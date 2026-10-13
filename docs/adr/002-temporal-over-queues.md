@@ -17,7 +17,7 @@ use cases. The prior Zenth prototype used a BullMQ-style queue (`zenth-queue`); 
 
 ## Development setup
 
-- `docker-compose.yml` runs `temporalio/auto-setup` on the shared Postgres plus the Temporal UI on port 8080.
+- `docker-compose.yml` runs `temporalio/auto-setup` on the shared Postgres plus the Temporal UI on port 8080. Host ports avoid 3000, 5432 and 6379, which other local projects usually hold.
 - The `temporal` CLI (`temporal server start-dev`) works as a lighter alternative on a laptop; the compose file
   is the one a fresh clone uses.
 - Temporal Cloud free tier is the target for the deployed demo (phase 5).

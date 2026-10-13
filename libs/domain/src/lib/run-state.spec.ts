@@ -44,3 +44,14 @@ describe('transition', () => {
     expect(() => transition('done', 'failed')).toThrow(DomainError);
   });
 });
+
+describe('transition while waiting for a spec decision', () => {
+  it('escalates when nobody decides in time', () => {
+    expect(transition('spec_drafted', 'escalated')).toBe('needs_human');
+  });
+
+  it('returns to intake on rejection so the spec can be redrafted', () => {
+    expect(transition('spec_drafted', 'spec_rejected')).toBe('intake');
+    expect(transition('intake', 'escalated')).toBe('needs_human');
+  });
+});

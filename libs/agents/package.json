@@ -21,6 +21,12 @@
     ]
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.122.0",
+    "@langchain/anthropic": "^1.5.12",
+    "@langchain/core": "^1.2.17",
+    "@langchain/langgraph": "^1.4.21",
+    "@zenthos/domain": "workspace:*",
+    "@zenthos/ports": "workspace:*",
     "tslib": "^2.3.0"
   }
 }

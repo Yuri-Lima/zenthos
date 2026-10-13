@@ -1,5 +1,7 @@
 # Local infrastructure for ZenthOs: Temporal (orchestration) and LangFuse (tracing and evals).
 # Start with `pnpm infra:up`. Every value has a dev default; override them in `.env` (see .env.example).
+# Published to the host: Postgres (5433, 5432 inside), Temporal (7233, UI 8080), LangFuse (3100), object store (9090).
+# Host ports avoid the usual dev-server ports (3000, 5432, 6379) so the stack coexists with other local projects.
 # LangFuse services follow the official compose file (github.com/langfuse/langfuse/docker-compose.yml).
 
 services:
@@ -13,7 +15,7 @@ services:
       TZ: UTC
       PGTZ: UTC
     ports:
-      - 127.0.0.1:5432:5432
+      - 127.0.0.1:${ZENTHOS_POSTGRES_PORT:-5433}:5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -24,7 +26,7 @@ services:
       retries: 10
 
   temporal:
-    image: temporalio/auto-setup:1.31
+    image: temporalio/auto-setup:1.29.7
     restart: unless-stopped
     depends_on:
       postgres:
@@ -39,7 +41,7 @@ services:
       - 127.0.0.1:7233:7233
 
   temporal-ui:
-    image: temporalio/ui:2.49
+    image: temporalio/ui:2.55.0
     restart: unless-stopped
     depends_on:
       - temporal
@@ -49,14 +51,76 @@ services:
     ports:
       - 127.0.0.1:8080:8080
 
+  # S3-compatible store for LangFuse events and media. RustFS stands in for MinIO: MinIO's server binary
+  # crashes (SIGILL) on older Docker Desktop VMs on Apple Silicon and its Docker Hub images are gone.
+  objectstore:
+    image: docker.io/rustfs/rustfs:latest
+    restart: unless-stopped
+    environment:
+      RUSTFS_ACCESS_KEY: minio
+      RUSTFS_SECRET_KEY: ${MINIO_PASSWORD:-miniosecret}
+    ports:
+      - 127.0.0.1:9090:9000
+    volumes:
+      - objectstore_data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://localhost:9000/health']
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 2s
+
+  # Creates the `langfuse` bucket once the store is up, then exits.
+  objectstore-init:
+    image: docker.io/amazon/aws-cli:latest
+    depends_on:
+      objectstore:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: ${MINIO_PASSWORD:-miniosecret}
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: sh
+    command: -c 'aws --endpoint-url http://objectstore:9000 s3api head-bucket --bucket langfuse 2>/dev/null || aws --endpoint-url http://objectstore:9000 s3 mb s3://langfuse'
+
+  clickhouse:
+    image: docker.io/clickhouse/clickhouse-server:25.12
+    restart: unless-stopped
+    user: '101:101'
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 1s
+
+  redis:
+    image: docker.io/redis:7
+    restart: unless-stopped
+    command: --requirepass ${REDIS_PASSWORD:-redissecret} --maxmemory-policy noeviction
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 3s
+      timeout: 10s
+      retries: 10
+
   langfuse-worker:
     image: docker.langfuse.com/langfuse/langfuse-worker:4
     restart: unless-stopped
     depends_on: &langfuse-depends-on
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_healthy
+      objectstore-init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       clickhouse:
@@ -64,7 +128,7 @@ services:
     ports:
       - 127.0.0.1:3030:3030
     environment: &langfuse-env
-      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_URL: http://localhost:${ZENTHOS_LANGFUSE_PORT:-3100}
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/langfuse
       SALT: ${LANGFUSE_SALT:-dev-salt-change-me}
       ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
@@ -78,14 +142,14 @@ services:
       LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
       LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
       LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_PASSWORD:-miniosecret}
-      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://objectstore:9000
       LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: 'true'
       LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
       LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
       LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
       LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minio
       LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_PASSWORD:-miniosecret}
-      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://objectstore:9000
       LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: 'true'
       LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
       REDIS_HOST: redis
@@ -97,12 +161,12 @@ services:
     restart: unless-stopped
     depends_on: *langfuse-depends-on
     ports:
-      - 127.0.0.1:3000:3000
+      - 127.0.0.1:${ZENTHOS_LANGFUSE_PORT:-3100}:3000
     environment:
       <<: *langfuse-env
       NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-dev-nextauth-secret-change-me}
       LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://localhost:9090
-      LANGFUSE_S3_MEDIA_UPLOAD_INTERNAL_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_INTERNAL_ENDPOINT: http://objectstore:9000
       # Dev bootstrap: one org, one project and fixed API keys so the worker can trace on first start.
       LANGFUSE_INIT_ORG_ID: zenthos
       LANGFUSE_INIT_ORG_NAME: ZenthOs
@@ -114,64 +178,9 @@ services:
       LANGFUSE_INIT_USER_NAME: admin
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_ADMIN_PASSWORD:-zenthos-dev-password}
 
-  clickhouse:
-    image: docker.io/clickhouse/clickhouse-server:25.12
-    restart: unless-stopped
-    user: '101:101'
-    environment:
-      CLICKHOUSE_DB: default
-      CLICKHOUSE_USER: clickhouse
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-      - clickhouse_logs:/var/log/clickhouse-server
-    ports:
-      - 127.0.0.1:8123:8123
-      - 127.0.0.1:9000:9000
-    healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 1s
-
-  minio:
-    image: cgr.dev/chainguard/minio
-    restart: unless-stopped
-    entrypoint: sh
-    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
-    environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-miniosecret}
-    ports:
-      - 127.0.0.1:9090:9000
-      - 127.0.0.1:9091:9001
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ['CMD', 'mc', 'ready', 'local']
-      interval: 1s
-      timeout: 5s
-      retries: 5
-      start_period: 1s
-
-  redis:
-    image: docker.io/redis:7
-    restart: unless-stopped
-    command: --requirepass ${REDIS_PASSWORD:-redissecret} --maxmemory-policy noeviction
-    ports:
-      - 127.0.0.1:6379:6379
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 3s
-      timeout: 10s
-      retries: 10
-
 volumes:
   postgres_data:
+  objectstore_data:
   clickhouse_data:
   clickhouse_logs:
-  minio_data:
   redis_data:

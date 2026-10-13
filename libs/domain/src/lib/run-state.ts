@@ -44,8 +44,12 @@ export type RunEvent = (typeof RUN_EVENTS)[number];
 export const TRANSITIONS: Readonly<
   Record<RunState, Partial<Record<RunEvent, RunState>>>
 > = {
-  intake: { spec_drafted: 'spec_drafted' },
-  spec_drafted: { spec_approved: 'spec_approved', spec_rejected: 'intake' },
+  intake: { spec_drafted: 'spec_drafted', escalated: 'needs_human' },
+  spec_drafted: {
+    spec_approved: 'spec_approved',
+    spec_rejected: 'intake',
+    escalated: 'needs_human',
+  },
   spec_approved: { implemented: 'implemented' },
   implemented: {
     gates_passed: 'gates_passed',

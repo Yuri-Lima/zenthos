@@ -6,7 +6,9 @@
     "check": "nx run-many -t typecheck lint test",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
-    "infra:reset": "docker compose down -v"
+    "infra:reset": "docker compose down -v",
+    "worker": "tsx --conditions=@zenthos/source apps/worker/src/main.ts",
+    "cli": "tsx --conditions=@zenthos/source apps/cli/src/main.ts"
   },
   "private": true,
   "devDependencies": {
@@ -32,6 +34,7 @@
     "ts-jest": "^29.4.7",
     "ts-node": "10.9.2",
     "tslib": "^2.3.0",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.58.0"
   },

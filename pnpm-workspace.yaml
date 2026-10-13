@@ -9,3 +9,4 @@ allowBuilds:
   nx: true
   esbuild: true
   unrs-resolver: false
+  protobufjs: true

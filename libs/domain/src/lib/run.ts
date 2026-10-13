@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import type { Spec } from './specification.js';
 import type { Ticket } from './ticket.js';
 import { transition, type RunEvent, type RunState } from './run-state.js';
 
@@ -17,11 +17,14 @@ export type Run = {
   createdAt: string;
   costUsd: number;
   history: RunHistoryEntry[];
+  /** Set once the spec writer has produced a draft. */
+  spec?: Spec;
 };
 
+/** Uses Web Crypto so this file stays free of node imports and can be bundled into a Temporal workflow. */
 export function createRun(ticket: Ticket, now: Date = new Date()): Run {
   return {
-    id: randomUUID(),
+    id: globalThis.crypto.randomUUID(),
     ticket,
     state: 'intake',
     createdAt: now.toISOString(),

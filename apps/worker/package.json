@@ -1,0 +1,39 @@
+{
+  "name": "@zenthos/worker",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@zenthos/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "nx": {
+    "tags": [
+      "scope:app"
+    ]
+  },
+  "dependencies": {
+    "@temporalio/worker": "^1.24.0",
+    "@temporalio/workflow": "^1.24.0",
+    "@zenthos/adapter-github": "workspace:*",
+    "@zenthos/adapter-in-memory": "workspace:*",
+    "@zenthos/adapter-langfuse": "workspace:*",
+    "@zenthos/agents": "workspace:*",
+    "@zenthos/application": "workspace:*",
+    "@zenthos/domain": "workspace:*",
+    "@zenthos/ports": "workspace:*",
+    "tslib": "^2.3.0",
+    "zod": "^4.6.6"
+  },
+  "devDependencies": {
+    "@temporalio/testing": "^1.24.0"
+  }
+}

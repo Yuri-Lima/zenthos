@@ -1,0 +1,41 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
+    "emitDeclarationOnly": false,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    {
+      "path": "../../libs/ports/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/domain/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/application/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/agents/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/adapters/langfuse/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/adapters/in-memory/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/adapters/github/tsconfig.lib.json"
+    }
+  ],
+  "exclude": [
+    "jest.config.ts",
+    "jest.config.cjs",
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts"
+  ]
+}

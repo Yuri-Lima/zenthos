@@ -24,6 +24,11 @@ export class InMemoryIssueTracker implements IssueTrackerPort {
     this.comments.set(key, list);
   }
 
+  /** What a human does in the real tracker: change the labels. */
+  async setLabels(key: string, labels: string[]): Promise<void> {
+    this.tickets.set(key, { ...(await this.getTicket(key)), labels });
+  }
+
   commentsOf(key: string): string[] {
     return [...(this.comments.get(key) ?? [])];
   }

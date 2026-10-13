@@ -20,6 +20,18 @@
     },
     {
       "path": "./libs/evals"
+    },
+    {
+      "path": "./libs/adapters/github"
+    },
+    {
+      "path": "./libs/adapters/langfuse"
+    },
+    {
+      "path": "./apps/worker"
+    },
+    {
+      "path": "./apps/cli"
     }
   ],
   "compilerOptions": {}

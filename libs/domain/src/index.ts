@@ -6,3 +6,4 @@ export * from './lib/run.js';
 export * from './lib/gate.js';
 export * from './lib/policies.js';
 export * from './lib/metrics.js';
+export * from './lib/approval.js';

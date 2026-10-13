@@ -9,7 +9,14 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "references": [],
+  "references": [
+    {
+      "path": "../ports/tsconfig.lib.json"
+    },
+    {
+      "path": "../domain/tsconfig.lib.json"
+    }
+  ],
   "exclude": [
     "jest.config.ts",
     "jest.config.cts",
