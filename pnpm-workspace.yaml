@@ -1,0 +1,11 @@
+packages:
+  - 'apps/*'
+  - 'libs/*'
+  - 'libs/adapters/*'
+
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  nx: true
+  esbuild: true
+  unrs-resolver: false

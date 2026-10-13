@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./libs/domain"
+    },
+    {
+      "path": "./libs/ports"
+    },
+    {
+      "path": "./libs/application"
+    },
+    {
+      "path": "./libs/adapters/in-memory"
+    },
+    {
+      "path": "./libs/agents"
+    },
+    {
+      "path": "./libs/evals"
+    }
+  ],
+  "compilerOptions": {}
+}
