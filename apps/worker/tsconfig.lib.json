@@ -30,6 +30,12 @@
     },
     {
       "path": "../../libs/adapters/github/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/adapters/git-sandbox/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/adapters/claude-code/tsconfig.lib.json"
     }
   ],
   "exclude": [

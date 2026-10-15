@@ -1,24 +1,16 @@
 import { DomainError, parseTicket, type Ticket } from '@zenthos/domain';
 import type { IssueTrackerPort } from '@zenthos/ports';
+import type { GitHubClients } from './clients.js';
 import { parseIssueKey } from './issue-key.js';
-
-type IssueParams = { owner: string; repo: string; issue_number: number };
-type Label = string | { name?: string };
-
-/** The three calls we use, as Octokit's `octokit.rest.issues` exposes them. A fake fits in a test. */
-export interface GitHubIssuesApi {
-  get(params: IssueParams): Promise<{ data: { title: string; body?: string | null; html_url: string; labels: Label[] } }>;
-  createComment(params: IssueParams & { body: string }): Promise<unknown>;
-  listComments(params: IssueParams & { per_page: number }): Promise<{ data: { body?: string }[] }>;
-}
 
 /** IssueTracker over the GitHub REST API. Translates only; the use cases decide. */
 export class GitHubIssueTracker implements IssueTrackerPort {
-  constructor(private readonly issues: GitHubIssuesApi) {}
+  constructor(private readonly clients: GitHubClients) {}
 
   async getTicket(key: string): Promise<Ticket> {
-    const params = issueParams(key);
-    const { data } = await this.issues.get(params).catch((error: { status?: number }) => {
+    const { owner, repo, issueNumber } = parseIssueKey(key);
+    const { issues } = await this.clients.for({ owner, repo });
+    const { data } = await issues.get({ owner, repo, issue_number: issueNumber }).catch((error: { status?: number }) => {
       if (error.status === 404) throw new DomainError('ticket_not_found', { key });
       throw error;
     });
@@ -32,17 +24,16 @@ export class GitHubIssueTracker implements IssueTrackerPort {
   }
 
   async postComment(key: string, body: string): Promise<void> {
-    await this.issues.createComment({ ...issueParams(key), body });
+    const { owner, repo, issueNumber } = parseIssueKey(key);
+    const { issues } = await this.clients.for({ owner, repo });
+    await issues.createComment({ owner, repo, issue_number: issueNumber, body });
   }
 
   /** Used by the contract run to read back what postComment wrote. */
   async listComments(key: string): Promise<string[]> {
-    const { data } = await this.issues.listComments({ ...issueParams(key), per_page: 100 });
+    const { owner, repo, issueNumber } = parseIssueKey(key);
+    const { issues } = await this.clients.for({ owner, repo });
+    const { data } = await issues.listComments({ owner, repo, issue_number: issueNumber, per_page: 100 });
     return data.map((comment) => comment.body ?? '');
   }
-}
-
-function issueParams(key: string): IssueParams {
-  const { owner, repo, issueNumber } = parseIssueKey(key);
-  return { owner, repo, issue_number: issueNumber };
 }

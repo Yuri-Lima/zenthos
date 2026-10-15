@@ -4,6 +4,10 @@ export const ERROR_CODES = {
   ticket_not_found: 'The issue tracker has no ticket with this key',
   invalid_ticket: 'The ticket does not match the Ticket schema',
   invalid_spec: 'The spec does not match the Spec schema',
+  command_not_allowed: 'The command is not in the repository profile allowlist',
+  implementation_failed: 'The coding agent did not finish the implementation',
+  unknown_repository: 'No repository profile matches this ticket key',
+  app_not_installed: 'The GitHub App is not installed on this repository',
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

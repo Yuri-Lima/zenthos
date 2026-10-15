@@ -40,10 +40,10 @@ These win over any pattern below when the two conflict. The goal is a codebase a
 | `libs/domain` | Entities, run state machine, zod schemas, gates, policies, metrics, error codes | nothing but zod and node |
 | `libs/ports` | One interface per adapter family, each with a `*.contract.ts` test | domain |
 | `libs/application` | One file per use case | domain, ports |
-| `libs/adapters/*` | One library per concrete adapter: `in-memory` (tests and dry runs), `github` (issues over the REST API), `langfuse` (tracing callbacks) | domain, ports |
+| `libs/adapters/*` | One library per concrete adapter: `in-memory` (tests and dry runs), `github` (issues and pull requests), `langfuse` (tracing callbacks), `git-sandbox` (a clone per run with the command allowlist), `claude-code` (headless Claude Code with the same allowlist) | domain, ports |
 | `libs/agents` | LangGraph graphs that implement agent ports. Spec writer: draft, validate against the schema, retry with the errors | domain, ports, LangChain |
 | `libs/evals` | Golden dataset, rubrics, regression runner (phase 3) | domain, ports, agents |
-| `apps/worker` | Temporal worker: `workflows.ts` (one workflow per ticket), `activities.ts` (thin, call use cases), `config.ts` (zod-validated env) | anything |
+| `apps/worker` | Temporal worker: `workflows.ts` (one workflow per ticket), `activities.ts` (thin, call use cases), `config.ts` (zod-validated env), `repos.ts` (the repository profiles: clone URL, base branch, allowed and gate commands, policy) | anything |
 | `apps/cli` | `zenthos run|approve|reject|state <ticket-key>` against the running worker | anything |
 | `docs/adr` | Architecture decision records | |
 | `infra/` | Files mounted by `docker-compose.yml` | |
@@ -60,13 +60,24 @@ bans vendor SDKs inside domain, ports and application. Every project carries a `
   `pnpm nx sync` updates the TypeScript references.
 - Tests sit next to the code as `*.spec.ts` and test behaviour, not implementation. An adapter spec runs the
   port's contract against its own fixture (see `libs/adapters/in-memory`).
+- A new target repository is one entry in `apps/worker/src/repos.ts`. Allowed commands are exact lines; a gate
+  command must be one of them (ADR 005).
 - Temporal workflow code stays deterministic; I/O lives in activities that call use cases. Workflow code may
   import `@zenthos/domain` (pure) and nothing with node or vendor imports; `apps/worker/src/bundler.ts` resolves
   the workspace sources for the workflow bundle.
 - Agent graphs take a LangChain `Runnable` as the model and are tested with `RunnableLambda` fakes (ADR 004).
 - Prompts carry a version string (`SPEC_WRITER_VERSION`); bump it when the wording changes.
 - No API keys in the repo or in CI. Model access comes from an `ant auth login` profile on a laptop and from
-  Workload Identity Federation elsewhere; `docs/authentication.md` has the setup.
+  Workload Identity Federation elsewhere; GitHub access from a GitHub App; `docs/authentication.md` has both.
+  Claude Code's claude.ai login is for a developer's own laptop only; shared deployments give the coding agent
+  the deployment's credentials (ADR 005).
+- Model cost on a run is `estimatedCostUsd`, an estimate at list price, kept beside the reported token counts.
+  Never present it as a bill.
+- The pipeline acts on GitHub only through installation tokens; a signed-in user's token identifies the person
+  and never does the bot's work (ADR 007).
+- Provider connections and repository profiles are configuration the product will own (ADR 006). Until the
+  tables and the settings page exist, the only two sources are `githubCredentials()` in the worker config and
+  `apps/worker/src/repos.ts`; add nothing credential-shaped anywhere else.
 
 ## Commands
 
@@ -88,9 +99,9 @@ Jest configs are `jest.config.cjs` (plain CommonJS) because Jest cannot load `.c
 
 ## Roadmap
 
-Phase 0 (scaffold) and phase 1 (intake, spec draft, human decision by label or signal, LangFuse traces) are in.
-Next: 2 implementation in a sandbox and PR to staging; 3 reviewer agent and regression evals; 4 Phoenix adapters
-and Codex; 5 dashboard, Cloud Run, write-up.
+Phases 0 to 2 are in: scaffold; intake, spec draft and human decision; implementation by Claude Code in a git
+sandbox, deterministic gates with one feedback retry, and a pull request to the base branch. Next: 3 reviewer
+agent and regression evals; 4 Phoenix adapters and Codex; 5 dashboard, Cloud Run, write-up.
 
 ## Dependency policy
 

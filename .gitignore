@@ -49,3 +49,8 @@ Thumbs.db
 .nx/self-healing
 .nx/migrate-runs
 test-output
+
+# local secrets and credentials, never committed (see .env.example)
+.env
+**/.env
+*.pem

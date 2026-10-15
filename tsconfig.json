@@ -32,6 +32,12 @@
     },
     {
       "path": "./apps/cli"
+    },
+    {
+      "path": "./libs/adapters/git-sandbox"
+    },
+    {
+      "path": "./libs/adapters/claude-code"
     }
   ],
   "compilerOptions": {}

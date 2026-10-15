@@ -2,3 +2,7 @@ export * from './lib/issue-tracker.port.js';
 export * from './lib/issue-tracker.contract.js';
 export * from './lib/spec-writer.port.js';
 export * from './lib/spec-writer.contract.js';
+export * from './lib/sandbox.port.js';
+export * from './lib/sandbox.contract.js';
+export * from './lib/coding-agent.port.js';
+export * from './lib/scm.port.js';

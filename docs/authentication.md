@@ -7,11 +7,17 @@ before the first ticket.
 
 | Where the worker runs | Credential | Why |
 | --- | --- | --- |
-| Your laptop | `ant auth login` profile | Interactive OAuth; nothing to copy into `.env`. A laptop has no OIDC issuer to federate from |
+| Your laptop | `ant auth login` profile for the spec writer; Claude Code's own claude.ai login for the coding agent | Interactive OAuth; nothing to copy into `.env`. A laptop has no OIDC issuer to federate from. Claude Code on a subscription is allowed for your own development only: Anthropic does not permit offering claude.ai login or its rate limits inside a product built on the Agent SDK |
 | GitHub Actions (evals in phase 3) | Workload Identity Federation, GitHub issuer | The job's OIDC token is exchanged for a short-lived token; no secret in the repo |
-| Cloud Run (phase 5) | Workload Identity Federation, Google issuer | The service's identity token from the metadata server |
+| Cloud Run (phase 5), or any deployment someone else uses | Workload Identity Federation, Google issuer, for both the spec writer and the coding agent | The service's identity token from the metadata server. The coding agent must not run on anyone's claude.ai subscription there; it gets the deployment's credentials, and its cost lands on the organization's Console usage |
 
 A leftover `ANTHROPIC_API_KEY`, even an empty one, shadows both other paths. Unset it rather than blanking it.
+
+**What the cost numbers mean.** The run's `estimatedCostUsd` is the sum of the agents' own estimates at
+list price; the Agent SDK documents its `total_cost_usd` as "estimates, not billing". Under a subscription
+nothing is charged for the coding agent; under an API key or federation the invoice is the Console's usage
+page, not this field. The run also keeps the token counts the models reported, which is what a bill is
+based on. LangFuse prices the spec-writer calls itself from its built-in model table.
 
 ## Laptop: `ant auth login`
 
@@ -94,6 +100,38 @@ jobs:
 Trigger the workflow once inside the wizard's 15-minute window and the rule's page shows the exchange. Failed
 exchanges appear under **Authentication events** with a reason: `jti_reused` (a token presented twice), a
 claim mismatch against the rule, or `workspace_id_required`.
+
+## GitHub: the ZenthOs app
+
+ZenthOs talks to GitHub as a GitHub App, so comments and pull requests come from `<app>[bot]` and each
+repository owner decides where it is installed (ADR 006). Creating the app is a one-time bootstrap for a
+deployment; users will connect repositories from the dashboard with an install redirect, and self-hosters
+will get the app created for them by the manifest wizard (ADR 007). Until the API and dashboard exist,
+create it by hand:
+
+1. GitHub → **Settings → Developer settings → GitHub Apps → New GitHub App**. Name it `zenthos` (or
+   `zenthos-dev` for your own tests). Homepage URL can be the repository. Uncheck **Webhook → Active** for now.
+2. Repository permissions: **Contents** read and write, **Issues** read and write, **Pull requests** read and
+   write, **Metadata** read. No organisation or account permissions.
+3. **Where can this app be installed**: only on this account, unless others will install it.
+4. After creating it, note the **App ID** and generate a **private key** (a `.pem` download).
+5. **Install App** on the repositories ZenthOs may work on, for example `mara-sandra-connect`.
+
+Then in `.env`:
+
+```bash
+ISSUE_TRACKER=github
+SCM=github
+GITHUB_APP_ID=123456
+GITHUB_APP_PRIVATE_KEY_FILE=/absolute/path/zenthos.private-key.pem
+```
+
+The worker resolves the installation per repository at first use and mints tokens as needed; nothing else
+to configure per repo. Keep the `.pem` out of the repository; on Cloud Run it comes from Secret Manager.
+The private key is the one long-lived secret in this design.
+
+A fine-grained personal token (`GITHUB_TOKEN`, scoped to the named repositories, with Contents, Issues and
+Pull requests write) still works as an interim and is ignored once the app is configured.
 
 ## Cloud Run (phase 5)
 

@@ -4,10 +4,13 @@
 out, with a human approving the spec and the risky steps. Built as a hexagonal core with pluggable adapters,
 orchestrated by Temporal, traced and evaluated with LangFuse, and proven on two real codebases.
 
-Status: phase 1. A ticket key starts a Temporal workflow that fetches the issue, has a LangGraph agent draft a
+Status: phase 2. A ticket key starts a Temporal workflow that fetches the issue, has a LangGraph agent draft a
 spec validated against the zod schema, posts it as a comment, and waits for a human to approve or reject by
-label or CLI signal, with a timeout that escalates. Every model call is traced in LangFuse. Adapters: GitHub
-issues, in-memory for dry runs. Tested with Temporal's time-skipping environment.
+label or CLI signal. After approval, Claude Code implements the spec headless in a fresh clone where only the
+repository profile's commands may run; deterministic gates (forbidden paths, diff budget, secret scan, cost
+ceiling, then the repo's own lint and checks) decide whether a pull request opens against the base branch, with
+one retry that feeds the failed gates back to the agent. Every model call is traced in LangFuse. Tested with
+Temporal's time-skipping environment, a local bare git remote, and fakes for the agent.
 
 ## Quick start
 

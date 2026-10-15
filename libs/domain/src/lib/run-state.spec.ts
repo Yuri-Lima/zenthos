@@ -8,8 +8,8 @@ describe('transition', () => {
       'spec_approved',
       'implemented',
       'gates_passed',
-      'review_passed',
       'mr_opened',
+      'review_passed',
       'verified',
       'merged',
     ];
@@ -19,6 +19,10 @@ describe('transition', () => {
 
   it('sends a failed gate back to spec_approved for a retry', () => {
     expect(transition('implemented', 'gates_failed')).toBe('spec_approved');
+  });
+
+  it('sends a failed review back to spec_approved for another implementation', () => {
+    expect(transition('mr_opened', 'review_failed')).toBe('spec_approved');
   });
 
   it('escalates to needs_human and resumes at spec_approved', () => {

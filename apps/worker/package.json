@@ -21,8 +21,11 @@
     ]
   },
   "dependencies": {
+    "@temporalio/activity": "^1.24.0",
     "@temporalio/worker": "^1.24.0",
     "@temporalio/workflow": "^1.24.0",
+    "@zenthos/adapter-claude-code": "workspace:*",
+    "@zenthos/adapter-git-sandbox": "workspace:*",
     "@zenthos/adapter-github": "workspace:*",
     "@zenthos/adapter-in-memory": "workspace:*",
     "@zenthos/adapter-langfuse": "workspace:*",

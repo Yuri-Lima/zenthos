@@ -1,15 +1,20 @@
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NativeConnection, Worker } from '@temporalio/worker';
-import { createGitHubIssueTracker } from '@zenthos/adapter-github';
-import { InMemoryIssueTracker, InMemorySpecWriter } from '@zenthos/adapter-in-memory';
+import { ClaudeCodeAgent } from '@zenthos/adapter-claude-code';
+import { GitSandbox } from '@zenthos/adapter-git-sandbox';
+import { createGitHubClients, GitHubIssueTracker, GitHubScm, parseRepo, type GitHubClients } from '@zenthos/adapter-github';
+import { InMemoryCodingAgent, InMemoryIssueTracker, InMemorySandbox, InMemoryScm, InMemorySpecWriter } from '@zenthos/adapter-in-memory';
 import { noTracing, startLangfuseTracing } from '@zenthos/adapter-langfuse';
 import { createAnthropicSpecModel, LangGraphSpecWriter, SPEC_WRITER_VERSION, verifyAnthropicAccess } from '@zenthos/agents';
-import type { IssueTrackerPort, SpecWriterPort } from '@zenthos/ports';
+import type { CodingAgentPort, IssueTrackerPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
 import { createActivities } from './activities.js';
 import { bundlerOptions } from './bundler.js';
-import { loadConfig, type WorkerConfig } from './config.js';
+import { githubCredentials, loadConfig, type WorkerConfig } from './config.js';
+import { REPO_PROFILES } from './repos.js';
 
 /** Dry runs have one ticket, `memory#1`; approve it with `pnpm cli approve memory#1`. */
 const DRY_RUN_TICKET = {
@@ -20,10 +25,14 @@ const DRY_RUN_TICKET = {
   labels: [],
 };
 
-function issueTracker(config: WorkerConfig): IssueTrackerPort {
-  return config.ISSUE_TRACKER === 'github'
-    ? createGitHubIssueTracker(config.GITHUB_TOKEN as string)
-    : new InMemoryIssueTracker().seed(DRY_RUN_TICKET);
+/** One GitHub connection for the worker; with an app it covers every repository the app is installed on. */
+function github(config: WorkerConfig): GitHubClients | undefined {
+  const credentials = githubCredentials(config);
+  return credentials && createGitHubClients(credentials);
+}
+
+function issueTracker(config: WorkerConfig, clients?: GitHubClients): IssueTrackerPort {
+  return config.ISSUE_TRACKER === 'github' && clients ? new GitHubIssueTracker(clients) : new InMemoryIssueTracker().seed(DRY_RUN_TICKET);
 }
 
 function tracing(config: WorkerConfig) {
@@ -42,19 +51,50 @@ async function specWriter(config: WorkerConfig, trace: ReturnType<typeof tracing
   });
 }
 
+async function sandbox(config: WorkerConfig, clients?: GitHubClients): Promise<SandboxPort> {
+  if (config.SANDBOX === 'memory') return new InMemorySandbox(REPO_PROFILES);
+  const root = config.SANDBOX_ROOT ?? path.join(tmpdir(), 'zenthos-sandboxes');
+  await mkdir(root, { recursive: true });
+  return new GitSandbox({
+    root,
+    profiles: REPO_PROFILES,
+    credential: async (profile) => (clients && profile.cloneUrl.startsWith('https://github.com/') ? (await clients.for(parseRepo(profile.repo))).gitToken() : undefined),
+  });
+}
+
+function codingAgent(config: WorkerConfig): CodingAgentPort {
+  return config.CODING_AGENT === 'claude-code' ? new ClaudeCodeAgent({ model: config.ZENTHOS_CODING_MODEL }) : new InMemoryCodingAgent();
+}
+
+function scm(config: WorkerConfig, clients?: GitHubClients): ScmPort {
+  return config.SCM === 'github' && clients ? new GitHubScm(clients) : new InMemoryScm();
+}
+
 async function main() {
   if (existsSync('.env')) process.loadEnvFile('.env');
   const config = loadConfig(process.env);
   const trace = tracing(config);
   const repoContext = config.REPO_CONTEXT_FILE ? await readFile(config.REPO_CONTEXT_FILE, 'utf8') : '';
 
+  const clients = github(config);
+  console.log(
+    `zenthos worker: issueTracker=${config.ISSUE_TRACKER} specWriter=${config.SPEC_WRITER} sandbox=${config.SANDBOX} codingAgent=${config.CODING_AGENT} scm=${config.SCM} github=${githubCredentials(config)?.type ?? 'none'} taskQueue=${config.TEMPORAL_TASK_QUEUE}`,
+  );
   const connection = await NativeConnection.connect({ address: config.TEMPORAL_ADDRESS });
   const worker = await Worker.create({
     connection,
     namespace: config.TEMPORAL_NAMESPACE,
     taskQueue: config.TEMPORAL_TASK_QUEUE,
     workflowsPath: fileURLToPath(new URL('./workflows.ts', import.meta.url)),
-    activities: createActivities({ issueTracker: issueTracker(config), specWriter: await specWriter(config, trace), repoContext }),
+    activities: createActivities({
+      issueTracker: issueTracker(config, clients),
+      specWriter: await specWriter(config, trace),
+      sandbox: await sandbox(config, clients),
+      codingAgent: codingAgent(config),
+      scm: scm(config, clients),
+      repoContext,
+      profiles: REPO_PROFILES,
+    }),
     bundlerOptions,
   });
 

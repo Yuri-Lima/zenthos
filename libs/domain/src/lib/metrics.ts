@@ -13,8 +13,12 @@ export const METRICS = {
     unit: 'minutes',
   },
   cost_per_ticket_usd: {
-    description: 'Sum of model cost across all calls in a run',
+    description: 'Sum of the models\' own cost estimates at list price across a run; the invoice comes from the Console',
     unit: 'usd',
+  },
+  tokens_per_ticket: {
+    description: 'Input, output and cached tokens the models reported across a run',
+    unit: 'count',
   },
   gate_failures: {
     description: 'Failed gate results, counted per gate',

@@ -11,14 +11,18 @@ import type { StructuredSpecModel } from './graph.js';
  */
 export type SpecModelConfig = { model: string; apiKey?: string };
 
-/** Claude through LangChain, bound to the Spec schema so the output is already the right shape. */
+/**
+ * Claude through LangChain, bound to the Spec schema so the output is already the right shape.
+ * `jsonSchema` uses Anthropic's native structured outputs; the default (`functionCalling`) forces a
+ * tool choice, which Claude Opus 5.5 and Sonnet 5.5 reject with a 400.
+ */
 export function createAnthropicSpecModel({ model, apiKey }: SpecModelConfig): StructuredSpecModel {
   return new ChatAnthropic({
     model,
     maxTokens: 16_000,
     // LangChain insists on a key unless it is handed a client factory; the SDK then does the resolving.
     createClient: (options) => new Anthropic({ ...options, apiKey }),
-  }).withStructuredOutput(SpecSchema, { name: 'spec' });
+  }).withStructuredOutput(SpecSchema, { name: 'spec', method: 'jsonSchema' });
 }
 
 /**

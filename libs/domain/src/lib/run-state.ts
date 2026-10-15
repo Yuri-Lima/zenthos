@@ -6,8 +6,8 @@ export const RUN_STATES = [
   'spec_approved',
   'implemented',
   'gates_passed',
-  'reviewed',
   'mr_opened',
+  'reviewed',
   'verified',
   'done',
   'failed',
@@ -39,6 +39,7 @@ export type RunEvent = (typeof RUN_EVENTS)[number];
 
 /**
  * The one definition of how a run moves. The worker, the API and the dashboard all read it.
+ * Review happens on the open merge request (ADR 005), so `mr_opened` comes before `reviewed`.
  * `failed` is accepted from every non-terminal state and is handled in `transition`.
  */
 export const TRANSITIONS: Readonly<
@@ -56,13 +57,13 @@ export const TRANSITIONS: Readonly<
     gates_failed: 'spec_approved',
     escalated: 'needs_human',
   },
-  gates_passed: {
+  gates_passed: { mr_opened: 'mr_opened', escalated: 'needs_human' },
+  mr_opened: {
     review_passed: 'reviewed',
     review_failed: 'spec_approved',
     escalated: 'needs_human',
   },
-  reviewed: { mr_opened: 'mr_opened' },
-  mr_opened: { verified: 'verified', verification_failed: 'needs_human' },
+  reviewed: { verified: 'verified', verification_failed: 'needs_human' },
   verified: { merged: 'done' },
   needs_human: { human_resumed: 'spec_approved', human_abandoned: 'failed' },
   done: {},

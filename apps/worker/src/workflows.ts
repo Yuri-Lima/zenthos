@@ -1,5 +1,5 @@
 import { condition, defineQuery, defineSignal, proxyActivities, setHandler } from '@temporalio/workflow';
-import { applyEvent, DEFAULT_APPROVAL_POLICY, type Approval, type ApprovalPolicy, type Run, type RunEvent } from '@zenthos/domain';
+import { addTokens, applyEvent, canRetryAfter, DEFAULT_APPROVAL_POLICY, DEFAULT_POLICY, type Approval, type ApprovalPolicy, type Run, type RunEvent } from '@zenthos/domain';
 import type { Activities } from './activities.js';
 
 const activities = proxyActivities<Activities>({
@@ -7,9 +7,23 @@ const activities = proxyActivities<Activities>({
   retry: { maximumAttempts: 3 },
 });
 
+/**
+ * The coding agent and the gates run for a long time. They heartbeat every 30 seconds, so a dead
+ * worker is noticed within 2 minutes and the attempt moves to a live worker; both activities start
+ * from a fresh clone, so one retry is safe. A model or gate failure inside the attempt is a result,
+ * not an exception, and is never retried here.
+ */
+const longActivities = proxyActivities<Pick<Activities, 'baseline' | 'implement' | 'runGates'>>({
+  startToCloseTimeout: '45 minutes',
+  heartbeatTimeout: '2 minutes',
+  retry: { maximumAttempts: 2, initialInterval: '10 seconds' },
+});
+
 export type TicketRunInput = {
   key: string;
   approval?: Partial<ApprovalPolicy>;
+  /** Overrides the repo profile's implementation rounds; tests use it. */
+  maxImplementRounds?: number;
 };
 
 type Decision = Exclude<Approval, 'pending'>;
@@ -19,8 +33,9 @@ export const approvalDecisionSignal = defineSignal<[Decision]>('approvalDecision
 export const runQuery = defineQuery<Run>('run');
 
 /**
- * One workflow per ticket. Phase 1 covers intake, spec and the human decision; later phases
- * continue from `spec_approved`. State changes go through the domain state machine only.
+ * One workflow per ticket: intake, spec, human decision, implementation in a sandbox, gates,
+ * merge request. Review (phase 3) continues from `mr_opened`. State changes go through the domain
+ * state machine only.
  */
 export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
   const policy = { ...DEFAULT_APPROVAL_POLICY, ...input.approval };
@@ -44,9 +59,44 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
     advance('spec_drafted');
 
     const outcome = await waitForDecision(input.key, policy, () => decision !== undefined, takeDecision);
-    if (outcome === 'approved') return advance('spec_approved');
+    if (outcome === 'approved') {
+      advance('spec_approved');
+      break;
+    }
     if (outcome === 'timeout') return advance('escalated');
     advance('spec_rejected');
+  }
+  if (run.state !== 'spec_approved') return advance('escalated');
+
+  const rounds = input.maxImplementRounds ?? DEFAULT_POLICY.maxImplementRounds;
+  const workspace = await activities.prepare(run);
+  run = { ...run, branch: workspace.branch };
+  // What already fails on the pristine checkout is the base branch's problem, not this run's.
+  const baselineFailures = await longActivities.baseline(run, workspace);
+  let feedback: string | undefined;
+  for (let round = 1; round <= rounds; round++) {
+    const { implementation, diff } = await longActivities.implement(run, workspace, feedback);
+    run = { ...run, estimatedCostUsd: run.estimatedCostUsd + implementation.estimatedCostUsd, tokens: addTokens(run.tokens, implementation.tokens) };
+    advance('implemented');
+
+    const gates = await longActivities.runGates(run, workspace, diff, baselineFailures);
+    run = { ...run, gates };
+    if (gates.every((gate) => gate.passed)) {
+      advance('gates_passed');
+      const pullRequest = await activities.openPullRequest(run, workspace, gates);
+      run = { ...run, pullRequestUrl: pullRequest.url };
+      await activities.cleanup(workspace);
+      return advance('mr_opened');
+    }
+    if (round < rounds && canRetryAfter(gates)) {
+      feedback = await activities.gateFeedback(gates);
+      advance('gates_failed');
+      continue;
+    }
+    // Out of rounds, or a failure no retry can fix: keep the work on its branch and hand over.
+    await activities.pushWorkInProgress(run, workspace, gates);
+    await activities.cleanup(workspace);
+    return advance('escalated');
   }
   return advance('escalated');
 }

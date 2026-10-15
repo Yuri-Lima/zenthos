@@ -7,3 +7,6 @@ export * from './lib/gate.js';
 export * from './lib/policies.js';
 export * from './lib/metrics.js';
 export * from './lib/approval.js';
+export * from './lib/repo-profile.js';
+export * from './lib/implementation.js';
+export * from './lib/provider.js';
