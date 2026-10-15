@@ -35,6 +35,9 @@ export const WorkerConfigSchema = z.object({
   ZENTHOS_CODING_MODEL: z.string().optional(),
   /** `github` opens pull requests with GITHUB_TOKEN; `memory` records them. */
   SCM: z.enum(['github', 'memory']).default('memory'),
+  /** `anthropic` scores the pull request with Claude; `memory` returns placeholder fours. */
+  REVIEWER: z.enum(['anthropic', 'memory']).default('memory'),
+  ZENTHOS_REVIEW_MODEL: z.string().default('claude-opus-5-5'),
 });
 
 export type WorkerConfig = z.infer<typeof WorkerConfigSchema>;

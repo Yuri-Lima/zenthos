@@ -5,3 +5,4 @@ export * from './lib/spec-comment.js';
 export * from './lib/implement-spec.js';
 export * from './lib/run-gates.js';
 export * from './lib/open-pull-request.js';
+export * from './lib/review-change.js';

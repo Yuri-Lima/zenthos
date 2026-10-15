@@ -1,7 +1,10 @@
 import type { GateResult, PullRequest, RepoProfile, Run, Workspace } from '@zenthos/domain';
 import type { SandboxPort, ScmPort } from '@zenthos/ports';
 
-/** Use case 6: push the branch and open the merge request a human will review. */
+/**
+ * Use case 6: push the branch and open the merge request a human will review. A later round of the
+ * same run pushes to the same branch and reuses the pull request that is already open for it.
+ */
 export async function openPullRequest(
   { sandbox, scm }: { sandbox: SandboxPort; scm: ScmPort },
   run: Run,
@@ -11,6 +14,8 @@ export async function openPullRequest(
 ): Promise<PullRequest> {
   const title = `${run.ticket.title} (${run.ticket.key})`;
   await sandbox.commitAndPush(workspace, title);
+  const existing = await scm.findPullRequest(profile, workspace.branch);
+  if (existing) return existing;
   return scm.openPullRequest({ profile, workspace, title, body: renderPullRequestBody(run, gates), ticketKey: run.ticket.key });
 }
 

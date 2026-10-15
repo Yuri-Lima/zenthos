@@ -8,6 +8,7 @@ export const ERROR_CODES = {
   implementation_failed: 'The coding agent did not finish the implementation',
   unknown_repository: 'No repository profile matches this ticket key',
   app_not_installed: 'The GitHub App is not installed on this repository',
+  invalid_review: 'The review does not match the Review schema',
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

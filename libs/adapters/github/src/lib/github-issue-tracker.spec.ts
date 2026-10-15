@@ -41,6 +41,9 @@ export function fakeClients(): GitHubClients & { comments: string[]; resolved: s
   };
   const pulls: GitHubPullsApi = {
     create: async () => ({ data: { html_url: 'https://github.com/owner/repo/pull/7', number: 7 } }),
+    list: async () => ({ data: [] }),
+    get: async () => ({ data: '' }),
+    createReview: async () => undefined,
   };
   return {
     comments,

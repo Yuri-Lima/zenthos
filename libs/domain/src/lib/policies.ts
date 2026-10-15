@@ -8,6 +8,10 @@ export type RunPolicy = {
   forbiddenPathPrefixes: string[];
   /** Implementation attempts before the run escalates; each retry sees the failed gates. */
   maxImplementRounds: number;
+  /** Mean rubric score (1 to 5) a review must reach; any blocker finding fails regardless. */
+  reviewThreshold: number;
+  /** Re-implementations allowed after a failed review before the run escalates. */
+  maxReviewRounds: number;
 };
 
 /**
@@ -36,6 +40,8 @@ export const DEFAULT_POLICY: RunPolicy = {
   diffBudgetLines: 800,
   forbiddenPathPrefixes: [...TOOLING_PATH_PREFIXES, 'migrations/'],
   maxImplementRounds: 2,
+  reviewThreshold: 3.5,
+  maxReviewRounds: 1,
 };
 
 /** Shapes of credentials that must never land in a diff. Named so a gate message can say which. */

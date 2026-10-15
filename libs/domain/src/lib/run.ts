@@ -1,5 +1,6 @@
 import type { GateResult } from './gate.js';
-import { NO_TOKENS, type TokenUsage } from './implementation.js';
+import { NO_TOKENS, type PullRequest, type TokenUsage } from './implementation.js';
+import type { Review } from './review.js';
 import { DEFAULT_POLICY, type RunPolicy } from './policies.js';
 import type { Spec } from './specification.js';
 import type { Ticket } from './ticket.js';
@@ -29,8 +30,10 @@ export type Run = {
   spec?: Spec;
   /** Results of the last gate run. */
   gates?: GateResult[];
-  /** Set once the merge request is open. */
-  pullRequestUrl?: string;
+  /** Set once the merge request is open; reused by later rounds on the same branch. */
+  pullRequest?: PullRequest;
+  /** The last review the reviewer agent posted on the pull request. */
+  review?: Review;
   /** The branch the implementation was pushed to, set even when the run escalates, so work is never lost. */
   branch?: string;
 };

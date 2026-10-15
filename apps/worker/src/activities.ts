@@ -9,11 +9,14 @@ import {
   prepareWorkspace,
   pushWorkInProgress,
   readApproval,
+  reviewChange,
+  reviewFeedback,
   runGates,
   type ImplementationResult,
+  type ReviewResult,
 } from '@zenthos/application';
-import { profileForTicket, type Approval, type GateResult, type PullRequest, type RepoProfile, type Run, type Spec, type Workspace } from '@zenthos/domain';
-import type { CodingAgentPort, IssueTrackerPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
+import { profileForTicket, type Approval, type GateResult, type PullRequest, type RepoProfile, type Review, type Run, type Spec, type Workspace } from '@zenthos/domain';
+import type { CodingAgentPort, IssueTrackerPort, ReviewerPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
 
 export type ActivityDeps = {
   issueTracker: IssueTrackerPort;
@@ -21,6 +24,7 @@ export type ActivityDeps = {
   sandbox: SandboxPort;
   codingAgent: CodingAgentPort;
   scm: ScmPort;
+  reviewer: ReviewerPort;
   repoContext: string;
   profiles: RepoProfile[];
 };
@@ -61,6 +65,8 @@ export function createActivities(deps: ActivityDeps) {
       openPullRequest(deps, run, workspace, gates, profile(run)),
     pushWorkInProgress: (run: Run, workspace: Workspace, gates: GateResult[]): Promise<string> =>
       pushWorkInProgress(deps, run, workspace, gates),
+    review: (run: Run): Promise<ReviewResult> => withHeartbeat(() => reviewChange(deps, run, profile(run))),
+    reviewFeedback: async (review: Review): Promise<string> => reviewFeedback(review),
     cleanup: (workspace: Workspace): Promise<void> => deps.sandbox.cleanup(workspace),
     /** Pure, but kept beside the activities so the workflow bundle stays free of application code. */
     gateFeedback: async (gates: GateResult[]): Promise<string> => gateFeedback(gates),

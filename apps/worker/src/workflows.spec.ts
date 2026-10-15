@@ -19,11 +19,23 @@ const ticket: Ticket = {
 /** Activities as the workflow sees them, with knobs for what the "human" and the "model" do. */
 const workspace: Workspace = { id: 'w', path: '/tmp/w', repo: 'owner/repo', baseBranch: 'staging', branch: 'zenthos/owner-repo-1' };
 
-function fakeActivities(options: { approvals?: Approval[]; failDraftsBeforeSuccess?: number; failingGateRounds?: number; costBreach?: boolean; baselineFailures?: string[] } = {}) {
+const goodReview = {
+  scores: {
+    correctness: { score: 5, evidence: 'Implements AC-1 as written' },
+    spec_coverage: { score: 4, evidence: 'The test covers the download' },
+    readability: { score: 4, evidence: 'Clear names throughout' },
+    engineering_rules: { score: 5, evidence: 'No tooling edits' },
+  },
+  findings: [],
+  summary: 'Focused change that matches the spec.',
+};
+
+function fakeActivities(options: { approvals?: Approval[]; failDraftsBeforeSuccess?: number; failingGateRounds?: number; costBreach?: boolean; baselineFailures?: string[]; failingReviewRounds?: number } = {}) {
   const approvals = [...(options.approvals ?? [])];
   let draftFailures = options.failDraftsBeforeSuccess ?? 0;
   let failingGates = options.failingGateRounds ?? 0;
-  const calls = { intake: 0, draftSpec: 0, readApproval: 0, implement: 0, runGates: 0, openPullRequest: 0, cleanup: 0, pushed: 0, feedback: [] as (string | undefined)[], baselines: [] as string[][] };
+  let failingReviews = options.failingReviewRounds ?? 0;
+  const calls = { intake: 0, draftSpec: 0, readApproval: 0, implement: 0, runGates: 0, openPullRequest: 0, cleanup: 0, pushed: 0, review: 0, feedback: [] as (string | undefined)[], baselines: [] as string[][] };
   const activities: Activities = {
     prepare: async () => workspace,
     baseline: async () => options.baselineFailures ?? [],
@@ -45,6 +57,15 @@ function fakeActivities(options: { approvals?: Approval[]; failDraftsBeforeSucce
       calls.pushed++;
       return ws.branch;
     },
+    review: async () => {
+      calls.review++;
+      const failed = failingReviews-- > 0;
+      return {
+        review: failed ? { ...goodReview, findings: [{ file: 'src/a.ts', severity: 'blocker' as const, message: 'Drops rows' }] } : goodReview,
+        gate: failed ? fail('review_threshold', '1 blocker finding(s): src/a.ts: Drops rows') : pass('review_threshold'),
+      };
+    },
+    reviewFeedback: async (review) => review.findings.map((f) => `${f.severity} ${f.file}: ${f.message}`).join('\n'),
     openPullRequest: async () => {
       calls.openPullRequest++;
       return { url: 'https://github.com/owner/repo/pull/9', number: 9 };
@@ -87,7 +108,7 @@ describe('ticketRunWorkflow', () => {
   const taskQueue = 'test';
   // Jest runs with the project root as cwd; main.ts resolves the same file from import.meta.url.
   const workflowsPath = path.join(process.cwd(), 'src', 'workflows.ts');
-  const input = (key: string): TicketRunInput => ({ key, approval: { pollSeconds: 60, timeoutHours: 1, maxDraftRounds: 2 }, maxImplementRounds: 2 });
+  const input = (key: string): TicketRunInput => ({ key, approval: { pollSeconds: 60, timeoutHours: 1, maxDraftRounds: 2 }, maxImplementRounds: 2, maxReviewRounds: 1 });
 
   beforeAll(async () => {
     env = await TestWorkflowEnvironment.createTimeSkipping();
@@ -110,16 +131,18 @@ describe('ticketRunWorkflow', () => {
     });
   }
 
-  it('opens a merge request after the label appears and the gates pass', async () => {
+  it('opens a merge request after the label appears, the gates pass, and the review passes', async () => {
     const { activities, calls } = fakeActivities({ approvals: ['pending', 'approved'] });
     const run = await runWith(activities, 'label');
-    expect(run.state).toBe('mr_opened');
+    expect(run.state).toBe('reviewed');
     expect(run.spec?.acceptanceCriteria[0].id).toBe('AC-1');
-    expect(run.pullRequestUrl).toBe('https://github.com/owner/repo/pull/9');
+    expect(run.pullRequest).toEqual({ url: 'https://github.com/owner/repo/pull/9', number: 9 });
+    expect(run.review?.summary).toContain('matches the spec');
     expect(run.estimatedCostUsd).toBe(0.5);
     expect(run.tokens.inputTokens).toBe(1000);
-    expect(run.history.map((h) => h.event)).toEqual(['spec_drafted', 'spec_approved', 'implemented', 'gates_passed', 'mr_opened']);
+    expect(run.history.map((h) => h.event)).toEqual(['spec_drafted', 'spec_approved', 'implemented', 'gates_passed', 'mr_opened', 'review_passed']);
     expect(calls.readApproval).toBe(2);
+    expect(calls.review).toBe(1);
     expect(calls.cleanup).toBe(1);
     expect(APPROVAL_LABELS.approved).toBeDefined();
   });
@@ -127,8 +150,27 @@ describe('ticketRunWorkflow', () => {
   it('approves on a signal without polling', async () => {
     const { activities, calls } = fakeActivities();
     const run = await runWith(activities, 'signal', 'approved');
-    expect(run.state).toBe('mr_opened');
+    expect(run.state).toBe('reviewed');
     expect(calls.readApproval).toBe(0);
+  });
+
+  it('sends a failed review back to the same workspace once, reuses the pull request, then passes', async () => {
+    const { activities, calls } = fakeActivities({ approvals: ['approved'], failingReviewRounds: 1 });
+    const run = await runWith(activities, 'review-retry');
+    expect(run.state).toBe('reviewed');
+    expect(calls.review).toBe(2);
+    expect(calls.implement).toBe(2);
+    expect(calls.openPullRequest).toBe(2);
+    expect(calls.feedback[1]).toContain('blocker src/a.ts: Drops rows');
+    expect(run.history.map((h) => h.event)).toEqual(['spec_drafted', 'spec_approved', 'implemented', 'gates_passed', 'mr_opened', 'review_failed', 'implemented', 'gates_passed', 'mr_opened', 'review_passed']);
+  });
+
+  it('escalates when the review fails again after the retry', async () => {
+    const { activities, calls } = fakeActivities({ approvals: ['approved'], failingReviewRounds: 2 });
+    const run = await runWith(activities, 'review-escalate');
+    expect(run.state).toBe('needs_human');
+    expect(calls.review).toBe(2);
+    expect(run.history.at(-1)?.event).toBe('escalated');
   });
 
   it('retries the implementation once in the same workspace with the gate feedback, then escalates with the branch pushed', async () => {
@@ -147,7 +189,7 @@ describe('ticketRunWorkflow', () => {
   it('hands the baseline failures to the gates', async () => {
     const { activities, calls } = fakeActivities({ approvals: ['approved'], baselineFailures: ['bun run format:check'] });
     const run = await runWith(activities, 'baseline');
-    expect(run.state).toBe('mr_opened');
+    expect(run.state).toBe('reviewed');
     expect(calls.baselines).toEqual([['bun run format:check']]);
   });
 
@@ -163,7 +205,7 @@ describe('ticketRunWorkflow', () => {
   it('opens the merge request when the second implementation passes the gates', async () => {
     const { activities, calls } = fakeActivities({ approvals: ['approved'], failingGateRounds: 1 });
     const run = await runWith(activities, 'gates-retry');
-    expect(run.state).toBe('mr_opened');
+    expect(run.state).toBe('reviewed');
     expect(calls.implement).toBe(2);
     expect(run.estimatedCostUsd).toBe(1);
     expect(run.tokens.outputTokens).toBe(400);
@@ -187,7 +229,7 @@ describe('ticketRunWorkflow', () => {
   it('retries a failed draft activity and still completes', async () => {
     const { activities, calls } = fakeActivities({ approvals: ['approved'], failDraftsBeforeSuccess: 1 });
     const run = await runWith(activities, 'retry');
-    expect(run.state).toBe('mr_opened');
+    expect(run.state).toBe('reviewed');
     expect(calls.draftSpec).toBe(2);
   });
 });

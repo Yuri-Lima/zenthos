@@ -7,7 +7,6 @@
  *   pnpm nx run @zenthos/worker:contract -- owner/repo#123      (credentials from .env, see docs/authentication.md)
  */
 import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -15,16 +14,16 @@ import { GitSandbox } from '@zenthos/adapter-git-sandbox';
 import { createGitHubClients, GitHubIssueTracker, parseRepo } from '@zenthos/adapter-github';
 import { profileForTicket } from '@zenthos/domain';
 import { issueTrackerContract } from '@zenthos/ports';
-import { githubCredentials, loadConfig } from './src/config.js';
-import { REPO_PROFILES } from './src/repos.js';
+import { githubCredentials } from '../config.js';
+import { loadWorkerConfig } from '../composition.js';
+import { REPO_PROFILES } from '../repos.js';
 
 /** Outside the sandbox allowlist on purpose: only this check deletes branches, never the pipeline. */
 const deleteBranch = (cwd: string, name: string) =>
   new Promise<void>((resolve) => execFile('git', ['push', '--quiet', 'origin', '--delete', name], { cwd }, () => resolve()));
 
-if (existsSync('.env')) process.loadEnvFile('.env');
 const key = process.argv[2];
-const credentials = key ? githubCredentials(loadConfig(process.env)) : undefined;
+const credentials = key ? githubCredentials(loadWorkerConfig()) : undefined;
 if (!key || !credentials) {
   console.error('usage: contract.ts owner/repo#number  (needs GITHUB_APP_ID + GITHUB_APP_PRIVATE_KEY[_FILE], or GITHUB_TOKEN)');
   process.exit(1);

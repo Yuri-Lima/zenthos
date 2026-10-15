@@ -21,7 +21,13 @@
     ],
     "targets": {
       "contract": {
-        "command": "tsx --conditions=@zenthos/source apps/worker/contract.ts",
+        "command": "tsx --conditions=@zenthos/source apps/worker/src/scripts/contract.ts",
+        "options": {
+          "cwd": "{workspaceRoot}"
+        }
+      },
+      "review": {
+        "command": "tsx --conditions=@zenthos/source apps/worker/src/scripts/review.ts",
         "options": {
           "cwd": "{workspaceRoot}"
         }

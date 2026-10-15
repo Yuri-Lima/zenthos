@@ -11,3 +11,5 @@ export * from './lib/repo-profile.js';
 export * from './lib/implementation.js';
 export * from './lib/provider.js';
 export * from './lib/workflow-contract.js';
+export * from './lib/review.js';
+export * from './lib/diff.js';

@@ -1,5 +1,5 @@
 import { condition, defineQuery, defineSignal, proxyActivities, setHandler } from '@temporalio/workflow';
-import { addTokens, applyEvent, canRetryAfter, DEFAULT_APPROVAL_POLICY, WORKFLOW_CONTRACT, type Approval, type ApprovalPolicy, type Run, type RunEvent } from '@zenthos/domain';
+import { addTokens, applyEvent, canRetryAfter, DEFAULT_APPROVAL_POLICY, WORKFLOW_CONTRACT, type Approval, type ApprovalPolicy, type Run, type RunEvent, type Workspace } from '@zenthos/domain';
 import type { Activities } from './activities.js';
 
 const activities = proxyActivities<Activities>({
@@ -8,12 +8,11 @@ const activities = proxyActivities<Activities>({
 });
 
 /**
- * The coding agent and the gates run for a long time. They heartbeat every 30 seconds, so a dead
- * worker is noticed within 2 minutes and the attempt moves to a live worker; both activities start
- * from a fresh clone, so one retry is safe. A model or gate failure inside the attempt is a result,
- * not an exception, and is never retried here.
+ * The coding agent, the gates and the reviewer run for a long time. They heartbeat every 30 seconds,
+ * so a dead worker is noticed within 2 minutes and the attempt moves to a live worker; each attempt
+ * is safe to repeat. A model or gate failure inside the attempt is a result, not an exception.
  */
-const longActivities = proxyActivities<Pick<Activities, 'baseline' | 'implement' | 'runGates'>>({
+const longActivities = proxyActivities<Pick<Activities, 'baseline' | 'implement' | 'runGates' | 'review'>>({
   startToCloseTimeout: '45 minutes',
   heartbeatTimeout: '2 minutes',
   retry: { maximumAttempts: 2, initialInterval: '10 seconds' },
@@ -22,8 +21,9 @@ const longActivities = proxyActivities<Pick<Activities, 'baseline' | 'implement'
 export type TicketRunInput = {
   key: string;
   approval?: Partial<ApprovalPolicy>;
-  /** Overrides the repo profile's implementation rounds; tests use it. */
+  /** Overrides for tests; production reads the run's policy. */
   maxImplementRounds?: number;
+  maxReviewRounds?: number;
 };
 
 type Decision = Exclude<Approval, 'pending'>;
@@ -33,9 +33,9 @@ export const approvalDecisionSignal = defineSignal<[Decision]>(WORKFLOW_CONTRACT
 export const runQuery = defineQuery<Run>(WORKFLOW_CONTRACT.runQuery);
 
 /**
- * One workflow per ticket: intake, spec, human decision, implementation in a sandbox, gates,
- * merge request. Review (phase 3) continues from `mr_opened`. State changes go through the domain
- * state machine only.
+ * One workflow per ticket: intake, spec, human decision, implementation in a sandbox, gates, pull
+ * request, review on the pull request. A failed review sends the agent back to the same workspace
+ * once; humans merge. State changes go through the domain state machine only.
  */
 export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
   const policy = { ...DEFAULT_APPROVAL_POLICY, ...input.approval };
@@ -68,38 +68,59 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
   }
   if (run.state !== 'spec_approved') return advance('escalated');
 
-  // The run carries its repository's policy from intake; the override exists for tests.
-  const rounds = input.maxImplementRounds ?? run.policy.maxImplementRounds;
+  const implementRounds = input.maxImplementRounds ?? run.policy.maxImplementRounds;
+  const reviewRounds = input.maxReviewRounds ?? run.policy.maxReviewRounds;
   const workspace = await activities.prepare(run);
   run = { ...run, branch: workspace.branch };
   // What already fails on the pristine checkout is the base branch's problem, not this run's.
   const baselineFailures = await longActivities.baseline(run, workspace);
-  let feedback: string | undefined;
-  for (let round = 1; round <= rounds; round++) {
-    const { implementation, diff } = await longActivities.implement(run, workspace, feedback);
-    run = { ...run, estimatedCostUsd: run.estimatedCostUsd + implementation.estimatedCostUsd, tokens: addTokens(run.tokens, implementation.tokens) };
-    advance('implemented');
 
-    const gates = await longActivities.runGates(run, workspace, diff, baselineFailures);
-    run = { ...run, gates };
-    if (gates.every((gate) => gate.passed)) {
-      advance('gates_passed');
-      const pullRequest = await activities.openPullRequest(run, workspace, gates);
-      run = { ...run, pullRequestUrl: pullRequest.url };
+  /** Implements until the gates pass or the rounds run out. On exhaustion the branch is pushed and the run escalates. */
+  const implementUntilGatesPass = async (feedback: string | undefined): Promise<'passed' | 'escalated'> => {
+    for (let round = 1; round <= implementRounds; round++) {
+      const { implementation, diff } = await longActivities.implement(run, workspace, feedback);
+      run = { ...run, estimatedCostUsd: run.estimatedCostUsd + implementation.estimatedCostUsd, tokens: addTokens(run.tokens, implementation.tokens) };
+      advance('implemented');
+
+      const gates = await longActivities.runGates(run, workspace, diff, baselineFailures);
+      run = { ...run, gates };
+      if (gates.every((gate) => gate.passed)) return 'passed';
+      if (round < implementRounds && canRetryAfter(gates)) {
+        feedback = await activities.gateFeedback(gates);
+        advance('gates_failed');
+        continue;
+      }
+      await activities.pushWorkInProgress(run, workspace, gates);
       await activities.cleanup(workspace);
-      return advance('mr_opened');
+      advance('escalated');
+      return 'escalated';
     }
-    if (round < rounds && canRetryAfter(gates)) {
-      feedback = await activities.gateFeedback(gates);
-      advance('gates_failed');
+    advance('escalated');
+    return 'escalated';
+  };
+
+  let feedback: string | undefined;
+  for (let reviewRound = 0; reviewRound <= reviewRounds; reviewRound++) {
+    if ((await implementUntilGatesPass(feedback)) === 'escalated') return run;
+    advance('gates_passed');
+    run = { ...run, pullRequest: await activities.openPullRequest(run, workspace, run.gates ?? []) };
+    advance('mr_opened');
+
+    const { review, gate } = await longActivities.review(run);
+    run = { ...run, review, gates: [...(run.gates ?? []), gate] };
+    if (gate.passed) {
+      await activities.cleanup(workspace);
+      return advance('review_passed');
+    }
+    if (reviewRound < reviewRounds) {
+      feedback = await activities.reviewFeedback(review);
+      advance('review_failed');
       continue;
     }
-    // Out of rounds, or a failure no retry can fix: keep the work on its branch and hand over.
-    await activities.pushWorkInProgress(run, workspace, gates);
     await activities.cleanup(workspace);
     return advance('escalated');
   }
-  return advance('escalated');
+  return run;
 }
 
 /** Waits for a signal or a label change, whichever comes first, until the policy's timeout. */
@@ -118,3 +139,5 @@ async function waitForDecision(
   }
   return 'timeout';
 }
+
+export type { Workspace };

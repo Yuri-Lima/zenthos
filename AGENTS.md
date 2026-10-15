@@ -42,7 +42,7 @@ These win over any pattern below when the two conflict. The goal is a codebase a
 | `libs/application` | One file per use case | domain, ports |
 | `libs/adapters/*` | One library per concrete adapter: `in-memory` (tests and dry runs), `github` (issues and pull requests), `langfuse` (tracing callbacks), `git-sandbox` (a clone per run with the command allowlist), `claude-code` (headless Claude Code with the same allowlist) | domain, ports |
 | `libs/agents` | LangGraph graphs that implement agent ports. Spec writer: draft, validate against the schema, retry with the errors | domain, ports, LangChain |
-| `libs/evals` | Golden dataset, rubrics, regression runner (phase 3) | domain, ports, agents |
+| `libs/evals` | Golden dataset and regression runner for the agents (phase 3) | domain, ports, agents |
 | `apps/worker` | Temporal worker: `workflows.ts` (one workflow per ticket), `activities.ts` (thin, call use cases), `config.ts` (zod-validated env), `repos.ts` (the repository profiles: clone URL, base branch, allowed and gate commands, policy) | anything |
 | `apps/cli` | `zenthos run|approve|reject|state <ticket-key>` against the running worker | anything |
 | `docs/adr` | Architecture decision records | |
@@ -93,6 +93,7 @@ pnpm cli run owner/repo#123
 pnpm cli approve owner/repo#123
 pnpm cli state owner/repo#123
 pnpm nx run @zenthos/worker:contract -- owner/repo#123   # live GitHub check: comment, commit attribution, cleanup
+pnpm nx run @zenthos/worker:review -- owner/repo#123 spec.json   # re-review the open pull request of a run (ADR 008)
 pnpm nx g @nx/js:lib libs/adapters/<name> --importPath=@zenthos/adapter-<name> --tags=scope:adapter --bundler=tsc --linter=eslint --unitTestRunner=jest --minimal
 ```
 
@@ -101,8 +102,10 @@ Jest configs are `jest.config.cjs` (plain CommonJS) because Jest cannot load `.c
 ## Roadmap
 
 Phases 0 to 2 are in: scaffold; intake, spec draft and human decision; implementation by Claude Code in a git
-sandbox, deterministic gates with one feedback retry, and a pull request to the base branch. Next: 3 reviewer
-agent and regression evals; 4 Phoenix adapters and Codex; 5 dashboard, Cloud Run, write-up.
+sandbox, deterministic gates with one feedback retry, and a pull request to the base branch. Phase 3 in
+progress: the reviewer scores the pull request against the domain rubric and posts a comment, a failed review
+sends the agent back once (ADR 008); next the regression evals and the REST API with persisted providers.
+Then 4 Phoenix adapters and Codex; 5 dashboard, Cloud Run, write-up.
 
 ## Dependency policy
 

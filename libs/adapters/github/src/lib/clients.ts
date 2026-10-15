@@ -11,11 +11,16 @@ export interface GitHubIssuesApi {
   listComments(params: IssueParams & { per_page: number }): Promise<{ data: { body?: string }[] }>;
 }
 
-/** The one pull-request call we use, as Octokit's `octokit.rest.pulls` exposes it. */
+/** The pull-request calls we use, as Octokit's `octokit.rest.pulls` exposes them. */
 export interface GitHubPullsApi {
   create(params: { owner: string; repo: string; title: string; head: string; base: string; body: string }): Promise<{
     data: { html_url: string; number: number };
   }>;
+  /** `head` is "owner:branch"; `state: 'open'` */
+  list(params: { owner: string; repo: string; head: string; state: 'open' }): Promise<{ data: { html_url: string; number: number }[] }>;
+  /** With `mediaType.format: 'diff'` GitHub returns the unified diff as a string in `data`. */
+  get(params: { owner: string; repo: string; pull_number: number; mediaType: { format: 'diff' } }): Promise<{ data: unknown }>;
+  createReview(params: { owner: string; repo: string; pull_number: number; body: string; event: 'COMMENT' }): Promise<unknown>;
 }
 
 /** The one commit call the contract run uses to ask GitHub who it attributes a commit to. */

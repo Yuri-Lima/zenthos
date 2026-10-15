@@ -6,3 +6,6 @@ export * from './lib/sandbox.port.js';
 export * from './lib/sandbox.contract.js';
 export * from './lib/coding-agent.port.js';
 export * from './lib/scm.port.js';
+export * from './lib/scm.contract.js';
+export * from './lib/reviewer.port.js';
+export * from './lib/reviewer.contract.js';

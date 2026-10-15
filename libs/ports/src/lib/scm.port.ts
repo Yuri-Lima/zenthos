@@ -1,4 +1,4 @@
-import type { PullRequest, RepoProfile, Workspace } from '@zenthos/domain';
+import type { Diff, PullRequest, RepoProfile, Workspace } from '@zenthos/domain';
 
 export type OpenPullRequestInput = {
   profile: RepoProfile;
@@ -9,7 +9,19 @@ export type OpenPullRequestInput = {
   ticketKey: string;
 };
 
-/** Opens the merge request for a pushed branch. */
+export type PostReviewInput = {
+  profile: RepoProfile;
+  pullRequest: PullRequest;
+  /** Markdown; the adapter posts it as a review comment, never as an approval. */
+  body: string;
+};
+
+/** The merge request side of the pipeline: open it, read what is on it, and comment on it. */
 export interface ScmPort {
   openPullRequest(input: OpenPullRequestInput): Promise<PullRequest>;
+  /** The open pull request for a branch, so a later round reuses it instead of opening a second one. */
+  findPullRequest(profile: RepoProfile, branch: string): Promise<PullRequest | undefined>;
+  /** The diff as the host serves it, so the reviewer judges what humans will merge. */
+  readPullRequestDiff(profile: RepoProfile, pullRequest: PullRequest): Promise<Diff>;
+  postReview(input: PostReviewInput): Promise<void>;
 }
