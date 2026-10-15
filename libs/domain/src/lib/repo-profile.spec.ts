@@ -1,5 +1,5 @@
 import { DomainError } from './errors.js';
-import { branchNameFor, isCommandAllowed, profileForTicket, repoProfile } from './repo-profile.js';
+import { branchNameFor, isCommandAllowed, isPipelineBranch, profileForTicket, repoProfile } from './repo-profile.js';
 
 const legal = repoProfile({
   repo: 'owner/legal',
@@ -40,7 +40,9 @@ describe('isCommandAllowed', () => {
 });
 
 describe('branchNameFor', () => {
-  it('turns a ticket key into a valid branch name', () => {
+  it('turns a ticket key into a valid branch name the pipeline owns', () => {
     expect(branchNameFor('owner/legal#12')).toBe('zenthos/owner-legal-12');
+    expect(isPipelineBranch(branchNameFor('owner/legal#12'))).toBe(true);
+    expect(isPipelineBranch('staging')).toBe(false);
   });
 });

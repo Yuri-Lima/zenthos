@@ -5,10 +5,10 @@ import { DomainError, isCommandAllowed, type CommandResult, type Diff, type Repo
 import type { SandboxPort } from '@zenthos/ports';
 
 /**
- * A sandbox with no git and no processes: an empty temp directory. Commands are recorded and
+ * A sandbox with no git and no processes: an empty local temp directory. Commands are recorded and
  * succeed unless listed in `failing`; the diff is every file written since prepare. For tests and dry runs.
  */
-export class InMemorySandbox implements SandboxPort {
+export class LocalSandbox implements SandboxPort {
   readonly commands: string[] = [];
   readonly pushed: { workspace: Workspace; message: string }[] = [];
 

@@ -2,7 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { repoProfile } from '@zenthos/domain';
 import { sandboxContract } from '@zenthos/ports';
-import { InMemorySandbox } from './in-memory-sandbox.js';
+import { LocalSandbox } from './local-sandbox.js';
 
 const profile = repoProfile({
   repo: 'memory',
@@ -12,11 +12,11 @@ const profile = repoProfile({
   gateCommands: ['echo ok'],
 });
 
-describe('InMemorySandbox', () => {
+describe('LocalSandbox', () => {
   for (const [name, check] of Object.entries(sandboxContract)) {
     it(name, () =>
       check({
-        port: new InMemorySandbox([profile]),
+        port: new LocalSandbox([profile]),
         profile,
         change: (workspace) => writeFile(path.join(workspace.path, 'a.txt'), 'one\ntwo\n'),
       }),

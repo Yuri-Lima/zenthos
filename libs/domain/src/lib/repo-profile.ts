@@ -42,7 +42,12 @@ export function profileForTicket(key: string, profiles: readonly RepoProfile[]):
   return profile;
 }
 
+/** Every branch the pipeline creates starts with this; it force-pushes only there and nowhere else. */
+export const PIPELINE_BRANCH_PREFIX = 'zenthos/';
+
+export const isPipelineBranch = (branch: string): boolean => branch.startsWith(PIPELINE_BRANCH_PREFIX);
+
 /** Branch a run works on. Ticket keys carry "/" and "#", which git refs reject. */
 export function branchNameFor(ticketKey: string): string {
-  return `zenthos/${ticketKey.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+  return `${PIPELINE_BRANCH_PREFIX}${ticketKey.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
 }

@@ -1,4 +1,4 @@
-import { DomainError, type Ticket } from '@zenthos/domain';
+import { DomainError, repoProfile, type Ticket } from '@zenthos/domain';
 import type { IssueTrackerPort } from '@zenthos/ports';
 import { intakeTicket } from './intake-ticket.js';
 
@@ -18,15 +18,18 @@ const issueTracker: IssueTrackerPort = {
   postComment: async () => undefined,
 };
 
+const profile = repoProfile({ repo: 'owner/repo', cloneUrl: 'x', baseBranch: 'staging', allowedCommands: [], gateCommands: [], policy: { costCeilingUsd: 42 } });
+
 describe('intakeTicket', () => {
-  it('creates a run in intake for a known ticket', async () => {
-    const run = await intakeTicket({ issueTracker }, ticket.key);
+  it('creates a run in intake for a known ticket, with the profile policy', async () => {
+    const run = await intakeTicket({ issueTracker }, ticket.key, profile);
     expect(run.state).toBe('intake');
     expect(run.ticket).toEqual(ticket);
+    expect(run.policy.costCeilingUsd).toBe(42);
   });
 
   it('lets ticket_not_found propagate', async () => {
-    await expect(intakeTicket({ issueTracker }, 'owner/repo#8')).rejects.toMatchObject({
+    await expect(intakeTicket({ issueTracker }, 'owner/repo#8', profile)).rejects.toMatchObject({
       code: 'ticket_not_found',
     });
   });

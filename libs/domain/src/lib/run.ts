@@ -1,5 +1,6 @@
 import type { GateResult } from './gate.js';
 import { NO_TOKENS, type TokenUsage } from './implementation.js';
+import { DEFAULT_POLICY, type RunPolicy } from './policies.js';
 import type { Spec } from './specification.js';
 import type { Ticket } from './ticket.js';
 import { transition, type RunEvent, type RunState } from './run-state.js';
@@ -21,6 +22,8 @@ export type Run = {
   estimatedCostUsd: number;
   /** Sum of the token counts the models reported; the figure a bill is actually based on. */
   tokens: TokenUsage;
+  /** The repository profile's policy, snapshotted at intake so every gate and the workflow read one value. */
+  policy: RunPolicy;
   history: RunHistoryEntry[];
   /** Set once the spec writer has produced a draft. */
   spec?: Spec;
@@ -33,14 +36,15 @@ export type Run = {
 };
 
 /** Uses Web Crypto so this file stays free of node imports and can be bundled into a Temporal workflow. */
-export function createRun(ticket: Ticket, now: Date = new Date()): Run {
+export function createRun(ticket: Ticket, options: { policy?: RunPolicy; now?: Date } = {}): Run {
   return {
     id: globalThis.crypto.randomUUID(),
     ticket,
     state: 'intake',
-    createdAt: now.toISOString(),
+    createdAt: (options.now ?? new Date()).toISOString(),
     estimatedCostUsd: 0,
     tokens: NO_TOKENS,
+    policy: options.policy ?? DEFAULT_POLICY,
     history: [],
   };
 }

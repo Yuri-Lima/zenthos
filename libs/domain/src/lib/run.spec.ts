@@ -11,7 +11,7 @@ const ticket: Ticket = {
 
 describe('run', () => {
   it('starts in intake with an empty history', () => {
-    const run = createRun(ticket, new Date('2026-10-13T10:00:00Z'));
+    const run = createRun(ticket, { now: new Date('2026-10-13T10:00:00Z') });
     expect(run.state).toBe('intake');
     expect(run.history).toEqual([]);
     expect(run.createdAt).toBe('2026-10-13T10:00:00.000Z');

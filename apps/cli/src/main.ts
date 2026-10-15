@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { Client, Connection } from '@temporalio/client';
-import type { Run } from '@zenthos/domain';
+import { WORKFLOW_CONTRACT, type Run } from '@zenthos/domain';
 
 const USAGE = `zenthos <command> <ticket-key>
   run      start a run for the ticket (owner/repo#123)
@@ -9,9 +9,7 @@ const USAGE = `zenthos <command> <ticket-key>
   state    print the run as the workflow sees it
 Environment: TEMPORAL_ADDRESS (localhost:7233), TEMPORAL_NAMESPACE (default), TEMPORAL_TASK_QUEUE (zenthos)`;
 
-/** Workflow names and ids are the contract with the worker; see apps/worker/src/workflows.ts. */
-const WORKFLOW = 'ticketRunWorkflow';
-const workflowId = (key: string) => `ticket:${key}`;
+const { workflowType, approvalSignal, runQuery, workflowId, defaultTaskQueue } = WORKFLOW_CONTRACT;
 
 async function main([command, key]: string[]) {
   if (existsSync('.env')) process.loadEnvFile('.env');
@@ -24,8 +22,8 @@ async function main([command, key]: string[]) {
   try {
     switch (command) {
       case 'run': {
-        const handle = await client.workflow.start(WORKFLOW, {
-          taskQueue: process.env['TEMPORAL_TASK_QUEUE'] ?? 'zenthos',
+        const handle = await client.workflow.start(workflowType, {
+          taskQueue: process.env['TEMPORAL_TASK_QUEUE'] ?? defaultTaskQueue,
           workflowId: workflowId(key),
           args: [{ key }],
         });
@@ -34,11 +32,11 @@ async function main([command, key]: string[]) {
       }
       case 'approve':
       case 'reject':
-        await client.workflow.getHandle(workflowId(key)).signal('approvalDecision', command === 'approve' ? 'approved' : 'rejected');
+        await client.workflow.getHandle(workflowId(key)).signal(approvalSignal, command === 'approve' ? 'approved' : 'rejected');
         console.log(JSON.stringify({ workflowId: workflowId(key), signalled: command }));
         return;
       case 'state': {
-        const run = await client.workflow.getHandle(workflowId(key)).query<Run>('run');
+        const run = await client.workflow.getHandle(workflowId(key)).query<Run>(runQuery);
         console.log(JSON.stringify(run, null, 2));
         return;
       }

@@ -30,10 +30,10 @@ export async function runGates(
 ): Promise<GateResult[]> {
   const results: GateResult[] = [
     diff.files.length === 0 ? fail('ci', 'the agent changed nothing') : pass('sandbox_allowlist'),
-    checkForbiddenPaths(diff.files, profile.policy),
-    checkDiffBudget(diff.changedLines, profile.policy),
+    checkForbiddenPaths(diff.files, run.policy),
+    checkDiffBudget(diff.changedLines, run.policy),
     checkSecrets(diff.patch),
-    checkCostCeiling(run.estimatedCostUsd, profile.policy),
+    checkCostCeiling(run.estimatedCostUsd, run.policy),
   ];
   if (results.some((result) => !result.passed)) return results;
 

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
-import { APPROVAL_LABELS, createRun, fail, pass, type Approval, type GateResult, type Run, type Ticket, type Workspace } from '@zenthos/domain';
+import { APPROVAL_LABELS, createRun, fail, pass, WORKFLOW_CONTRACT, type Approval, type GateResult, type Run, type Ticket, type Workspace } from '@zenthos/domain';
 import type { Activities } from './activities.js';
 import { bundlerOptions } from './bundler.js';
 import { approvalDecisionSignal, ticketRunWorkflow, type TicketRunInput } from './workflows.js';
@@ -79,6 +79,10 @@ function fakeActivities(options: { approvals?: Approval[]; failDraftsBeforeSucce
 }
 
 describe('ticketRunWorkflow', () => {
+  it('is registered under the name the contract promises clients', () => {
+    expect(ticketRunWorkflow.name).toBe(WORKFLOW_CONTRACT.workflowType);
+  });
+
   let env: TestWorkflowEnvironment;
   const taskQueue = 'test';
   // Jest runs with the project root as cwd; main.ts resolves the same file from import.meta.url.

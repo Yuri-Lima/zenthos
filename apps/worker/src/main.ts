@@ -7,7 +7,7 @@ import { NativeConnection, Worker } from '@temporalio/worker';
 import { ClaudeCodeAgent } from '@zenthos/adapter-claude-code';
 import { GitSandbox } from '@zenthos/adapter-git-sandbox';
 import { createGitHubClients, GitHubIssueTracker, GitHubScm, parseRepo, type GitHubClients } from '@zenthos/adapter-github';
-import { InMemoryCodingAgent, InMemoryIssueTracker, InMemorySandbox, InMemoryScm, InMemorySpecWriter } from '@zenthos/adapter-in-memory';
+import { InMemoryCodingAgent, InMemoryIssueTracker, InMemoryScm, InMemorySpecWriter, LocalSandbox } from '@zenthos/adapter-in-memory';
 import { noTracing, startLangfuseTracing } from '@zenthos/adapter-langfuse';
 import { createAnthropicSpecModel, LangGraphSpecWriter, SPEC_WRITER_VERSION, verifyAnthropicAccess } from '@zenthos/agents';
 import type { CodingAgentPort, IssueTrackerPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
@@ -52,7 +52,7 @@ async function specWriter(config: WorkerConfig, trace: ReturnType<typeof tracing
 }
 
 async function sandbox(config: WorkerConfig, clients?: GitHubClients): Promise<SandboxPort> {
-  if (config.SANDBOX === 'memory') return new InMemorySandbox(REPO_PROFILES);
+  if (config.SANDBOX === 'memory') return new LocalSandbox(REPO_PROFILES);
   const root = config.SANDBOX_ROOT ?? path.join(tmpdir(), 'zenthos-sandboxes');
   await mkdir(root, { recursive: true });
   return new GitSandbox({

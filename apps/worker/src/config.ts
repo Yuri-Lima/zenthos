@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
-import type { GitHubCredentials } from '@zenthos/domain';
+import { WORKFLOW_CONTRACT, type GitHubCredentials } from '@zenthos/domain';
 import { z } from 'zod';
 
 /** Every setting the worker reads, validated once at boot. Missing config fails here, never mid-run. */
 export const WorkerConfigSchema = z.object({
   TEMPORAL_ADDRESS: z.string().default('localhost:7233'),
   TEMPORAL_NAMESPACE: z.string().default('default'),
-  TEMPORAL_TASK_QUEUE: z.string().default('zenthos'),
+  TEMPORAL_TASK_QUEUE: z.string().default(WORKFLOW_CONTRACT.defaultTaskQueue),
   /** `github` needs a GitHub App (default) or a token. `memory` is a dry run that never leaves the process. */
   ISSUE_TRACKER: z.enum(['github', 'memory']).default('memory'),
   /** GitHub App: ZenthOs acts as the app's bot in every repository the app is installed on. */

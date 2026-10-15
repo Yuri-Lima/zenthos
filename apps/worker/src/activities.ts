@@ -48,7 +48,7 @@ async function withHeartbeat<T>(work: () => Promise<T>): Promise<T> {
 export function createActivities(deps: ActivityDeps) {
   const profile = (run: Run) => profileForTicket(run.ticket.key, deps.profiles);
   return {
-    intake: (key: string): Promise<Run> => intakeTicket(deps, key),
+    intake: (key: string): Promise<Run> => intakeTicket(deps, key, profileForTicket(key, deps.profiles)),
     draftSpec: (run: Run): Promise<Spec> => draftSpec(deps, run, deps.repoContext),
     readApproval: (key: string): Promise<Approval> => readApproval(deps, key),
     prepare: (run: Run): Promise<Workspace> => prepareWorkspace(deps, run, profile(run)),

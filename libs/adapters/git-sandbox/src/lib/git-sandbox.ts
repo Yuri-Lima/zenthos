@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { DomainError, isCommandAllowed, type CommandResult, type Diff, type GitAuthor, type RepoProfile, type Workspace } from '@zenthos/domain';
+import { DomainError, isCommandAllowed, isPipelineBranch, type CommandResult, type Diff, type GitAuthor, type RepoProfile, type Workspace } from '@zenthos/domain';
 import type { SandboxPort } from '@zenthos/ports';
 
 const run = promisify(execFile);
@@ -70,11 +70,12 @@ export class GitSandbox implements SandboxPort {
   }
 
   /**
-   * Safe to retry: commits only when something is staged, and force-pushes because the pipeline owns
-   * every `zenthos/*` branch. A stale branch left by an earlier escalated run of the same ticket is
-   * replaced, never merged into.
+   * Safe to retry: commits only when something is staged. Force-pushes, but only to a branch the
+   * pipeline owns (`isPipelineBranch`), so a stale branch from an earlier escalated run of the same
+   * ticket is replaced and no human branch can ever be overwritten.
    */
   async commitAndPush(workspace: Workspace, message: string): Promise<void> {
+    if (!isPipelineBranch(workspace.branch)) throw new Error(`refusing to force-push to ${workspace.branch}: not a pipeline branch`);
     await git(workspace.path, ['add', '--all']);
     const staged = await git(workspace.path, ['diff', '--cached', '--quiet']).then(() => false, () => true);
     const profile = this.profile(workspace);

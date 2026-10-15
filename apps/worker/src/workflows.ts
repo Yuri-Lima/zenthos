@@ -1,5 +1,5 @@
 import { condition, defineQuery, defineSignal, proxyActivities, setHandler } from '@temporalio/workflow';
-import { addTokens, applyEvent, canRetryAfter, DEFAULT_APPROVAL_POLICY, DEFAULT_POLICY, type Approval, type ApprovalPolicy, type Run, type RunEvent } from '@zenthos/domain';
+import { addTokens, applyEvent, canRetryAfter, DEFAULT_APPROVAL_POLICY, WORKFLOW_CONTRACT, type Approval, type ApprovalPolicy, type Run, type RunEvent } from '@zenthos/domain';
 import type { Activities } from './activities.js';
 
 const activities = proxyActivities<Activities>({
@@ -29,8 +29,8 @@ export type TicketRunInput = {
 type Decision = Exclude<Approval, 'pending'>;
 
 /** A human can decide from the CLI or the API instead of setting a label. */
-export const approvalDecisionSignal = defineSignal<[Decision]>('approvalDecision');
-export const runQuery = defineQuery<Run>('run');
+export const approvalDecisionSignal = defineSignal<[Decision]>(WORKFLOW_CONTRACT.approvalSignal);
+export const runQuery = defineQuery<Run>(WORKFLOW_CONTRACT.runQuery);
 
 /**
  * One workflow per ticket: intake, spec, human decision, implementation in a sandbox, gates,
@@ -68,7 +68,8 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
   }
   if (run.state !== 'spec_approved') return advance('escalated');
 
-  const rounds = input.maxImplementRounds ?? DEFAULT_POLICY.maxImplementRounds;
+  // The run carries its repository's policy from intake; the override exists for tests.
+  const rounds = input.maxImplementRounds ?? run.policy.maxImplementRounds;
   const workspace = await activities.prepare(run);
   run = { ...run, branch: workspace.branch };
   // What already fails on the pristine checkout is the base branch's problem, not this run's.
