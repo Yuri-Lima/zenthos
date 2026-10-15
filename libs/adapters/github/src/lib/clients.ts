@@ -18,11 +18,20 @@ export interface GitHubPullsApi {
   }>;
 }
 
+/** The one commit call the contract run uses to ask GitHub who it attributes a commit to. */
+export interface GitHubCommitsApi {
+  getCommit(params: { owner: string; repo: string; ref: string }): Promise<{
+    /** `author` is the linked account; GitHub returns an empty object or null when the email links to none. */
+    data: { author: { login?: string } | null; commit: { author: { name?: string; email?: string } | null } };
+  }>;
+}
+
 export type RepoRef = Pick<IssueRef, 'owner' | 'repo'>;
 
 export type GitHubRepoClients = {
   issues: GitHubIssuesApi;
   pulls: GitHubPullsApi;
+  commits: GitHubCommitsApi;
   /** A token a git remote URL can carry. Fresh enough for one clone or one push; never cache it. */
   gitToken(): Promise<string>;
   /** The identity GitHub attributes commits to: the app's bot user, or the token's user. */

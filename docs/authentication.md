@@ -135,6 +135,13 @@ The private key is the one long-lived secret in this design.
 A fine-grained personal token (`GITHUB_TOKEN`, scoped to the named repositories, with Contents, Issues and
 Pull requests write) still works as an interim and is ignored once the app is configured.
 
+Prove the connection before the first real run, on an issue you own. It posts one comment there, pushes one
+marker commit to a throwaway branch, checks that GitHub attributes that commit to the bot, and deletes the branch:
+
+```bash
+pnpm nx run @zenthos/worker:contract -- owner/repo#123
+```
+
 ## Cloud Run (phase 5)
 
 Same mechanism with the Google issuer (`https://accounts.google.com`), the service's identity token from the

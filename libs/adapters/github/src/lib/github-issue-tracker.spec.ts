@@ -47,7 +47,7 @@ export function fakeClients(): GitHubClients & { comments: string[]; resolved: s
     resolved,
     for: async ({ owner, repo }) => {
       resolved.push(`${owner}/${repo}`);
-      return { issues, pulls, gitToken: async () => 'ghs_fake', gitIdentity: async () => ({ name: 'zenthos-test[bot]', email: '1+zenthos-test[bot]@users.noreply.github.com' }) };
+      return { issues, pulls, commits: {} as never, gitToken: async () => 'ghs_fake', gitIdentity: async () => ({ name: 'zenthos-test[bot]', email: '1+zenthos-test[bot]@users.noreply.github.com' }) };
     },
   };
 }

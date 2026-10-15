@@ -14,7 +14,7 @@ describe('GitHubScm', () => {
             return { data: { html_url: 'https://github.com/owner/repo/pull/7', number: 7 } };
           },
         },
-        gitToken: async () => 'ghs_fake',
+        commits: {} as never, gitToken: async () => 'ghs_fake',
         gitIdentity: async () => ({ name: 'zenthos-test[bot]', email: '1+zenthos-test[bot]@users.noreply.github.com' }),
       }),
     };

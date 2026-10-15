@@ -92,6 +92,7 @@ pnpm worker           # Temporal worker, dry run by default (ISSUE_TRACKER=memor
 pnpm cli run owner/repo#123
 pnpm cli approve owner/repo#123
 pnpm cli state owner/repo#123
+pnpm nx run @zenthos/worker:contract -- owner/repo#123   # live GitHub check: comment, commit attribution, cleanup
 pnpm nx g @nx/js:lib libs/adapters/<name> --importPath=@zenthos/adapter-<name> --tags=scope:adapter --bundler=tsc --linter=eslint --unitTestRunner=jest --minimal
 ```
 

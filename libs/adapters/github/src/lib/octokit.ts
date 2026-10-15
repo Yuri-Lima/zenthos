@@ -25,6 +25,7 @@ class TokenClients implements GitHubClients {
     this.clients = {
       issues: octokit.rest.issues,
       pulls: octokit.rest.pulls,
+      commits: { getCommit: (params) => octokit.rest.repos.getCommit(params) },
       gitToken: async () => token,
       gitIdentity: () => (identity ??= octokit.rest.users.getAuthenticated().then(({ data }) => noReply(data))),
     };
@@ -74,6 +75,7 @@ class AppClients implements GitHubClients {
     return {
       issues: octokit.rest.issues,
       pulls: octokit.rest.pulls,
+      commits: { getCommit: (params) => octokit.rest.repos.getCommit(params) },
       gitToken: async () => (await installationAuth({ type: 'installation' })).token,
       gitIdentity: () => (this.identity ??= this.botIdentity(octokit)),
     };

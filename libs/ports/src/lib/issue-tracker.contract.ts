@@ -24,8 +24,10 @@ export const issueTrackerContract: Record<string, (fixture: IssueTrackerFixture)
       (error: unknown) => error instanceof DomainError && error.code === 'ticket_not_found',
     );
   },
+  // A unique body, so the check can run again and again against the same real issue.
   'postComment makes the comment readable': async ({ port, seeded, readComments }) => {
-    await port.postComment(seeded.key, 'hello from the contract');
-    assert.deepEqual(await readComments(seeded.key), ['hello from the contract']);
+    const body = `hello from the contract ${new Date().toISOString()}`;
+    await port.postComment(seeded.key, body);
+    assert.ok((await readComments(seeded.key)).includes(body), 'the posted comment is not readable back');
   },
 };

@@ -18,7 +18,15 @@
   "nx": {
     "tags": [
       "scope:app"
-    ]
+    ],
+    "targets": {
+      "contract": {
+        "command": "tsx --conditions=@zenthos/source apps/worker/contract.ts",
+        "options": {
+          "cwd": "{workspaceRoot}"
+        }
+      }
+    }
   },
   "dependencies": {
     "@temporalio/activity": "^1.24.0",
