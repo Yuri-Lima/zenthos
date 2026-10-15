@@ -15,6 +15,7 @@ describe('GitHubScm', () => {
           },
         },
         gitToken: async () => 'ghs_fake',
+        gitIdentity: async () => ({ name: 'zenthos-test[bot]', email: '1+zenthos-test[bot]@users.noreply.github.com' }),
       }),
     };
     const profile = repoProfile({ repo: 'owner/repo', cloneUrl: 'x', baseBranch: 'staging', allowedCommands: [], gateCommands: [] });

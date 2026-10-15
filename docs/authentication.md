@@ -127,7 +127,9 @@ GITHUB_APP_PRIVATE_KEY_FILE=/absolute/path/zenthos.private-key.pem
 ```
 
 The worker resolves the installation per repository at first use and mints tokens as needed; nothing else
-to configure per repo. Keep the `.pem` out of the repository; on Cloud Run it comes from Secret Manager.
+to configure per repo. Commits are authored as the app's bot user, `<slug>[bot]`, with the no-reply address
+GitHub assigns to it, so the commit, the comment and the pull request all show the same bot. Never set a
+hand-written no-reply address: GitHub maps it to whichever account owns that name. Keep the `.pem` out of the repository; on Cloud Run it comes from Secret Manager.
 The private key is the one long-lived secret in this design.
 
 A fine-grained personal token (`GITHUB_TOKEN`, scoped to the named repositories, with Contents, Issues and

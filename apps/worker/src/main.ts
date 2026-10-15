@@ -59,6 +59,7 @@ async function sandbox(config: WorkerConfig, clients?: GitHubClients): Promise<S
     root,
     profiles: REPO_PROFILES,
     credential: async (profile) => (clients && profile.cloneUrl.startsWith('https://github.com/') ? (await clients.for(parseRepo(profile.repo))).gitToken() : undefined),
+    author: async (profile) => (clients && profile.cloneUrl.startsWith('https://github.com/') ? (await clients.for(parseRepo(profile.repo))).gitIdentity() : { name: 'ZenthOs', email: 'zenthos@pipeline.invalid' }),
   });
 }
 

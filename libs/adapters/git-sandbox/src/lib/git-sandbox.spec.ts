@@ -46,13 +46,15 @@ describe('GitSandbox', () => {
     );
   }
 
-  it('commits and pushes the branch to origin, and leaves the base branch alone', async () => {
-    const sandbox = new GitSandbox({ root, profiles: [profile] });
+  it('commits and pushes the branch to origin as the provider identity, and leaves the base branch alone', async () => {
+    const sandbox = new GitSandbox({ root, profiles: [profile], author: async () => ({ name: 'zenthos-test[bot]', email: '1+zenthos-test[bot]@users.noreply.github.com' }) });
     const workspace = await sandbox.prepare(profile, 'zenthos/local-origin-1');
     await writeFile(path.join(workspace.path, 'feature.ts'), 'export const feature = true;\n');
     await sandbox.commitAndPush(workspace, 'Add feature (local/origin#1)');
     const { stdout } = await git(origin, 'branch', '--list');
     expect(stdout).toContain('zenthos/local-origin-1');
+    const { stdout: author } = await git(origin, 'log', '-1', '--format=%an <%ae>', 'zenthos/local-origin-1');
+    expect(author.trim()).toBe('zenthos-test[bot] <1+zenthos-test[bot]@users.noreply.github.com>');
     const { stdout: log } = await git(origin, 'log', '--oneline', 'staging');
     expect(log.trim().split('\n')).toHaveLength(1);
     await sandbox.cleanup(workspace);

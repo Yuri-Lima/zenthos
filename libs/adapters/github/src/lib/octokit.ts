@@ -1,7 +1,11 @@
 import { createAppAuth } from '@octokit/auth-app';
 import { Octokit } from '@octokit/rest';
 import { DomainError, type GitHubCredentials } from '@zenthos/domain';
+import type { GitAuthor } from '@zenthos/domain';
 import type { GitHubClients, GitHubRepoClients, RepoRef } from './clients.js';
+
+/** GitHub's no-reply address for an account; commits with it are linked to that account and no other. */
+const noReply = (user: { id: number; login: string }): GitAuthor => ({ name: user.login, email: `${user.id}+${user.login}@users.noreply.github.com` });
 
 /**
  * The production wiring, kept apart from the classes so tests never load Octokit (ESM only).
@@ -17,7 +21,13 @@ class TokenClients implements GitHubClients {
 
   constructor(token: string) {
     const octokit = new Octokit({ auth: token });
-    this.clients = { issues: octokit.rest.issues, pulls: octokit.rest.pulls, gitToken: async () => token };
+    let identity: Promise<GitAuthor> | undefined;
+    this.clients = {
+      issues: octokit.rest.issues,
+      pulls: octokit.rest.pulls,
+      gitToken: async () => token,
+      gitIdentity: () => (identity ??= octokit.rest.users.getAuthenticated().then(({ data }) => noReply(data))),
+    };
   }
 
   async for(): Promise<GitHubRepoClients> {
@@ -28,6 +38,7 @@ class TokenClients implements GitHubClients {
 class AppClients implements GitHubClients {
   private readonly app: Octokit;
   private readonly byRepo = new Map<string, Promise<GitHubRepoClients>>();
+  private identity?: Promise<GitAuthor>;
 
   constructor(
     private readonly appId: string,
@@ -64,6 +75,14 @@ class AppClients implements GitHubClients {
       issues: octokit.rest.issues,
       pulls: octokit.rest.pulls,
       gitToken: async () => (await installationAuth({ type: 'installation' })).token,
+      gitIdentity: () => (this.identity ??= this.botIdentity(octokit)),
     };
+  }
+
+  /** The app's bot user (`<slug>[bot]`), looked up once; user lookups need an installation token, not the app JWT. */
+  private async botIdentity(octokit: Octokit): Promise<GitAuthor> {
+    const { data: app } = await this.app.rest.apps.getAuthenticated();
+    const { data: bot } = await octokit.rest.users.getByUsername({ username: `${app?.slug}[bot]` });
+    return noReply(bot);
   }
 }

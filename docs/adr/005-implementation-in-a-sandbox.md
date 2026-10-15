@@ -26,6 +26,12 @@ Date: 2026-10-13. Status: accepted.
    nothing is staged, so the pull-request step can be retried and a stale branch left by an earlier escalated
    run of the same ticket is replaced rather than merged into. Humans do not work on these branches.
 
+7. **Commits are authored as the provider's own identity.** The git author is the GitHub App's bot user,
+   `<slug>[bot] <id+slug[bot]@users.noreply.github.com>`, looked up from the API. It is never typed by hand:
+   GitHub links commits to accounts by email, and an invented no-reply address (`zenthos@users.noreply.github.com`)
+   turned out to belong to an unrelated user, which made the first pull request's commit look like theirs.
+   Without a provider identity the author is `zenthos@pipeline.invalid`, which links to nothing.
+
 ## Why not
 
 - Running the agent in the worker's own checkout: no isolation, no clean diff, and nothing to throw away

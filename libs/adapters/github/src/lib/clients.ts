@@ -1,3 +1,4 @@
+import type { GitAuthor } from '@zenthos/domain';
 import type { IssueRef } from './issue-key.js';
 
 type IssueParams = { owner: string; repo: string; issue_number: number };
@@ -24,6 +25,8 @@ export type GitHubRepoClients = {
   pulls: GitHubPullsApi;
   /** A token a git remote URL can carry. Fresh enough for one clone or one push; never cache it. */
   gitToken(): Promise<string>;
+  /** The identity GitHub attributes commits to: the app's bot user, or the token's user. */
+  gitIdentity(): Promise<GitAuthor>;
 };
 
 /** Resolves the clients for one repository. With a GitHub App that means the installation that covers it. */

@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { DomainError, isCommandAllowed, type CommandResult, type Diff, type RepoProfile, type Workspace } from '@zenthos/domain';
+import { DomainError, isCommandAllowed, type CommandResult, type Diff, type GitAuthor, type RepoProfile, type Workspace } from '@zenthos/domain';
 import type { SandboxPort } from '@zenthos/ports';
 
 const run = promisify(execFile);
@@ -17,9 +17,14 @@ export type GitSandboxOptions = {
    * installation tokens stay valid. Undefined for local or public pulls.
    */
   credential?: (profile: RepoProfile) => Promise<string | undefined>;
+  /** Who commits are attributed to, from the provider's own identity. Without it, a name that links to no account. */
+  author?: (profile: RepoProfile) => Promise<GitAuthor>;
   /** Seconds a single command may run. */
   commandTimeoutSeconds?: number;
 };
+
+/** Links to no GitHub account: the domain is not GitHub's no-reply domain. */
+const UNLINKED_AUTHOR: GitAuthor = { name: 'ZenthOs', email: 'zenthos@pipeline.invalid' };
 
 /**
  * A fresh shallow clone per run, on its own branch. The allowlist is checked here as well as in the
@@ -72,10 +77,12 @@ export class GitSandbox implements SandboxPort {
   async commitAndPush(workspace: Workspace, message: string): Promise<void> {
     await git(workspace.path, ['add', '--all']);
     const staged = await git(workspace.path, ['diff', '--cached', '--quiet']).then(() => false, () => true);
+    const profile = this.profile(workspace);
     if (staged) {
-      await git(workspace.path, ['-c', 'user.name=ZenthOs', '-c', 'user.email=zenthos@users.noreply.github.com', 'commit', '--quiet', '-m', message]);
+      const author = (await this.options.author?.(profile)) ?? UNLINKED_AUTHOR;
+      await git(workspace.path, ['-c', `user.name=${author.name}`, '-c', `user.email=${author.email}`, 'commit', '--quiet', '-m', message]);
     }
-    await git(workspace.path, ['remote', 'set-url', 'origin', await this.remoteUrl(this.profile(workspace))]);
+    await git(workspace.path, ['remote', 'set-url', 'origin', await this.remoteUrl(profile)]);
     await git(workspace.path, ['push', '--quiet', '--force', '--set-upstream', 'origin', workspace.branch]);
   }
 

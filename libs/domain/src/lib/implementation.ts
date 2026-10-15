@@ -10,6 +10,13 @@ export type Workspace = {
   branch: string;
 };
 
+/**
+ * Who the pipeline's commits are attributed to. Always derived from the provider's own identity
+ * (a GitHub App's bot user), never typed by hand: GitHub links commits to accounts by email, and an
+ * invented no-reply address can belong to a stranger.
+ */
+export type GitAuthor = { name: string; email: string };
+
 export type CommandResult = {
   command: string;
   exitCode: number;
