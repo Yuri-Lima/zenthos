@@ -64,11 +64,19 @@ export class GitSandbox implements SandboxPort {
     };
   }
 
+  /**
+   * Safe to retry: commits only when something is staged, and force-pushes because the pipeline owns
+   * every `zenthos/*` branch. A stale branch left by an earlier escalated run of the same ticket is
+   * replaced, never merged into.
+   */
   async commitAndPush(workspace: Workspace, message: string): Promise<void> {
     await git(workspace.path, ['add', '--all']);
-    await git(workspace.path, ['-c', 'user.name=ZenthOs', '-c', 'user.email=zenthos@users.noreply.github.com', 'commit', '--quiet', '-m', message]);
+    const staged = await git(workspace.path, ['diff', '--cached', '--quiet']).then(() => false, () => true);
+    if (staged) {
+      await git(workspace.path, ['-c', 'user.name=ZenthOs', '-c', 'user.email=zenthos@users.noreply.github.com', 'commit', '--quiet', '-m', message]);
+    }
     await git(workspace.path, ['remote', 'set-url', 'origin', await this.remoteUrl(this.profile(workspace))]);
-    await git(workspace.path, ['push', '--quiet', '--set-upstream', 'origin', workspace.branch]);
+    await git(workspace.path, ['push', '--quiet', '--force', '--set-upstream', 'origin', workspace.branch]);
   }
 
   async cleanup(workspace: Workspace): Promise<void> {

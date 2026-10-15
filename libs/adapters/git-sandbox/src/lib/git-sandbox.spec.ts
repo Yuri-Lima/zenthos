@@ -58,6 +58,24 @@ describe('GitSandbox', () => {
     await sandbox.cleanup(workspace);
   });
 
+  it('can be retried after a failed push and replaces a stale branch of the same name', async () => {
+    const sandbox = new GitSandbox({ root, profiles: [profile] });
+    const stale = await sandbox.prepare(profile, 'zenthos/local-origin-2');
+    await writeFile(path.join(stale.path, 'old.ts'), 'export const old = true;\n');
+    await sandbox.commitAndPush(stale, 'WIP from an escalated run');
+    await sandbox.cleanup(stale);
+
+    const fresh = await sandbox.prepare(profile, 'zenthos/local-origin-2');
+    await writeFile(path.join(fresh.path, 'new.ts'), 'export const fresh = true;\n');
+    await sandbox.commitAndPush(fresh, 'Real change');
+    // A retry of the same step finds nothing new to commit and must still succeed.
+    await sandbox.commitAndPush(fresh, 'Real change');
+    const { stdout } = await git(origin, 'ls-tree', '--name-only', 'zenthos/local-origin-2');
+    expect(stdout).toContain('new.ts');
+    expect(stdout).not.toContain('old.ts');
+    await sandbox.cleanup(fresh);
+  });
+
   it('returns a non-zero exit code instead of throwing when an allowed command fails', async () => {
     const failing = repoProfile({ ...profile, allowedCommands: ['exit 3'], gateCommands: [] });
     const sandbox = new GitSandbox({ root, profiles: [failing] });

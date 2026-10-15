@@ -22,6 +22,10 @@ Date: 2026-10-13. Status: accepted.
    it. Phase 2 deploys one worker; phase 5 moves to Temporal sessions or a per-worker task queue if
    more than one is needed.
 
+6. **The pipeline owns `zenthos/*` branches.** The push is a force push and the commit step is skipped when
+   nothing is staged, so the pull-request step can be retried and a stale branch left by an earlier escalated
+   run of the same ticket is replaced rather than merged into. Humans do not work on these branches.
+
 ## Why not
 
 - Running the agent in the worker's own checkout: no isolation, no clean diff, and nothing to throw away
