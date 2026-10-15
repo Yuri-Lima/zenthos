@@ -1,0 +1,71 @@
+# Regression evals for the agents. Runs when a prompt, a graph or the evals change, and on demand.
+# Model access is Workload Identity Federation (docs/authentication.md), so the repository holds no key.
+# The dataset holds only references; the GitHub App reads the issues and diffs at run time.
+name: Evals
+
+on:
+  pull_request:
+    paths:
+      - 'libs/agents/**'
+      - 'libs/evals/**'
+      - 'apps/worker/src/scripts/evals.ts'
+      - '.github/workflows/evals.yml'
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: spec or review
+        default: spec
+      limit:
+        description: items from the top of the dataset
+        default: '10'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+      ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
+      ANTHROPIC_IDENTITY_TOKEN_FILE: ${{ runner.temp }}/anthropic-jwt
+      ISSUE_TRACKER: github
+      SCM: github
+      SPEC_WRITER: anthropic
+      REVIEWER: anthropic
+      GITHUB_APP_ID: ${{ vars.ZENTHOS_GITHUB_APP_ID }}
+      GITHUB_APP_PRIVATE_KEY: ${{ secrets.ZENTHOS_GITHUB_APP_PRIVATE_KEY }}
+      LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+      LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+      LANGFUSE_BASE_URL: ${{ vars.LANGFUSE_BASE_URL }}
+      EVAL_REPO: nairaromero/mara-sandra-connect
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm install --frozen-lockfile
+      - name: Fetch GitHub OIDC token for Anthropic
+        run: |
+          curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" \
+            | jq -r .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+      - name: Spec suite
+        if: github.event_name == 'pull_request' || inputs.suite == 'spec'
+        run: pnpm nx run @zenthos/worker:eval -- spec "$EVAL_REPO" --limit "${{ inputs.limit || '5' }}"
+      - name: Review suite
+        if: github.event_name == 'workflow_dispatch' && inputs.suite == 'review'
+        run: pnpm nx run @zenthos/worker:eval -- review "$EVAL_REPO" --limit "${{ inputs.limit }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-results
+          path: libs/evals/results/

@@ -1,0 +1,14 @@
+{
+  "spec-writer/v1": {
+    "items": 5,
+    "failed": 0,
+    "touched_area_recall": 0.39999999999999997,
+    "criteria_per_spec": 4.6
+  },
+  "reviewer/v1": {
+    "items": 3,
+    "failed": 0,
+    "review_score": 2.4166666666666665,
+    "review_agreement": 0
+  }
+}

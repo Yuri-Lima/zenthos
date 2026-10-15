@@ -11,7 +11,8 @@ repository profile's commands may run; deterministic gates (forbidden paths, dif
 ceiling, then the repo's own lint and checks) decide whether a pull request opens against the base branch, with
 one retry that feeds the failed gates back to the agent. A LangGraph reviewer then scores the open pull request
 against a four-line rubric and posts the scores and findings as a comment; below the threshold the agent gets
-one more round with the findings, and humans always merge. Every model call is traced in LangFuse. Tested with
+one more round with the findings, and humans always merge. Regression evals built from the repository's merged
+history score both agents and block a prompt change that lowers them. Every model call is traced in LangFuse. Tested with
 Temporal's time-skipping environment, a local bare git remote, and fakes for the agent.
 
 ## Quick start

@@ -40,6 +40,9 @@
     },
     {
       "path": "../../libs/adapters/claude-code/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/evals/tsconfig.lib.json"
     }
   ],
   "exclude": [

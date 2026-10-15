@@ -94,7 +94,7 @@ jobs:
           curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" \
             | jq -r .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
-      - run: SPEC_WRITER=anthropic pnpm nx run @zenthos/evals:run
+      - run: SPEC_WRITER=anthropic pnpm nx run @zenthos/worker:eval -- spec owner/repo --limit 10
 ```
 
 Trigger the workflow once inside the wizard's 15-minute window and the rule's page shows the exchange. Failed

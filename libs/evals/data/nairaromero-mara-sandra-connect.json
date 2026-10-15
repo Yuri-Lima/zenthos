@@ -1,0 +1,468 @@
+{
+  "repo": "nairaromero/mara-sandra-connect",
+  "builtAt": "2026-10-15T11:53:14.328Z",
+  "items": [
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#180",
+      "pullRequest": {
+        "number": 190,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/190"
+      },
+      "files": [
+        "e2e/tests/drive-picker-erro.spec.ts",
+        "src/lib/google-drive.ts"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#199",
+      "pullRequest": {
+        "number": 207,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/207"
+      },
+      "files": [
+        "e2e/tests/site-publico.spec.ts",
+        "src/lib/supabase.ts",
+        "src/routes/__root.tsx",
+        "src/styles.css"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#202",
+      "pullRequest": {
+        "number": 203,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/203"
+      },
+      "files": [
+        "e2e/tests/parceiro-desligar.spec.ts",
+        "planning/sql-migrations/migration_parceiro_desligar.sql",
+        "src/routes/_authenticated/parceiros.tsx"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#299",
+      "pullRequest": {
+        "number": 302,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/302"
+      },
+      "files": [
+        "e2e/supabase-admin.ts",
+        "e2e/tests/tarefas-parceiro-kanban.spec.ts",
+        "src/components/parceiro/tarefas-parceiro.tsx"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#306",
+      "pullRequest": {
+        "number": 311,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/311"
+      },
+      "files": [
+        "e2e/tests/autoria-tarefas-admin.spec.ts",
+        "e2e/tests/concluir-tarefa-popup.spec.ts",
+        "e2e/tests/desfecho-analise-caso-interno.spec.ts",
+        "src/components/tarefas/caso-tarefas-tab.tsx",
+        "src/components/tarefas/concluir-tarefa-dialog.tsx",
+        "src/components/tarefas/tarefa-sheet.tsx",
+        "src/lib/tarefas/proxima-sugerida.ts",
+        "src/routes/_authenticated/tarefas.tsx",
+        "supabase/functions/sugerir-proxima-tarefa/index.ts"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#308",
+      "pullRequest": {
+        "number": 309,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/309"
+      },
+      "files": [
+        "e2e/tests/senha-meu-inss-parceiro.spec.ts",
+        "planning/sql-migrations/migration_senha_meu_inss_pedido_parceiro.sql",
+        "src/components/documentos/cumprir-troca-senha-dialog.tsx",
+        "src/components/parceiro/tarefas-parceiro.tsx",
+        "src/lib/documentos/senha-meu-inss.ts",
+        "src/routes/_authenticated/casos.$id.tsx",
+        "src/routes/_authenticated/documentos.tsx",
+        "supabase/functions/notify-solicitacao-doc/index.ts"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#315",
+      "pullRequest": {
+        "number": 393,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/393"
+      },
+      "files": [
+        "e2e/fuso.ts",
+        "e2e/tests/andamento-data-publicacao.spec.ts",
+        "e2e/tests/exigencia-judicial.spec.ts",
+        "e2e/tests/senha-meu-inss-parceiro.spec.ts",
+        "src/routes/_authenticated/casos.$id.tsx",
+        "supabase/.temp/cli-latest",
+        "supabase/functions/inss-email-processor/index.ts"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#330",
+      "pullRequest": {
+        "number": 340,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/340"
+      },
+      "files": [
+        "e2e/tarefas.ts",
+        "e2e/tests/autoria-tarefas-admin.spec.ts",
+        "e2e/tests/concluir-tarefa-popup.spec.ts",
+        "supabase/functions/sugerir-proxima-tarefa/index.ts"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#332",
+      "pullRequest": {
+        "number": 341,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/341"
+      },
+      "files": [
+        "e2e/tarefas.ts",
+        "e2e/tests/agenda-concluir-por-tipo.spec.ts",
+        "e2e/tests/autoria-tarefas-admin.spec.ts",
+        "e2e/tests/concluir-tarefa-popup.spec.ts",
+        "src/components/agenda/agenda-sheet.tsx"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#357",
+      "pullRequest": {
+        "number": 394,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/394"
+      },
+      "files": [
+        "e2e/tests/frente-unica-e-dono-do-pedido.spec.ts",
+        "planning/sql-migrations/migration_reabre_caso_so_com_autor.sql"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#362",
+      "pullRequest": {
+        "number": 363,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/363"
+      },
+      "files": [
+        "CLAUDE.md",
+        "e2e/env.ts",
+        "e2e/supabase-admin.ts",
+        "e2e/tests/primeiro-acesso-senha.spec.ts",
+        "planning/sql-migrations/migration_senha_definida_convite.sql",
+        "scripts/link-teste-primeiro-acesso.mjs",
+        "src/hooks/use-auth.tsx"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#364",
+      "pullRequest": {
+        "number": 391,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/391"
+      },
+      "files": [
+        "e2e/tests/editar-solicitacao-processo.spec.ts",
+        "e2e/tests/frente-unica-e-dono-do-pedido.spec.ts",
+        "e2e/tests/pericia-processo-obrigatorio.spec.ts",
+        "e2e/tests/providenciar-documento-interno.spec.ts",
+        "e2e/tests/tarefas-parceiro-kanban.spec.ts",
+        "planning/sql-migrations/migration_frente_unica_e_dono_do_pedido.sql",
+        "planning/sql-migrations/migration_kanban_por_processo.sql",
+        "planning/sql-migrations/migration_solicitacao_responsavel_edicao.sql",
+        "src/components/agenda/agenda-sheet.tsx",
+        "src/components/documentos/cumprir-solicitacao-dialog.tsx",
+        "src/components/documentos/editar-solicitacao-dialog.tsx",
+        "src/components/parceiro/tarefas-parceiro.tsx",
+        "src/components/tarefas/concluir-tarefa-dialog.tsx",
+        "src/components/tarefas/etapa-providenciar-documento.tsx",
+        "src/components/tarefas/tarefa-card.tsx",
+        "src/components/tarefas/tarefa-sheet.tsx",
+        "src/lib/processos/token.ts",
+        "src/lib/tarefas/pedido-documento.ts",
+        "src/lib/tarefas/queries.ts",
+        "src/routes/_authenticated/casos.$id.tsx",
+        "src/routes/_authenticated/documentos.tsx",
+        "supabase/functions/_shared/ia-tools.ts",
+        "supabase/functions/inss-email-processor/index.ts"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#374",
+      "pullRequest": {
+        "number": 384,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/384"
+      },
+      "files": [
+        "e2e/tests/ia-mcp-rls.spec.ts",
+        "supabase/functions/_shared/auth.ts",
+        "supabase/functions/_shared/tokens.ts",
+        "supabase/functions/ia-config/index.ts",
+        "supabase/functions/ia-mcp/index.ts"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#382",
+      "pullRequest": {
+        "number": 377,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/377"
+      },
+      "files": [
+        "e2e/tests/datas-fuso-brasilia.spec.ts",
+        "e2e/unit/fuso-datas.test.ts",
+        "src/components/ia/conexao-claude-card.tsx",
+        "src/components/integracoes/integracao-gmail-card.tsx",
+        "src/components/movimentacoes-parceiro-bell.tsx",
+        "src/components/notificacoes-bell.tsx",
+        "src/lib/clientes-excel.ts",
+        "src/lib/fuso.ts",
+        "src/lib/legal/termos.ts",
+        "src/routes/_authenticated/auditoria.tsx",
+        "src/routes/_authenticated/casos.$id.tsx",
+        "src/routes/_authenticated/casos.index.tsx",
+        "src/routes/_authenticated/comercial.tsx",
+        "src/routes/_authenticated/conversas.tsx",
+        "src/routes/_authenticated/documentos.tsx",
+        "src/routes/_authenticated/equipe.tsx",
+        "src/routes/_authenticated/parceiros.tsx",
+        "src/routes/_authenticated/processos.tsx",
+        "src/routes/_authenticated/processos_.movimentacoes.tsx",
+        "src/routes/_authenticated/publicacoes.tsx"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#397",
+      "pullRequest": {
+        "number": 398,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/398"
+      },
+      "files": [
+        "e2e/datas.ts",
+        "e2e/demo/roteiros/dedup-por-processo.cjs",
+        "e2e/demo/roteiros/revisao-padroes.cjs",
+        "e2e/fuso.ts",
+        "e2e/tests/criar-tarefa-template.spec.ts",
+        "e2e/tests/janelas-prazo.spec.ts",
+        "e2e/tests/processos-independentes.spec.ts",
+        "e2e/tests/relogio-prazos.spec.ts",
+        "e2e/unit/leituras-checadas.test.ts",
+        "planning/sql-migrations/migration_relogio_prazos.sql",
+        "planning/sql-migrations/migration_tarefas_independentes_por_processo.sql",
+        "planning/sql-migrations/migration_templates_prazos_mariane.sql",
+        "scripts/rbac-conferir-exigencias.mjs",
+        "src/components/casos/painel-datas-caso.tsx",
+        "src/components/tarefas/acompanhamento-pericia.tsx",
+        "src/components/tarefas/analise-caso-novo.tsx",
+        "src/components/tarefas/analise-indeferimento.tsx",
+        "src/components/tarefas/comparecimento-pericia.tsx",
+        "src/components/tarefas/decisoes-janela.tsx",
+        "src/components/tarefas/etapa-cumprimento-exigencia.tsx",
+        "src/components/tarefas/etapas-acompanhamento.tsx",
+        "src/components/tarefas/montagem-inicial.tsx",
+        "src/components/tarefas/relogio-prazo.tsx",
+        "src/components/tarefas/tarefa-card.tsx",
+        "src/components/tarefas/tarefa-sheet.tsx",
+        "src/lib/glossario/termos.ts",
+        "src/lib/rbac/exigencias.ts",
+        "src/lib/tarefas/aplicador.ts",
+        "src/lib/tarefas/helpers.ts",
+        "src/lib/tarefas/relogio.ts",
+        "src/routes/_authenticated/casos.$id.tsx",
+        "src/routes/_authenticated/tarefas.tsx",
+        "supabase/functions/inss-email-processor/index.ts"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#409",
+      "pullRequest": {
+        "number": 410,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/410"
+      },
+      "files": [
+        "e2e/rbac.ts",
+        "e2e/tests/digest-escopo.spec.ts",
+        "e2e/tests/integracoes-escritorio.spec.ts",
+        "e2e/tests/integracoes-legalmail-ti.spec.ts",
+        "e2e/tests/marca-escritorio.spec.ts",
+        "e2e/tests/mcp-terceiro.spec.ts",
+        "e2e/tests/mfa.spec.ts",
+        "e2e/tests/rbac-telas.spec.ts",
+        "e2e/tests/suporte-escritorio.spec.ts",
+        "e2e/tests/whatsapp-outbox.spec.ts",
+        "e2e/unit/limpeza-por-ambiente.test.ts"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#411",
+      "pullRequest": {
+        "number": 412,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/412"
+      },
+      "files": [
+        "CLAUDE.md",
+        "e2e/demo/roteiros/conferencia-lote-staging.cjs",
+        "planning/RELEASE_PRODUCAO.md"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#413",
+      "pullRequest": {
+        "number": 414,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/414"
+      },
+      "files": [
+        "e2e/demo/montar-filme.cjs",
+        "e2e/demo/roteiros/release-completo-staging.cjs"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#416",
+      "pullRequest": {
+        "number": 417,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/417"
+      },
+      "files": [
+        "e2e/demo/roteiros/permissoes-por-pessoa.cjs",
+        "e2e/demo/roteiros/permissoes-salvar-e-detalhe.cjs",
+        "e2e/demo/roteiros/release-completo-staging.cjs",
+        "e2e/tests/permissoes-por-pessoa.spec.ts",
+        "e2e/tests/permissoes-salvar-e-detalhe.spec.ts",
+        "planning/sql-migrations/migration_permissao_detalhe.sql",
+        "src/components/equipe/permissoes-sheet.tsx"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#418",
+      "pullRequest": {
+        "number": 419,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/419"
+      },
+      "files": [
+        "e2e/unit/rotulos-auditoria.test.ts",
+        "src/lib/suporte/rotulos.ts"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#421",
+      "pullRequest": {
+        "number": 422,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/422"
+      },
+      "files": [
+        "e2e/tests/equipe-etiqueta-do-papel.spec.ts",
+        "src/routes/_authenticated/equipe.tsx"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#423",
+      "pullRequest": {
+        "number": 424,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/424"
+      },
+      "files": [
+        "e2e/tests/glossario.spec.ts",
+        "src/lib/glossario/termos.ts"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#426",
+      "pullRequest": {
+        "number": 427,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/427"
+      },
+      "files": [
+        "planning/sql-migrations/migration_execute_so_de_quem_precisa.sql",
+        "planning/sql-migrations/migration_permissao_detalhe.sql",
+        "scripts/rbac-conferir-exigencias.mjs"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#429",
+      "pullRequest": {
+        "number": 430,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/430"
+      },
+      "files": [
+        "e2e/tests/permissoes-salvar-e-detalhe.spec.ts",
+        "src/components/equipe/permissoes-sheet.tsx"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#432",
+      "pullRequest": {
+        "number": 433,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/433"
+      },
+      "files": [
+        "e2e/demo/roteiros/selecao-todas-as-telas.cjs",
+        "e2e/tests/selecao-com-busca.spec.ts",
+        "e2e/unit/um-so-dropdown.test.ts",
+        "src/components/agenda/agenda-sheet.tsx",
+        "src/components/doc-type-combobox.tsx",
+        "src/components/documentos/arquivos-cumprimento.tsx",
+        "src/components/documentos/editar-solicitacao-dialog.tsx",
+        "src/components/drive-picker-dialog.tsx",
+        "src/components/ia/conexao-claude-card.tsx",
+        "src/components/ia/integracao-ia-card.tsx",
+        "src/components/integracoes/webhooks-card.tsx",
+        "src/components/paginador.tsx",
+        "src/components/seletor-destinatario.tsx",
+        "src/components/tarefas/analise-caso-novo.tsx",
+        "src/components/tarefas/tarefa-sheet.tsx",
+        "src/components/ui/selecao.tsx",
+        "src/components/ui/select.tsx",
+        "src/routes/_authenticated/auditoria.tsx",
+        "src/routes/_authenticated/casos.$id.tsx",
+        "src/routes/_authenticated/casos.novo.tsx",
+        "src/routes/_authenticated/clientes.tsx",
+        "src/routes/_authenticated/comercial.tsx",
+        "src/routes/_authenticated/conversas.tsx",
+        "src/routes/_authenticated/documentos.tsx",
+        "src/routes/_authenticated/equipe.tsx",
+        "src/routes/_authenticated/processos.tsx",
+        "src/routes/_authenticated/tarefas.tsx",
+        "src/routes/qg.equipe.tsx",
+        "src/routes/qg.escritorios.$id.tsx",
+        "src/routes/qg.index.tsx"
+      ],
+      "verdict": "accepted"
+    },
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#437",
+      "pullRequest": {
+        "number": 438,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/438"
+      },
+      "files": [
+        "e2e/demo/roteiros/board-sync-paginacao.cjs",
+        "e2e/unit/board-sync-recusas.test.ts",
+        "scripts/board-sync.mjs"
+      ],
+      "verdict": "accepted"
+    }
+  ]
+}

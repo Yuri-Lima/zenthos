@@ -131,6 +131,9 @@ importers:
       '@zenthos/domain':
         specifier: workspace:*
         version: link:../../libs/domain
+      '@zenthos/evals':
+        specifier: workspace:*
+        version: link:../../libs/evals
       '@zenthos/ports':
         specifier: workspace:*
         version: link:../../libs/ports
