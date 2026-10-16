@@ -8,3 +8,4 @@ export * from './lib/open-pull-request.js';
 export * from './lib/review-change.js';
 export * from './lib/provider-connections.js';
 export * from './lib/repo-profiles.js';
+export * from './lib/repo-credentials.js';

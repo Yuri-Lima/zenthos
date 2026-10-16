@@ -11,7 +11,7 @@
 import { readFile } from 'node:fs/promises';
 import { intakeTicket, profileForTicket, reviewChange } from '@zenthos/application';
 import { branchNameFor, parseSpec } from '@zenthos/domain';
-import { github, issueTracker, loadWorkerConfig, repoProfiles, reviewer, scm, tracing } from '../composition.js';
+import { github, issueTracker, loadWorkerConfig, reviewer, scm, stores, tracing } from '../composition.js';
 
 const [key, specPath] = process.argv.slice(2);
 if (!key || !specPath) {
@@ -21,8 +21,9 @@ if (!key || !specPath) {
 
 const config = loadWorkerConfig();
 const trace = tracing(config);
-const clients = github(config);
-const profile = await profileForTicket(await repoProfiles(config), key);
+const store = await stores(config);
+const clients = github(config, store);
+const profile = await profileForTicket(store.profiles, key);
 const deps = { issueTracker: issueTracker(config, clients), scm: scm(config, clients), reviewer: await reviewer(config, trace) };
 try {
   const pullRequest = await deps.scm.findPullRequest(profile, branchNameFor(key));

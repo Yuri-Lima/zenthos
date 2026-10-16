@@ -1,4 +1,5 @@
-import type { GitAuthor } from '@zenthos/domain';
+import { createHash } from 'node:crypto';
+import type { GitAuthor, GitHubCredentials } from '@zenthos/domain';
 import type { IssueRef } from './issue-key.js';
 
 type IssueParams = { owner: string; repo: string; issue_number: number };
@@ -46,6 +47,30 @@ export type GitHubRepoClients = {
 /** Resolves the clients for one repository. With a GitHub App that means the installation that covers it. */
 export interface GitHubClients {
   for(ref: RepoRef): Promise<GitHubRepoClients>;
+}
+
+/**
+ * Clients whose credentials are decided per repository, through `resolve`. One underlying client per
+ * distinct credentials (an app id, or a token), so a hundred repositories on one app share its token cache.
+ */
+export class ResolvingGitHubClients implements GitHubClients {
+  private readonly byCredentials = new Map<string, GitHubClients>();
+
+  constructor(
+    private readonly resolve: (ref: RepoRef) => Promise<GitHubCredentials>,
+    private readonly create: (credentials: GitHubCredentials) => GitHubClients,
+  ) {}
+
+  async for(ref: RepoRef): Promise<GitHubRepoClients> {
+    const credentials = await this.resolve(ref);
+    const key = credentials.type === 'github-app' ? `app:${credentials.appId}` : `token:${createHash('sha256').update(credentials.token).digest('hex')}`;
+    let clients = this.byCredentials.get(key);
+    if (!clients) {
+      clients = this.create(credentials);
+      this.byCredentials.set(key, clients);
+    }
+    return clients.for(ref);
+  }
 }
 
 /** "owner/name", as a repository profile names it. */

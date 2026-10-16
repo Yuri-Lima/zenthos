@@ -79,9 +79,10 @@ bans vendor SDKs inside domain, ports and application. Every project carries a `
   Never present it as a bill.
 - The pipeline acts on GitHub only through installation tokens; a signed-in user's token identifies the person
   and never does the bot's work (ADR 007).
-- Provider connections and repository profiles are configuration the product will own (ADR 006). Until the
-  tables and the settings page exist, the only two sources are `githubCredentials()` in the worker config and
-  `apps/worker/src/repos.ts`; add nothing credential-shaped anywhere else.
+- Provider connections and repository profiles are configuration the product owns (ADR 006, ADR 010): the
+  stores behind `ProviderConnectionsPort` and `RepoProfilesPort`, written by the API. The worker resolves
+  credentials per repository from the connection a profile names (`credentialsForRepo`), with
+  `githubCredentials()` from its environment as the only fallback; add nothing credential-shaped anywhere else.
 
 ## Commands
 

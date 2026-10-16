@@ -31,9 +31,10 @@ in the worker's environment and in `apps/worker/src/repos.ts`.
   profile are ignored.
 - **Runs are driven through a port too.** `RunControlPort` (start, decide, state) has a Temporal adapter the
   API and the CLI share, and an in-memory twin for tests; the adapter owns the workflow bundler config.
-- **The worker reads profiles from the store** when `DATABASE_URL` is set, and from `repos.ts` otherwise.
-  Credentials still come from the worker's environment; resolving them per repository from the
-  connection a profile names is the next step.
+- **The worker reads profiles and connections from the store** when `DATABASE_URL` is set, and from
+  `repos.ts` otherwise. Credentials are decided per repository: the connection the profile names, else the
+  worker's environment as the fallback for a laptop with one app in `.env`; with neither, the run stops
+  before touching GitHub (`no_credentials`). One Octokit setup is kept per distinct credentials.
 
 ## Consequences
 

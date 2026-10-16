@@ -4,14 +4,15 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { ClaudeCodeAgent } from '@zenthos/adapter-claude-code';
 import { GitSandbox } from '@zenthos/adapter-git-sandbox';
-import { GitHubIssueTracker, GitHubScm, parseRepo, type GitHubClients } from '@zenthos/adapter-github';
+import { GitHubIssueTracker, GitHubScm, parseRepo, ResolvingGitHubClients, type GitHubClients } from '@zenthos/adapter-github';
 import { createGitHubClients } from '@zenthos/adapter-github/live';
-import { InMemoryCodingAgent, InMemoryIssueTracker, InMemoryRepoProfiles, InMemoryReviewer, InMemoryScm, InMemorySpecWriter, LocalSandbox } from '@zenthos/adapter-in-memory';
-import { migrate, PostgresRepoProfiles } from '@zenthos/adapter-postgres';
+import { InMemoryCodingAgent, InMemoryIssueTracker, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryReviewer, InMemoryScm, InMemorySpecWriter, LocalSandbox } from '@zenthos/adapter-in-memory';
+import { migrate, PostgresProviderConnections, PostgresRepoProfiles, SecretBox } from '@zenthos/adapter-postgres';
+import { credentialsForRepo } from '@zenthos/application';
 import pg from 'pg';
 import { noTracing, startLangfuseTracing } from '@zenthos/adapter-langfuse';
 import { createAnthropicReviewerModels, createAnthropicSpecModel, LangGraphReviewer, LangGraphSpecWriter, REVIEWER_VERSION, SPEC_WRITER_VERSION, verifyAnthropicAccess } from '@zenthos/agents';
-import type { CodingAgentPort, IssueTrackerPort, RepoProfilesPort, ReviewerPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
+import type { CodingAgentPort, IssueTrackerPort, ProviderConnectionsPort, RepoProfilesPort, ReviewerPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
 import { githubCredentials, loadConfig, type WorkerConfig } from './config.js';
 import { REPO_PROFILES } from './repos.js';
 
@@ -36,10 +37,25 @@ const DRY_RUN_TICKET = {
   labels: [],
 };
 
-/** One GitHub connection for the worker; with an app it covers every repository the app is installed on. */
-export function github(config: WorkerConfig): GitHubClients | undefined {
-  const credentials = githubCredentials(config);
-  return credentials && createGitHubClients(credentials);
+export type Stores = { profiles: RepoProfilesPort; connections: ProviderConnectionsPort };
+
+/** Profiles and connections come from Postgres when the API manages them, otherwise from the code list for dry runs. */
+export async function stores(config: WorkerConfig): Promise<Stores> {
+  if (!config.DATABASE_URL) return { profiles: new InMemoryRepoProfiles(REPO_PROFILES), connections: new InMemoryProviderConnections() };
+  if (!config.ZENTHOS_SECRETS_KEY) throw new Error('ZENTHOS_SECRETS_KEY is required with DATABASE_URL (openssl rand -hex 32)');
+  const pool = new pg.Pool({ connectionString: config.DATABASE_URL });
+  await migrate(pool);
+  return { profiles: new PostgresRepoProfiles(pool), connections: new PostgresProviderConnections(pool, new SecretBox(config.ZENTHOS_SECRETS_KEY)) };
+}
+
+/**
+ * GitHub, with credentials decided per repository: the connection the profile names, else what the
+ * environment provides (ADR 006). Undefined only when neither can ever apply.
+ */
+export function github(config: WorkerConfig, { profiles, connections }: Stores): GitHubClients | undefined {
+  const fallback = githubCredentials(config);
+  if (!fallback && !config.DATABASE_URL) return undefined;
+  return new ResolvingGitHubClients((ref) => credentialsForRepo({ profiles, connections }, `${ref.owner}/${ref.repo}`, fallback), createGitHubClients);
 }
 
 export function issueTracker(config: WorkerConfig, clients?: GitHubClients): IssueTrackerPort {
@@ -60,14 +76,6 @@ export async function specWriter(config: WorkerConfig, trace: ReturnType<typeof 
     model: createAnthropicSpecModel(modelConfig),
     callbacks: ({ ticket }) => trace.callbacks({ sessionId: ticket.key, version: SPEC_WRITER_VERSION }),
   });
-}
-
-/** Profiles come from Postgres when the API manages them, otherwise from the code list for dry runs. */
-export async function repoProfiles(config: WorkerConfig): Promise<RepoProfilesPort> {
-  if (!config.DATABASE_URL) return new InMemoryRepoProfiles(REPO_PROFILES);
-  const pool = new pg.Pool({ connectionString: config.DATABASE_URL });
-  await migrate(pool);
-  return new PostgresRepoProfiles(pool);
 }
 
 export async function sandbox(config: WorkerConfig, profiles: RepoProfilesPort, clients?: GitHubClients): Promise<SandboxPort> {

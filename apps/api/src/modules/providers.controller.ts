@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { Controller, Get, Inject, NotFoundException, Post, Query, Res, Body, Delete, Param, HttpCode } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { githubAppManifest, manifestFormUrl } from '@zenthos/adapter-github';
-import { connectGitHubApp, connectGitHubToken, recordInstallation } from '@zenthos/application';
+import { connectExistingGitHubApp, connectGitHubApp, connectGitHubToken, recordInstallation } from '@zenthos/application';
 import { installUrl, redactConnection } from '@zenthos/domain';
 import type { Response } from 'express';
 import { z } from 'zod';
@@ -11,6 +11,7 @@ import type { ApiConfig } from '../config.js';
 import { jsonSchema, parseBody } from '../openapi.js';
 
 const TokenBody = z.object({ name: z.string().min(1), token: z.string().min(1) });
+const AppBody = z.object({ name: z.string().min(1), appId: z.string().min(1), privateKey: z.string().min(1), webhookSecret: z.string().min(1).optional() });
 const MANIFEST_STATE_TTL_MS = 10 * 60 * 1000;
 
 /**
@@ -42,6 +43,13 @@ export class ProvidersController {
   async connectToken(@Body() body: unknown) {
     const { name, token } = parseBody(TokenBody, body);
     return redactConnection(await connectGitHubToken(this.ports, name, token));
+  }
+
+  @Post('github/app')
+  @ApiOperation({ summary: 'Connect a GitHub App created by hand: app id, private key, and the webhook secret if one is set' })
+  @ApiBody({ schema: jsonSchema(AppBody) })
+  async connectApp(@Body() body: unknown) {
+    return redactConnection(await connectExistingGitHubApp(this.ports, parseBody(AppBody, body)));
   }
 
   @Get('github/manifest')

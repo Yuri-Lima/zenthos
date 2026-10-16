@@ -7,6 +7,7 @@ export const ERROR_CODES = {
   command_not_allowed: 'The command is not in the repository profile allowlist',
   implementation_failed: 'The coding agent did not finish the implementation',
   unknown_repository: 'No repository profile matches this ticket key',
+  no_credentials: 'No provider connection covers this repository and no fallback credentials are configured',
   app_not_installed: 'The GitHub App is not installed on this repository',
   invalid_review: 'The review does not match the Review schema',
   invalid_connection: 'The provider connection does not match its schema',

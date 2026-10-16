@@ -19,6 +19,21 @@ export async function connectGitHubApp({ connections }: { connections: ProviderC
   return connection;
 }
 
+/** An app someone created by hand on GitHub (docs/authentication.md); the webhook works once its secret is given. */
+export async function connectExistingGitHubApp(
+  { connections }: { connections: ProviderConnectionsPort },
+  input: { name: string; appId: string; privateKey: string; webhookSecret?: string },
+): Promise<ProviderConnection> {
+  const connection = createConnection({
+    provider: 'github',
+    name: input.name,
+    credentials: { type: 'github-app', appId: input.appId, privateKey: input.privateKey },
+    app: input.webhookSecret ? { slug: input.name, webhookSecret: input.webhookSecret } : undefined,
+  });
+  await connections.save(connection);
+  return connection;
+}
+
 /** A personal token as the interim connection for one account. */
 export async function connectGitHubToken({ connections }: { connections: ProviderConnectionsPort }, name: string, token: string): Promise<ProviderConnection> {
   const connection = createConnection({ provider: 'github', name, credentials: { type: 'github-token', token } });

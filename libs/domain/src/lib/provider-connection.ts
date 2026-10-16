@@ -17,12 +17,12 @@ export type Installation = z.infer<typeof InstallationSchema>;
 /** What GitHub returns when a manifest code is exchanged (ADR 007); everything but the slug and id is a secret. */
 export type GitHubAppManifestResult = { appId: string; slug: string; privateKey: string; webhookSecret: string; clientId: string; clientSecret: string };
 
-/** The app half of a connection; every field but the slug is a secret. */
+/** The app half of a connection; every field but the slug is a secret. The OAuth pair exists only for apps the manifest flow created. */
 export const GitHubAppSchema = z.object({
   slug: z.string().min(1),
   webhookSecret: z.string().min(1),
-  clientId: z.string().min(1),
-  clientSecret: z.string().min(1),
+  clientId: z.string().min(1).optional(),
+  clientSecret: z.string().min(1).optional(),
 });
 
 const CredentialsSchema = z.discriminatedUnion('type', [

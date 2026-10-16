@@ -120,7 +120,14 @@ To create it by hand instead, for a worker that takes credentials from `.env`:
 4. After creating it, note the **App ID** and generate a **private key** (a `.pem` download).
 5. **Install App** on the repositories ZenthOs may work on, for example `mara-sandra-connect`.
 
-Then in `.env`:
+Then either store it as a connection through the API, which the worker resolves per repository profile:
+
+```bash
+curl -X POST localhost:3200/providers/github/app -H 'content-type: application/json' \
+  -d "{\"name\":\"zenthos-dev\",\"appId\":\"123456\",\"privateKey\":$(jq -Rs . < zenthos.private-key.pem)}"
+```
+
+or, for a worker without the store, in `.env` as the fallback credentials:
 
 ```bash
 ISSUE_TRACKER=github
