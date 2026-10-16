@@ -21,8 +21,8 @@
     ]
   },
   "dependencies": {
-    "@temporalio/client": "^1.24.0",
     "@zenthos/domain": "workspace:*",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "@zenthos/adapter-temporal": "workspace:*"
   }
 }

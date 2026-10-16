@@ -8,7 +8,8 @@
     "infra:down": "docker compose down",
     "infra:reset": "docker compose down -v",
     "worker": "tsx --conditions=@zenthos/source apps/worker/src/main.ts",
-    "cli": "tsx --conditions=@zenthos/source apps/cli/src/main.ts"
+    "cli": "tsx --conditions=@zenthos/source apps/cli/src/main.ts",
+    "api": "nx run @zenthos/api:serve"
   },
   "private": true,
   "devDependencies": {

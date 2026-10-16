@@ -3,7 +3,7 @@ import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 import { APPROVAL_LABELS, createRun, fail, pass, WORKFLOW_CONTRACT, type Approval, type GateResult, type Run, type Ticket, type Workspace } from '@zenthos/domain';
 import type { Activities } from './activities.js';
-import { bundlerOptions } from './bundler.js';
+import { bundlerOptions } from '@zenthos/adapter-temporal';
 import { approvalDecisionSignal, ticketRunWorkflow, type TicketRunInput } from './workflows.js';
 
 jest.setTimeout(120_000);

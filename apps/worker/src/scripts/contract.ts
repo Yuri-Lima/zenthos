@@ -11,19 +11,20 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { GitSandbox } from '@zenthos/adapter-git-sandbox';
-import { createGitHubClients, GitHubIssueTracker, parseRepo } from '@zenthos/adapter-github';
-import { profileForTicket } from '@zenthos/domain';
+import { GitHubIssueTracker, parseRepo } from '@zenthos/adapter-github';
+import { createGitHubClients } from '@zenthos/adapter-github/live';
+import { profileForTicket } from '@zenthos/application';
 import { issueTrackerContract } from '@zenthos/ports';
 import { githubCredentials } from '../config.js';
-import { loadWorkerConfig } from '../composition.js';
-import { REPO_PROFILES } from '../repos.js';
+import { loadWorkerConfig, repoProfiles } from '../composition.js';
 
 /** Outside the sandbox allowlist on purpose: only this check deletes branches, never the pipeline. */
 const deleteBranch = (cwd: string, name: string) =>
   new Promise<void>((resolve) => execFile('git', ['push', '--quiet', 'origin', '--delete', name], { cwd }, () => resolve()));
 
 const key = process.argv[2];
-const credentials = key ? githubCredentials(loadWorkerConfig()) : undefined;
+const config = loadWorkerConfig();
+const credentials = key ? githubCredentials(config) : undefined;
 if (!key || !credentials) {
   console.error('usage: contract.ts owner/repo#number  (needs GITHUB_APP_ID + GITHUB_APP_PRIVATE_KEY[_FILE], or GITHUB_TOKEN)');
   process.exit(1);
@@ -41,13 +42,14 @@ for (const [name, check] of Object.entries(issueTrackerContract)) {
   console.log(`ok  ${name}`);
 }
 
-const profile = profileForTicket(key, REPO_PROFILES);
+const profiles = await repoProfiles(config);
+const profile = await profileForTicket(profiles, key);
 const ref = parseRepo(profile.repo);
 const repo = await clients.for(ref);
 const identity = await repo.gitIdentity();
 const root = path.join(tmpdir(), 'zenthos-contract');
 await mkdir(root, { recursive: true });
-const sandbox = new GitSandbox({ root, profiles: REPO_PROFILES, credential: () => repo.gitToken(), author: async () => identity });
+const sandbox = new GitSandbox({ root, profiles, credential: () => repo.gitToken(), author: async () => identity });
 const branch = `zenthos/contract-${Date.now()}`;
 const workspace = await sandbox.prepare(profile, branch);
 try {

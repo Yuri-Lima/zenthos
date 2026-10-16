@@ -13,10 +13,9 @@ import { execFile } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { REVIEWER_VERSION, SPEC_WRITER_VERSION } from '@zenthos/agents';
-import { profileForTicket } from '@zenthos/domain';
+import { profileForTicket } from '@zenthos/application';
 import { findRegressions, parseDataset, runReviewSuite, runSpecSuite, type Baseline, type GoldenDataset } from '@zenthos/evals';
-import { github, issueTracker, loadWorkerConfig, reviewer, scm, specWriter, tracing } from '../composition.js';
-import { REPO_PROFILES } from '../repos.js';
+import { github, issueTracker, loadWorkerConfig, repoProfiles, reviewer, scm, specWriter, tracing } from '../composition.js';
 
 const DATA_DIR = 'libs/evals/data';
 const BASELINE_FILE = 'libs/evals/baseline.json';
@@ -59,7 +58,7 @@ async function run(suite: string, repo: string) {
   const trace = tracing(config);
   const clients = github(config);
   const repoContext = config.REPO_CONTEXT_FILE ? await readFile(config.REPO_CONTEXT_FILE, 'utf8') : '';
-  const profile = profileForTicket(dataset.items[0].ticketKey, REPO_PROFILES);
+  const profile = await profileForTicket(await repoProfiles(config), dataset.items[0].ticketKey);
   const deps = { issueTracker: issueTracker(config, clients), specWriter: await specWriter(config, trace), scm: scm(config, clients), reviewer: await reviewer(config, trace), repoContext };
   try {
     const version = suite === 'spec' ? SPEC_WRITER_VERSION : REVIEWER_VERSION;

@@ -4,6 +4,9 @@ export const APPROVAL_LABELS = {
   rejected: 'zenthos:spec-rejected',
 } as const;
 
+/** Adding this label to a ticket starts a run, when the webhook is connected (ADR 007). */
+export const RUN_LABEL = 'zenthos:run';
+
 export type Approval = 'approved' | 'rejected' | 'pending';
 
 export function approvalFromLabels(labels: readonly string[]): Approval {

@@ -9,10 +9,9 @@
  * JSON). Needs REVIEWER=anthropic, SCM=github and the GitHub credentials, see docs/authentication.md.
  */
 import { readFile } from 'node:fs/promises';
-import { intakeTicket, reviewChange } from '@zenthos/application';
-import { branchNameFor, parseSpec, profileForTicket } from '@zenthos/domain';
-import { github, issueTracker, loadWorkerConfig, reviewer, scm, tracing } from '../composition.js';
-import { REPO_PROFILES } from '../repos.js';
+import { intakeTicket, profileForTicket, reviewChange } from '@zenthos/application';
+import { branchNameFor, parseSpec } from '@zenthos/domain';
+import { github, issueTracker, loadWorkerConfig, repoProfiles, reviewer, scm, tracing } from '../composition.js';
 
 const [key, specPath] = process.argv.slice(2);
 if (!key || !specPath) {
@@ -23,7 +22,7 @@ if (!key || !specPath) {
 const config = loadWorkerConfig();
 const trace = tracing(config);
 const clients = github(config);
-const profile = profileForTicket(key, REPO_PROFILES);
+const profile = await profileForTicket(await repoProfiles(config), key);
 const deps = { issueTracker: issueTracker(config, clients), scm: scm(config, clients), reviewer: await reviewer(config, trace) };
 try {
   const pullRequest = await deps.scm.findPullRequest(profile, branchNameFor(key));

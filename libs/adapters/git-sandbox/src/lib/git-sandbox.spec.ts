@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { repoProfile } from '@zenthos/domain';
+import type { RepoProfile } from '@zenthos/domain';
+import type { RepoProfilesPort } from '@zenthos/ports';
 import { sandboxContract } from '@zenthos/ports';
 import { GitSandbox } from './git-sandbox.js';
 
@@ -23,6 +25,12 @@ async function createOrigin(root: string): Promise<string> {
   return origin;
 }
 
+/** Map-backed profiles store; an adapter test may not import the in-memory adapter. */
+const profilesOf = (...list: RepoProfile[]): RepoProfilesPort => {
+  const byRepo = new Map(list.map((p) => [p.repo, p]));
+  return { get: async (repo) => byRepo.get(repo), list: async () => [...byRepo.values()], save: async (p) => void byRepo.set(p.repo, p), remove: async (repo) => void byRepo.delete(repo) };
+};
+
 describe('GitSandbox', () => {
   let root: string;
   let origin: string;
@@ -39,7 +47,7 @@ describe('GitSandbox', () => {
   for (const [name, check] of Object.entries(sandboxContract)) {
     it(name, () =>
       check({
-        port: new GitSandbox({ root, profiles: [profile] }),
+        port: new GitSandbox({ root, profiles: profilesOf(profile) }),
         profile,
         change: (workspace) => writeFile(path.join(workspace.path, 'feature.ts'), 'export const feature = true;\n'),
       }),
@@ -47,7 +55,7 @@ describe('GitSandbox', () => {
   }
 
   it('commits and pushes the branch to origin as the provider identity, and leaves the base branch alone', async () => {
-    const sandbox = new GitSandbox({ root, profiles: [profile], author: async () => ({ name: 'zenthos-test[bot]', email: '1+zenthos-test[bot]@users.noreply.github.com' }) });
+    const sandbox = new GitSandbox({ root, profiles: profilesOf(profile), author: async () => ({ name: 'zenthos-test[bot]', email: '1+zenthos-test[bot]@users.noreply.github.com' }) });
     const workspace = await sandbox.prepare(profile, 'zenthos/local-origin-1');
     await writeFile(path.join(workspace.path, 'feature.ts'), 'export const feature = true;\n');
     await sandbox.commitAndPush(workspace, 'Add feature (local/origin#1)');
@@ -61,7 +69,7 @@ describe('GitSandbox', () => {
   });
 
   it('can be retried after a failed push and replaces a stale branch of the same name', async () => {
-    const sandbox = new GitSandbox({ root, profiles: [profile] });
+    const sandbox = new GitSandbox({ root, profiles: profilesOf(profile) });
     const stale = await sandbox.prepare(profile, 'zenthos/local-origin-2');
     await writeFile(path.join(stale.path, 'old.ts'), 'export const old = true;\n');
     await sandbox.commitAndPush(stale, 'WIP from an escalated run');
@@ -80,7 +88,7 @@ describe('GitSandbox', () => {
 
   it('returns a non-zero exit code instead of throwing when an allowed command fails', async () => {
     const failing = repoProfile({ ...profile, allowedCommands: ['exit 3'], gateCommands: [] });
-    const sandbox = new GitSandbox({ root, profiles: [failing] });
+    const sandbox = new GitSandbox({ root, profiles: profilesOf(failing) });
     const workspace = await sandbox.prepare(failing, 'zenthos/fail');
     expect((await sandbox.run(workspace, 'exit 3')).exitCode).toBe(3);
     await sandbox.cleanup(workspace);

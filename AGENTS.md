@@ -43,7 +43,10 @@ These win over any pattern below when the two conflict. The goal is a codebase a
 | `libs/adapters/*` | One library per concrete adapter: `in-memory` (tests and dry runs), `github` (issues and pull requests), `langfuse` (tracing callbacks), `git-sandbox` (a clone per run with the command allowlist), `claude-code` (headless Claude Code with the same allowlist) | domain, ports |
 | `libs/agents` | LangGraph graphs that implement agent ports. Spec writer: draft, validate against the schema, retry with the errors | domain, ports, LangChain |
 | `libs/evals` | Golden dataset schema, metrics, regression check and the port-based suite runner (ADR 009) | domain, ports |
-| `apps/worker` | Temporal worker: `workflows.ts` (one workflow per ticket), `activities.ts` (thin, call use cases), `config.ts` (zod-validated env), `repos.ts` (the repository profiles: clone URL, base branch, allowed and gate commands, policy) | anything |
+| `libs/adapters/postgres` | Provider connections (secrets sealed at rest) and repository profiles in Postgres; the schema as ordered statements (ADR 010) | domain, ports |
+| `libs/adapters/temporal` | `RunControlPort` over the Temporal client and the workflow bundler config, shared by the API, the CLI and the worker | domain, ports |
+| `apps/api` | NestJS REST API: provider connections, the GitHub manifest and install flows, repository profiles, runs, the GitHub webhook; OpenAPI at `/docs` (ADR 010) | everything |
+| `apps/worker` | Temporal worker: `workflows.ts` (one workflow per ticket), `activities.ts` (thin, call use cases), `config.ts` (zod-validated env), `composition.ts` (the adapters, chosen once), `repos.ts` (the dry-run repository profiles), `scripts/` (contract check, manual review, evals) | anything |
 | `apps/cli` | `zenthos run|approve|reject|state <ticket-key>` against the running worker | anything |
 | `docs/adr` | Architecture decision records | |
 | `infra/` | Files mounted by `docker-compose.yml` | |
@@ -60,11 +63,12 @@ bans vendor SDKs inside domain, ports and application. Every project carries a `
   `pnpm nx sync` updates the TypeScript references.
 - Tests sit next to the code as `*.spec.ts` and test behaviour, not implementation. An adapter spec runs the
   port's contract against its own fixture (see `libs/adapters/in-memory`).
-- A new target repository is one entry in `apps/worker/src/repos.ts`. Allowed commands are exact lines; a gate
-  command must be one of them (ADR 005).
+- A new target repository is a profile: `PUT /repos/:owner/:name` on the API when the store is Postgres, or an
+  entry in `apps/worker/src/repos.ts` for dry runs (ADR 010). Allowed commands are exact lines; a gate command
+  must be one of them (ADR 005).
 - Temporal workflow code stays deterministic; I/O lives in activities that call use cases. Workflow code may
-  import `@zenthos/domain` (pure) and nothing with node or vendor imports; `apps/worker/src/bundler.ts` resolves
-  the workspace sources for the workflow bundle.
+  import `@zenthos/domain` (pure) and nothing with node or vendor imports; `bundlerOptions` in
+  `libs/adapters/temporal` resolves the workspace sources for the workflow bundle.
 - Agent graphs take a LangChain `Runnable` as the model and are tested with `RunnableLambda` fakes (ADR 004).
 - Prompts carry a version string (`SPEC_WRITER_VERSION`); bump it when the wording changes.
 - No API keys in the repo or in CI. Model access comes from an `ant auth login` profile on a laptop and from
@@ -92,6 +96,7 @@ pnpm worker           # Temporal worker, dry run by default (ISSUE_TRACKER=memor
 pnpm cli run owner/repo#123
 pnpm cli approve owner/repo#123
 pnpm cli state owner/repo#123
+pnpm api               # REST API on :3200, OpenAPI at /docs (RUN_CONTROL=temporal to drive real runs)
 pnpm nx run @zenthos/worker:contract -- owner/repo#123   # live GitHub check: comment, commit attribution, cleanup
 pnpm nx run @zenthos/worker:review -- owner/repo#123 spec.json   # re-review the open pull request of a run (ADR 008)
 pnpm nx run @zenthos/worker:eval-dataset -- owner/repo            # golden dataset from merged pull requests (ADR 009)
@@ -108,7 +113,9 @@ Phases 0 to 2 are in: scaffold; intake, spec draft and human decision; implement
 sandbox, deterministic gates with one feedback retry, and a pull request to the base branch. Phase 3 in
 progress: the reviewer scores the pull request against the domain rubric and posts a comment, a failed review
 sends the agent back once (ADR 008); the evals measure both agents against merged history and block a prompt
-change that lowers the scores (ADR 009); next the REST API with persisted providers.
+change that lowers the scores (ADR 009); the REST API keeps provider connections and repository profiles in
+Postgres with secrets sealed, connects GitHub by the manifest flow and takes the app's webhook (ADR 010). Next:
+credentials resolved per repository from the stored connection, and runs persisted for the dashboard.
 Then 4 Phoenix adapters and Codex; 5 dashboard, Cloud Run, write-up.
 
 ## Dependency policy

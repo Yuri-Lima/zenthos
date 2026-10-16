@@ -38,6 +38,15 @@
     },
     {
       "path": "./libs/adapters/claude-code"
+    },
+    {
+      "path": "./libs/adapters/postgres"
+    },
+    {
+      "path": "./apps/api"
+    },
+    {
+      "path": "./libs/adapters/temporal"
     }
   ],
   "compilerOptions": {}

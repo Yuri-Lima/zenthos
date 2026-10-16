@@ -8,6 +8,7 @@ import {
   openPullRequest,
   prepareWorkspace,
   pushWorkInProgress,
+  profileForTicket,
   readApproval,
   reviewChange,
   reviewFeedback,
@@ -15,8 +16,8 @@ import {
   type ImplementationResult,
   type ReviewResult,
 } from '@zenthos/application';
-import { profileForTicket, type Approval, type GateResult, type PullRequest, type RepoProfile, type Review, type Run, type Spec, type Workspace } from '@zenthos/domain';
-import type { CodingAgentPort, IssueTrackerPort, ReviewerPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
+import type { Approval, GateResult, PullRequest, Review, Run, Spec, Workspace } from '@zenthos/domain';
+import type { CodingAgentPort, IssueTrackerPort, RepoProfilesPort, ReviewerPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
 
 export type ActivityDeps = {
   issueTracker: IssueTrackerPort;
@@ -26,7 +27,7 @@ export type ActivityDeps = {
   scm: ScmPort;
   reviewer: ReviewerPort;
   repoContext: string;
-  profiles: RepoProfile[];
+  profiles: RepoProfilesPort;
 };
 
 /**
@@ -50,22 +51,22 @@ async function withHeartbeat<T>(work: () => Promise<T>): Promise<T> {
  * request must execute on workers of the same host.
  */
 export function createActivities(deps: ActivityDeps) {
-  const profile = (run: Run) => profileForTicket(run.ticket.key, deps.profiles);
+  const profile = (run: Run) => profileForTicket(deps.profiles, run.ticket.key);
   return {
-    intake: (key: string): Promise<Run> => intakeTicket(deps, key, profileForTicket(key, deps.profiles)),
+    intake: async (key: string): Promise<Run> => intakeTicket(deps, key, await profileForTicket(deps.profiles, key)),
     draftSpec: (run: Run): Promise<Spec> => draftSpec(deps, run, deps.repoContext),
     readApproval: (key: string): Promise<Approval> => readApproval(deps, key),
-    prepare: (run: Run): Promise<Workspace> => prepareWorkspace(deps, run, profile(run)),
-    baseline: (run: Run, workspace: Workspace): Promise<string[]> => withHeartbeat(() => baselineGates(deps, workspace, profile(run))),
+    prepare: async (run: Run): Promise<Workspace> => prepareWorkspace(deps, run, await profile(run)),
+    baseline: (run: Run, workspace: Workspace): Promise<string[]> => withHeartbeat(async () => baselineGates(deps, workspace, await profile(run))),
     implement: (run: Run, workspace: Workspace, feedback?: string): Promise<ImplementationResult> =>
-      withHeartbeat(() => implementSpec(deps, run, workspace, profile(run), feedback)),
+      withHeartbeat(async () => implementSpec(deps, run, workspace, await profile(run), feedback)),
     runGates: (run: Run, workspace: Workspace, diff: ImplementationResult['diff'], baselineFailures: string[]): Promise<GateResult[]> =>
-      withHeartbeat(() => runGates(deps, run, workspace, diff, profile(run), baselineFailures)),
-    openPullRequest: (run: Run, workspace: Workspace, gates: GateResult[]): Promise<PullRequest> =>
-      openPullRequest(deps, run, workspace, gates, profile(run)),
+      withHeartbeat(async () => runGates(deps, run, workspace, diff, await profile(run), baselineFailures)),
+    openPullRequest: async (run: Run, workspace: Workspace, gates: GateResult[]): Promise<PullRequest> =>
+      openPullRequest(deps, run, workspace, gates, await profile(run)),
     pushWorkInProgress: (run: Run, workspace: Workspace, gates: GateResult[]): Promise<string> =>
       pushWorkInProgress(deps, run, workspace, gates),
-    review: (run: Run): Promise<ReviewResult> => withHeartbeat(() => reviewChange(deps, run, profile(run))),
+    review: (run: Run): Promise<ReviewResult> => withHeartbeat(async () => reviewChange(deps, run, await profile(run))),
     reviewFeedback: async (review: Review): Promise<string> => reviewFeedback(review),
     cleanup: (workspace: Workspace): Promise<void> => deps.sandbox.cleanup(workspace),
     /** Pure, but kept beside the activities so the workflow bundle stays free of application code. */

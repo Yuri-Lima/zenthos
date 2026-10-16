@@ -104,10 +104,13 @@ claim mismatch against the rule, or `workspace_id_required`.
 ## GitHub: the ZenthOs app
 
 ZenthOs talks to GitHub as a GitHub App, so comments and pull requests come from `<app>[bot]` and each
-repository owner decides where it is installed (ADR 006). Creating the app is a one-time bootstrap for a
-deployment; users will connect repositories from the dashboard with an install redirect, and self-hosters
-will get the app created for them by the manifest wizard (ADR 007). Until the API and dashboard exist,
-create it by hand:
+repository owner decides where it is installed (ADR 006). The API creates the app for you through GitHub's
+manifest flow and stores it as a provider connection (ADR 007, ADR 010): start `pnpm api` with
+`DATABASE_URL`, `ZENTHOS_SECRETS_KEY`, `GITHUB_APPS=octokit` and `ZENTHOS_API_BASE_URL` set to a URL GitHub
+can reach (a tunnel on a laptop), open `/providers/github/manifest?name=zenthos-dev` in a browser, create the
+app on GitHub, and install it; the webhook, the callbacks and the permissions are all in the manifest.
+
+To create it by hand instead, for a worker that takes credentials from `.env`:
 
 1. GitHub → **Settings → Developer settings → GitHub Apps → New GitHub App**. Name it `zenthos` (or
    `zenthos-dev` for your own tests). Homepage URL can be the repository. Uncheck **Webhook → Active** for now.

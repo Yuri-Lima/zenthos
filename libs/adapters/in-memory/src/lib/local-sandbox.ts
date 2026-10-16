@@ -2,7 +2,8 @@ import { mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DomainError, isCommandAllowed, type CommandResult, type Diff, type RepoProfile, type Workspace } from '@zenthos/domain';
-import type { SandboxPort } from '@zenthos/ports';
+import { InMemoryRepoProfiles } from './in-memory-stores.js';
+import type { RepoProfilesPort, SandboxPort } from '@zenthos/ports';
 
 /**
  * A sandbox with no git and no processes: an empty local temp directory. Commands are recorded and
@@ -13,7 +14,7 @@ export class LocalSandbox implements SandboxPort {
   readonly pushed: { workspace: Workspace; message: string }[] = [];
 
   constructor(
-    private readonly profiles: readonly RepoProfile[] = [],
+    private readonly profiles: RepoProfilesPort = new InMemoryRepoProfiles(),
     private readonly failing: Record<string, string> = {},
   ) {}
 
@@ -24,7 +25,7 @@ export class LocalSandbox implements SandboxPort {
 
   async run(workspace: Workspace, command: string): Promise<CommandResult> {
     this.commands.push(command);
-    const profile = this.profiles.find((candidate) => candidate.repo === workspace.repo);
+    const profile = await this.profiles.get(workspace.repo);
     if (!isCommandAllowed(command, profile?.allowedCommands ?? [])) throw new DomainError('command_not_allowed', { command });
     const stderr = this.failing[command];
     return { command, exitCode: stderr ? 1 : 0, stdout: '', stderr: stderr ?? '' };

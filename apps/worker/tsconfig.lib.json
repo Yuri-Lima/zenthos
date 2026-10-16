@@ -6,14 +6,19 @@
     "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
     "emitDeclarationOnly": false,
     "forceConsistentCasingInFileNames": true,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "src/**/*.ts"
-  ],
+  "include": ["src/**/*.ts"],
   "references": [
+    {
+      "path": "../../libs/adapters/postgres/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/adapters/temporal/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/evals/tsconfig.lib.json"
+    },
     {
       "path": "../../libs/ports/tsconfig.lib.json"
     },
@@ -40,9 +45,6 @@
     },
     {
       "path": "../../libs/adapters/claude-code/tsconfig.lib.json"
-    },
-    {
-      "path": "../../libs/evals/tsconfig.lib.json"
     }
   ],
   "exclude": [

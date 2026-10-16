@@ -37,6 +37,9 @@ export const WorkerConfigSchema = z.object({
   SCM: z.enum(['github', 'memory']).default('memory'),
   /** `anthropic` scores the pull request with Claude; `memory` returns placeholder fours. */
   REVIEWER: z.enum(['anthropic', 'memory']).default('memory'),
+  /** Set to read repository profiles from Postgres (the API writes them, ADR 006); unset seeds them from repos.ts. */
+  DATABASE_URL: z.string().url().optional(),
+  ZENTHOS_SECRETS_KEY: z.string().regex(/^[0-9a-f]{64}$/i).optional(),
   ZENTHOS_REVIEW_MODEL: z.string().default('claude-opus-5-5'),
 });
 

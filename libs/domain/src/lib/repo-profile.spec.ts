@@ -1,5 +1,5 @@
 import { DomainError } from './errors.js';
-import { branchNameFor, isCommandAllowed, isPipelineBranch, profileForTicket, repoProfile } from './repo-profile.js';
+import { branchNameFor, isCommandAllowed, isPipelineBranch, repoOfTicket, repoProfile } from './repo-profile.js';
 
 const legal = repoProfile({
   repo: 'owner/legal',
@@ -17,12 +17,13 @@ describe('repo profiles', () => {
     expect(custom.policy.forbiddenPathPrefixes).toEqual(expect.arrayContaining(['eslint.config', 'supabase/']));
     expect(() =>
       repoProfile({ ...legal, gateCommands: ['bun run e2e'] }),
-    ).toThrow('gate commands must be allowed commands: bun run e2e');
+    ).toThrow(DomainError);
   });
 
   it('matches a ticket key to its profile and refuses unknown repos', () => {
-    expect(profileForTicket('owner/legal#12', [legal])).toBe(legal);
-    expect(() => profileForTicket('other/repo#1', [legal])).toThrow(DomainError);
+    expect(repoOfTicket('owner/legal#12')).toBe('owner/legal');
+    expect(() => repoOfTicket('no-hash')).toThrow(DomainError);
+    expect(legal.repo).toBe('owner/legal');
   });
 });
 

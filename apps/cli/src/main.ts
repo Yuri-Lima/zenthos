@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
-import { Client, Connection } from '@temporalio/client';
-import { WORKFLOW_CONTRACT, type Run } from '@zenthos/domain';
+import { TemporalRunControl } from '@zenthos/adapter-temporal';
+import { WORKFLOW_CONTRACT } from '@zenthos/domain';
 
 const USAGE = `zenthos <command> <ticket-key>
   run      start a run for the ticket (owner/repo#123)
@@ -9,43 +9,36 @@ const USAGE = `zenthos <command> <ticket-key>
   state    print the run as the workflow sees it
 Environment: TEMPORAL_ADDRESS (localhost:7233), TEMPORAL_NAMESPACE (default), TEMPORAL_TASK_QUEUE (zenthos)`;
 
-const { workflowType, approvalSignal, runQuery, workflowId, defaultTaskQueue } = WORKFLOW_CONTRACT;
-
 async function main([command, key]: string[]) {
   if (existsSync('.env')) process.loadEnvFile('.env');
   if (!command || !key) {
     console.log(USAGE);
     process.exit(command ? 1 : 0);
   }
-  const connection = await Connection.connect({ address: process.env['TEMPORAL_ADDRESS'] ?? 'localhost:7233' });
-  const client = new Client({ connection, namespace: process.env['TEMPORAL_NAMESPACE'] ?? 'default' });
+  const runs = await TemporalRunControl.connect({
+    address: process.env['TEMPORAL_ADDRESS'] ?? 'localhost:7233',
+    namespace: process.env['TEMPORAL_NAMESPACE'] ?? 'default',
+    taskQueue: process.env['TEMPORAL_TASK_QUEUE'] ?? WORKFLOW_CONTRACT.defaultTaskQueue,
+  });
   try {
     switch (command) {
-      case 'run': {
-        const handle = await client.workflow.start(workflowType, {
-          taskQueue: process.env['TEMPORAL_TASK_QUEUE'] ?? defaultTaskQueue,
-          workflowId: workflowId(key),
-          args: [{ key }],
-        });
-        console.log(JSON.stringify({ workflowId: handle.workflowId, runId: handle.firstExecutionRunId }));
+      case 'run':
+        console.log(JSON.stringify(await runs.start(key)));
         return;
-      }
       case 'approve':
       case 'reject':
-        await client.workflow.getHandle(workflowId(key)).signal(approvalSignal, command === 'approve' ? 'approved' : 'rejected');
-        console.log(JSON.stringify({ workflowId: workflowId(key), signalled: command }));
+        await runs.decide(key, command === 'approve' ? 'approved' : 'rejected');
+        console.log(JSON.stringify({ ticketKey: key, signalled: command }));
         return;
-      case 'state': {
-        const run = await client.workflow.getHandle(workflowId(key)).query<Run>(runQuery);
-        console.log(JSON.stringify(run, null, 2));
+      case 'state':
+        console.log(JSON.stringify(await runs.state(key), null, 2));
         return;
-      }
       default:
         console.log(USAGE);
         process.exit(1);
     }
   } finally {
-    await connection.close();
+    await runs.close();
   }
 }
 

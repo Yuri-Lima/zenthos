@@ -13,3 +13,5 @@ export * from './lib/provider.js';
 export * from './lib/workflow-contract.js';
 export * from './lib/review.js';
 export * from './lib/diff.js';
+export * from './lib/provider-connection.js';
+export * from './lib/webhook.js';

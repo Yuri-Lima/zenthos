@@ -39,9 +39,10 @@ export type Run = {
 };
 
 /** Uses Web Crypto so this file stays free of node imports and can be bundled into a Temporal workflow. */
-export function createRun(ticket: Ticket, options: { policy?: RunPolicy; now?: Date } = {}): Run {
+/** `id` is for callers without `crypto` at hand, such as workflow code that must stay deterministic. */
+export function createRun(ticket: Ticket, options: { policy?: RunPolicy; now?: Date; id?: string } = {}): Run {
   return {
-    id: globalThis.crypto.randomUUID(),
+    id: options.id ?? globalThis.crypto.randomUUID(),
     ticket,
     state: 'intake',
     createdAt: (options.now ?? new Date()).toISOString(),

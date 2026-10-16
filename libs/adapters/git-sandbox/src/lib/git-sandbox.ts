@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { DomainError, isCommandAllowed, isPipelineBranch, type CommandResult, type Diff, type GitAuthor, type RepoProfile, type Workspace } from '@zenthos/domain';
-import type { SandboxPort } from '@zenthos/ports';
+import type { RepoProfilesPort, SandboxPort } from '@zenthos/ports';
 
 const run = promisify(execFile);
 
@@ -11,7 +11,7 @@ export type GitSandboxOptions = {
   /** Directory that holds one subdirectory per workspace. */
   root: string;
   /** Every repository this worker may work on; a workspace names its repo and the profile is looked up here. */
-  profiles: readonly RepoProfile[];
+  profiles: RepoProfilesPort;
   /**
    * A token for the repository, asked for right before each clone and each push so short-lived
    * installation tokens stay valid. Undefined for local or public pulls.
@@ -41,7 +41,7 @@ export class GitSandbox implements SandboxPort {
   }
 
   async run(workspace: Workspace, command: string): Promise<CommandResult> {
-    if (!isCommandAllowed(command, this.profile(workspace).allowedCommands)) {
+    if (!isCommandAllowed(command, (await this.profile(workspace)).allowedCommands)) {
       throw new DomainError('command_not_allowed', { command, repo: workspace.repo });
     }
     try {
@@ -78,7 +78,7 @@ export class GitSandbox implements SandboxPort {
     if (!isPipelineBranch(workspace.branch)) throw new Error(`refusing to force-push to ${workspace.branch}: not a pipeline branch`);
     await git(workspace.path, ['add', '--all']);
     const staged = await git(workspace.path, ['diff', '--cached', '--quiet']).then(() => false, () => true);
-    const profile = this.profile(workspace);
+    const profile = await this.profile(workspace);
     if (staged) {
       const author = (await this.options.author?.(profile)) ?? UNLINKED_AUTHOR;
       await git(workspace.path, ['-c', `user.name=${author.name}`, '-c', `user.email=${author.email}`, 'commit', '--quiet', '-m', message]);
@@ -92,8 +92,8 @@ export class GitSandbox implements SandboxPort {
   }
 
   /** Looked up by repository, not by instance memory, so any worker on this host can continue a run. */
-  private profile(workspace: Workspace): RepoProfile {
-    const profile = this.options.profiles.find((candidate) => candidate.repo === workspace.repo);
+  private async profile(workspace: Workspace): Promise<RepoProfile> {
+    const profile = await this.options.profiles.get(workspace.repo);
     if (!profile) throw new DomainError('unknown_repository', { repo: workspace.repo });
     return profile;
   }

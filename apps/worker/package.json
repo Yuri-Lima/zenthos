@@ -61,9 +61,13 @@
     "@zenthos/ports": "workspace:*",
     "tslib": "^2.3.0",
     "zod": "^4.6.6",
-    "@zenthos/evals": "workspace:*"
+    "@zenthos/evals": "workspace:*",
+    "@zenthos/adapter-temporal": "workspace:*",
+    "@zenthos/adapter-postgres": "workspace:*",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
-    "@temporalio/testing": "^1.24.0"
+    "@temporalio/testing": "^1.24.0",
+    "@types/pg": "^8.23.1"
   }
 }

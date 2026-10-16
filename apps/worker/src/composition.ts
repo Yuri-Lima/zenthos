@@ -4,11 +4,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { ClaudeCodeAgent } from '@zenthos/adapter-claude-code';
 import { GitSandbox } from '@zenthos/adapter-git-sandbox';
-import { createGitHubClients, GitHubIssueTracker, GitHubScm, parseRepo, type GitHubClients } from '@zenthos/adapter-github';
-import { InMemoryCodingAgent, InMemoryIssueTracker, InMemoryReviewer, InMemoryScm, InMemorySpecWriter, LocalSandbox } from '@zenthos/adapter-in-memory';
+import { GitHubIssueTracker, GitHubScm, parseRepo, type GitHubClients } from '@zenthos/adapter-github';
+import { createGitHubClients } from '@zenthos/adapter-github/live';
+import { InMemoryCodingAgent, InMemoryIssueTracker, InMemoryRepoProfiles, InMemoryReviewer, InMemoryScm, InMemorySpecWriter, LocalSandbox } from '@zenthos/adapter-in-memory';
+import { migrate, PostgresRepoProfiles } from '@zenthos/adapter-postgres';
+import pg from 'pg';
 import { noTracing, startLangfuseTracing } from '@zenthos/adapter-langfuse';
 import { createAnthropicReviewerModels, createAnthropicSpecModel, LangGraphReviewer, LangGraphSpecWriter, REVIEWER_VERSION, SPEC_WRITER_VERSION, verifyAnthropicAccess } from '@zenthos/agents';
-import type { CodingAgentPort, IssueTrackerPort, ReviewerPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
+import type { CodingAgentPort, IssueTrackerPort, RepoProfilesPort, ReviewerPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
 import { githubCredentials, loadConfig, type WorkerConfig } from './config.js';
 import { REPO_PROFILES } from './repos.js';
 
@@ -59,13 +62,21 @@ export async function specWriter(config: WorkerConfig, trace: ReturnType<typeof 
   });
 }
 
-export async function sandbox(config: WorkerConfig, clients?: GitHubClients): Promise<SandboxPort> {
-  if (config.SANDBOX === 'memory') return new LocalSandbox(REPO_PROFILES);
+/** Profiles come from Postgres when the API manages them, otherwise from the code list for dry runs. */
+export async function repoProfiles(config: WorkerConfig): Promise<RepoProfilesPort> {
+  if (!config.DATABASE_URL) return new InMemoryRepoProfiles(REPO_PROFILES);
+  const pool = new pg.Pool({ connectionString: config.DATABASE_URL });
+  await migrate(pool);
+  return new PostgresRepoProfiles(pool);
+}
+
+export async function sandbox(config: WorkerConfig, profiles: RepoProfilesPort, clients?: GitHubClients): Promise<SandboxPort> {
+  if (config.SANDBOX === 'memory') return new LocalSandbox(profiles);
   const root = config.SANDBOX_ROOT ?? path.join(tmpdir(), 'zenthos-sandboxes');
   await mkdir(root, { recursive: true });
   return new GitSandbox({
     root,
-    profiles: REPO_PROFILES,
+    profiles,
     credential: async (profile) => (clients && profile.cloneUrl.startsWith('https://github.com/') ? (await clients.for(parseRepo(profile.repo))).gitToken() : undefined),
     author: async (profile) => (clients && profile.cloneUrl.startsWith('https://github.com/') ? (await clients.for(parseRepo(profile.repo))).gitIdentity() : { name: 'ZenthOs', email: 'zenthos@pipeline.invalid' }),
   });

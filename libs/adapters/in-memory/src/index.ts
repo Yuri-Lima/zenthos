@@ -4,3 +4,6 @@ export * from './lib/local-sandbox.js';
 export * from './lib/in-memory-coding-agent.js';
 export * from './lib/in-memory-scm.js';
 export * from './lib/in-memory-reviewer.js';
+export * from './lib/in-memory-stores.js';
+export * from './lib/in-memory-run-control.js';
+export * from './lib/in-memory-github-apps.js';
