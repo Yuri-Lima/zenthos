@@ -103,6 +103,8 @@ pnpm nx run @zenthos/worker:review -- owner/repo#123 spec.json   # re-review the
 pnpm nx run @zenthos/worker:eval-dataset -- owner/repo            # golden dataset from merged pull requests (ADR 009)
 pnpm nx run @zenthos/worker:eval -- spec owner/repo --limit 5     # spec suite against libs/evals/baseline.json; --record sets it
 pnpm nx run @zenthos/worker:eval -- review owner/repo --limit 3   # review suite (costs both agents per item)
+pnpm nx run @zenthos/worker:eval-dataset -- owner/repo --from runs    # the pipeline's own judged runs, specs included (ADR 011)
+pnpm nx run @zenthos/worker:eval -- review owner/repo --dataset runs  # the fair review measurement; baselines keyed per dataset
 pnpm nx g @nx/js:lib libs/adapters/<name> --importPath=@zenthos/adapter-<name> --tags=scope:adapter --bundler=tsc --linter=eslint --unitTestRunner=jest --minimal
 ```
 

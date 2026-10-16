@@ -27,7 +27,7 @@ export function touchedAreaRecall(spec: Pick<Spec, 'touchedAreas'>, files: strin
 }
 
 /** The reviewer agrees with a human who merged when its gate passes. */
-export const reviewAgreement = (gatePassed: boolean, verdict: 'accepted'): number => (gatePassed === (verdict === 'accepted') ? 1 : 0);
+export const reviewAgreement = (gatePassed: boolean, verdict: 'accepted' | 'rejected'): number => (gatePassed === (verdict === 'accepted') ? 1 : 0);
 
 /** Mean of a metric over item results, ignoring items that failed before producing it. */
 export function mean(values: (number | undefined)[]): number | undefined {

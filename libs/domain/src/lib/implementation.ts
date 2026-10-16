@@ -62,3 +62,6 @@ export type PullRequest = {
   url: string;
   number: number;
 };
+
+/** What the humans did with a pull request; `merged` and `closed` are the verdicts the evals learn from. */
+export type PullRequestState = 'open' | 'merged' | 'closed';

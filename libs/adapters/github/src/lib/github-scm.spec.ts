@@ -27,7 +27,10 @@ function fakeClients(openForBranch?: string) {
             ...created.filter((c) => head === `owner:${c.head}`).map(() => ({ html_url: 'https://github.com/owner/repo/pull/7', number: 7 })),
           ],
         }),
-        get: async () => ({ data: 'diff --git a/src/a.ts b/src/a.ts\n--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1,2 @@\n const a = 1;\n+const b = 2;\n' }),
+        get: (async (params: { pull_number: number; mediaType?: unknown }) =>
+          params.mediaType
+            ? { data: 'diff --git a/src/a.ts b/src/a.ts\n--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1,2 @@\n const a = 1;\n+const b = 2;\n' }
+            : { data: { state: params.pull_number === 5 ? 'closed' : 'open', merged: params.pull_number === 5 } }) as GitHubPullsApi['get'],
         createReview: async (params) => {
           reviews.push(params);
         },
@@ -53,6 +56,7 @@ describe('GitHubScm', () => {
     expect(diff.changedLines).toBe(1);
     await scm.postReview({ profile, pullRequest: found, body: '## Review' });
     expect(reviews[0]).toMatchObject({ pull_number: 5, event: 'COMMENT', body: '## Review' });
+    expect(await scm.pullRequestState(profile, found)).toBe('merged');
   });
 
   it('opens the pull request against the base branch with the closing line', async () => {

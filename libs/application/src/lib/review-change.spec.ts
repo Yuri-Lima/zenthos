@@ -26,6 +26,7 @@ function deps(result: Review) {
     postReview: async ({ body }) => {
       posted.push(body);
     },
+    pullRequestState: async () => 'open',
   };
   const reviewer: ReviewerPort = { review: async () => result };
   return { reviewer, scm, posted };

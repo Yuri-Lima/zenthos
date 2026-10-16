@@ -1,11 +1,11 @@
 {
-  "spec-writer/v1": {
+  "spec-writer/v1@nairaromero-mara-sandra-connect": {
     "items": 5,
     "failed": 0,
     "touched_area_recall": 0.39999999999999997,
     "criteria_per_spec": 4.6
   },
-  "reviewer/v1": {
+  "reviewer/v1@nairaromero-mara-sandra-connect": {
     "items": 3,
     "failed": 0,
     "review_score": 2.4166666666666665,

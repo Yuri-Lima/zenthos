@@ -19,8 +19,9 @@ export interface GitHubPullsApi {
   }>;
   /** `head` is "owner:branch"; `state: 'open'` */
   list(params: { owner: string; repo: string; head: string; state: 'open' }): Promise<{ data: { html_url: string; number: number }[] }>;
-  /** With `mediaType.format: 'diff'` GitHub returns the unified diff as a string in `data`. */
+  /** With `mediaType.format: 'diff'` GitHub returns the unified diff as a string in `data`; without it, the pull request. */
   get(params: { owner: string; repo: string; pull_number: number; mediaType: { format: 'diff' } }): Promise<{ data: unknown }>;
+  get(params: { owner: string; repo: string; pull_number: number }): Promise<{ data: { state: 'open' | 'closed'; merged: boolean } }>;
   createReview(params: { owner: string; repo: string; pull_number: number; body: string; event: 'COMMENT' }): Promise<unknown>;
 }
 

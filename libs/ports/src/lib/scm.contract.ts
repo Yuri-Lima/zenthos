@@ -14,5 +14,6 @@ export const scmContract: Record<string, (fixture: ScmFixture) => Promise<void>>
     const diff = await port.readPullRequestDiff(profile, opened);
     assert.ok(diff.files.length > 0 && diff.changedLines >= 0 && typeof diff.patch === 'string');
     await port.postReview({ profile, pullRequest: opened, body: '## Review' });
+    assert.equal(await port.pullRequestState(profile, opened), 'open');
   },
 };

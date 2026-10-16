@@ -1,4 +1,4 @@
-import type { Diff, PullRequest, RepoProfile, Workspace } from '@zenthos/domain';
+import type { Diff, PullRequest, PullRequestState, RepoProfile, Workspace } from '@zenthos/domain';
 
 export type OpenPullRequestInput = {
   profile: RepoProfile;
@@ -24,4 +24,6 @@ export interface ScmPort {
   /** The diff as the host serves it, so the reviewer judges what humans will merge. */
   readPullRequestDiff(profile: RepoProfile, pullRequest: PullRequest): Promise<Diff>;
   postReview(input: PostReviewInput): Promise<void>;
+  /** Open, merged or closed without merge: the human verdict the evals compare the reviewer with. */
+  pullRequestState(profile: RepoProfile, pullRequest: PullRequest): Promise<PullRequestState>;
 }

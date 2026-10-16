@@ -45,8 +45,8 @@ export async function runSpecSuite(
 }
 
 /**
- * Review suite: the reviewer judges the merged diff against a spec drafted for its ticket, and must agree
- * with the human who merged it. The spec comes from the spec writer, so this suite costs both agents.
+ * Review suite: the reviewer judges each change against its spec and must agree with the human verdict.
+ * History items need a spec drafted now, so they cost both agents; run items carry their own.
  */
 export async function runReviewSuite(
   deps: { issueTracker: IssueTrackerPort; specWriter: SpecWriterPort; scm: ScmPort; reviewer: ReviewerPort; repoContext: string },
@@ -56,8 +56,8 @@ export async function runReviewSuite(
 ): Promise<SuiteResult<ReviewItemResult>> {
   const results = await mapLimited(select(dataset, options), options.concurrency, async (item): Promise<ReviewItemResult> => {
     try {
-      const ticket = await deps.issueTracker.getTicket(item.ticketKey);
-      const spec = parseSpec(await deps.specWriter.draftSpec({ ticket, repoContext: deps.repoContext }));
+      // An item from a stored run brings the spec its change was written against; history items get one drafted now.
+      const spec = item.spec ?? parseSpec(await deps.specWriter.draftSpec({ ticket: await deps.issueTracker.getTicket(item.ticketKey), repoContext: deps.repoContext }));
       const diff = await deps.scm.readPullRequestDiff(profile, item.pullRequest);
       const review = await deps.reviewer.review({ spec, diff, gates: [], profile });
       const gate = checkReviewThreshold(review, profile.policy);

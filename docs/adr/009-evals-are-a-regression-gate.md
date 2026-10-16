@@ -33,11 +33,16 @@ way a failing test blocks a code change, without a human re-reading thirty specs
   exactly one issue, close to the 30 the plan hoped for, and no human-rejected changes, so agreement is
   measured only on accepted work. Negative examples come from the pipeline's own escalated runs once the API
   persists them.
-- The review suite judges a historical diff against a spec drafted *today*, not the spec the human worked
+- The review suite over history judges a diff against a spec drafted *today*, not the spec the human worked
   from, so a disagreement partly measures spec drift. The first baseline is low (agreement 0 of 3, mean
   score 2.4) and is a floor to improve on, not a verdict on the reviewer; the gate still catches a prompt
-  change that lowers it. Reviewing the pipeline's own runs, where the spec is the one implemented, is the
-  fair measurement once runs are persisted.
+  change that lowers it.
+- **The fair measurement is the pipeline's own runs** (added 2026-10-16, with ADR 011). `eval-dataset --from
+  runs` turns every stored run whose pull request a human has merged or closed into an item that carries
+  the spec that run implemented; merged is `accepted`, closed without merge is `rejected`, so this dataset
+  has negatives. The review suite uses an item's own spec when it has one. Baselines are keyed
+  `<prompt version>@<dataset>`, so the history and the runs datasets never share one. The runs dataset
+  grows only as pull requests get judged; until then the builder says what it skipped and writes nothing.
 - Touched-area recall rewards specs that name paths; a spec that describes areas in prose scores low on
   purpose.
 - Model variance makes a single run noisy; the tolerance absorbs the usual spread, and a borderline failure

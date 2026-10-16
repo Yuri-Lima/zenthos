@@ -24,7 +24,7 @@ const specWriter: SpecWriterPort = {
     return specFor(ticket.key);
   },
 };
-const scm: ScmPort = { openPullRequest: async () => ({ url: 'x', number: 1 }), findPullRequest: async () => undefined, readPullRequestDiff: async () => ({ files: ['src/a.ts'], changedLines: 3, patch: '+a' }), postReview: async () => undefined };
+const scm: ScmPort = { openPullRequest: async () => ({ url: 'x', number: 1 }), findPullRequest: async () => undefined, readPullRequestDiff: async () => ({ files: ['src/a.ts'], changedLines: 3, patch: '+a' }), postReview: async () => undefined, pullRequestState: async () => 'open' };
 
 describe('runSpecSuite', () => {
   it('measures each spec against the merged files and keeps failures as rows', async () => {
@@ -40,6 +40,16 @@ describe('runSpecSuite', () => {
 });
 
 describe('runReviewSuite', () => {
+  it('uses the spec an item carries instead of drafting one', async () => {
+    let drafted = 0;
+    const counting: SpecWriterPort = { draftSpec: async (input) => (drafted++, specFor(input.ticket.key)) };
+    const reviewer: ReviewerPort = { review: async () => goodReview };
+    const withSpec = { ...dataset, items: [{ ...dataset.items[0], spec: specFor('owner/repo#1'), verdict: 'rejected' as const }] };
+    const { results } = await runReviewSuite({ issueTracker, specWriter: counting, scm, reviewer, repoContext: '' }, withSpec, profile);
+    expect(drafted).toBe(0);
+    expect(results[0].review_agreement).toBe(0);
+  });
+
   it('scores agreement with the human merge', async () => {
     let calls = 0;
     const reviewer: ReviewerPort = {

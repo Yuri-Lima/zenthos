@@ -1,4 +1,4 @@
-import { parseUnifiedDiff, type Diff, type PullRequest, type RepoProfile } from '@zenthos/domain';
+import { parseUnifiedDiff, type Diff, type PullRequest, type PullRequestState, type RepoProfile } from '@zenthos/domain';
 import type { OpenPullRequestInput, PostReviewInput, ScmPort } from '@zenthos/ports';
 import { parseRepo, type GitHubClients } from './clients.js';
 import { parseIssueKey } from './issue-key.js';
@@ -33,6 +33,13 @@ export class GitHubScm implements ScmPort {
     const { pulls } = await this.clients.for(ref);
     const { data } = await pulls.get({ ...ref, pull_number: pullRequest.number, mediaType: { format: 'diff' } });
     return parseUnifiedDiff(String(data));
+  }
+
+  async pullRequestState(profile: RepoProfile, pullRequest: PullRequest): Promise<PullRequestState> {
+    const ref = parseRepo(profile.repo);
+    const { pulls } = await this.clients.for(ref);
+    const { data } = await pulls.get({ ...ref, pull_number: pullRequest.number });
+    return data.merged ? 'merged' : data.state === 'closed' ? 'closed' : 'open';
   }
 
   /** Always a comment: a bot must not approve or block its own pull request; the gate result is in the body. */
