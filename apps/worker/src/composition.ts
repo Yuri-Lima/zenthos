@@ -6,13 +6,13 @@ import { ClaudeCodeAgent } from '@zenthos/adapter-claude-code';
 import { GitSandbox } from '@zenthos/adapter-git-sandbox';
 import { GitHubIssueTracker, GitHubScm, parseRepo, ResolvingGitHubClients, type GitHubClients } from '@zenthos/adapter-github';
 import { createGitHubClients } from '@zenthos/adapter-github/live';
-import { InMemoryCodingAgent, InMemoryIssueTracker, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryReviewer, InMemoryScm, InMemorySpecWriter, LocalSandbox } from '@zenthos/adapter-in-memory';
-import { migrate, PostgresProviderConnections, PostgresRepoProfiles, SecretBox } from '@zenthos/adapter-postgres';
+import { InMemoryCodingAgent, InMemoryIssueTracker, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryReviewer, InMemoryRuns, InMemoryScm, InMemorySpecWriter, LocalSandbox } from '@zenthos/adapter-in-memory';
+import { migrate, PostgresProviderConnections, PostgresRepoProfiles, PostgresRuns, SecretBox } from '@zenthos/adapter-postgres';
 import { credentialsForRepo } from '@zenthos/application';
 import pg from 'pg';
 import { noTracing, startLangfuseTracing } from '@zenthos/adapter-langfuse';
 import { createAnthropicReviewerModels, createAnthropicSpecModel, LangGraphReviewer, LangGraphSpecWriter, REVIEWER_VERSION, SPEC_WRITER_VERSION, verifyAnthropicAccess } from '@zenthos/agents';
-import type { CodingAgentPort, IssueTrackerPort, ProviderConnectionsPort, RepoProfilesPort, ReviewerPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
+import type { CodingAgentPort, IssueTrackerPort, ProviderConnectionsPort, RepoProfilesPort, ReviewerPort, RunsPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
 import { githubCredentials, loadConfig, type WorkerConfig } from './config.js';
 import { REPO_PROFILES } from './repos.js';
 
@@ -37,15 +37,15 @@ const DRY_RUN_TICKET = {
   labels: [],
 };
 
-export type Stores = { profiles: RepoProfilesPort; connections: ProviderConnectionsPort };
+export type Stores = { profiles: RepoProfilesPort; connections: ProviderConnectionsPort; runs: RunsPort };
 
 /** Profiles and connections come from Postgres when the API manages them, otherwise from the code list for dry runs. */
 export async function stores(config: WorkerConfig): Promise<Stores> {
-  if (!config.DATABASE_URL) return { profiles: new InMemoryRepoProfiles(REPO_PROFILES), connections: new InMemoryProviderConnections() };
+  if (!config.DATABASE_URL) return { profiles: new InMemoryRepoProfiles(REPO_PROFILES), connections: new InMemoryProviderConnections(), runs: new InMemoryRuns() };
   if (!config.ZENTHOS_SECRETS_KEY) throw new Error('ZENTHOS_SECRETS_KEY is required with DATABASE_URL (openssl rand -hex 32)');
   const pool = new pg.Pool({ connectionString: config.DATABASE_URL });
   await migrate(pool);
-  return { profiles: new PostgresRepoProfiles(pool), connections: new PostgresProviderConnections(pool, new SecretBox(config.ZENTHOS_SECRETS_KEY)) };
+  return { profiles: new PostgresRepoProfiles(pool), connections: new PostgresProviderConnections(pool, new SecretBox(config.ZENTHOS_SECRETS_KEY)), runs: new PostgresRuns(pool) };
 }
 
 /**

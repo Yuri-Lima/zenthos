@@ -45,7 +45,7 @@ These win over any pattern below when the two conflict. The goal is a codebase a
 | `libs/evals` | Golden dataset schema, metrics, regression check and the port-based suite runner (ADR 009) | domain, ports |
 | `libs/adapters/postgres` | Provider connections (secrets sealed at rest) and repository profiles in Postgres; the schema as ordered statements (ADR 010) | domain, ports |
 | `libs/adapters/temporal` | `RunControlPort` over the Temporal client and the workflow bundler config, shared by the API, the CLI and the worker | domain, ports |
-| `apps/api` | NestJS REST API: provider connections, the GitHub manifest and install flows, repository profiles, runs, the GitHub webhook; OpenAPI at `/docs` (ADR 010) | everything |
+| `apps/api` | NestJS REST API: provider connections, the GitHub manifest and install flows, repository profiles, runs from the stored projection, the GitHub webhook; OpenAPI at `/docs` (ADR 010, ADR 011) | everything |
 | `apps/worker` | Temporal worker: `workflows.ts` (one workflow per ticket), `activities.ts` (thin, call use cases), `config.ts` (zod-validated env), `composition.ts` (the adapters, chosen once), `repos.ts` (the dry-run repository profiles), `scripts/` (contract check, manual review, evals) | anything |
 | `apps/cli` | `zenthos run|approve|reject|state <ticket-key>` against the running worker | anything |
 | `docs/adr` | Architecture decision records | |
@@ -115,8 +115,9 @@ sandbox, deterministic gates with one feedback retry, and a pull request to the 
 progress: the reviewer scores the pull request against the domain rubric and posts a comment, a failed review
 sends the agent back once (ADR 008); the evals measure both agents against merged history and block a prompt
 change that lowers the scores (ADR 009); the REST API keeps provider connections and repository profiles in
-Postgres with secrets sealed, connects GitHub by the manifest flow and takes the app's webhook (ADR 010). Next:
-credentials resolved per repository from the stored connection, and runs persisted for the dashboard.
+Postgres with secrets sealed, connects GitHub by the manifest flow and takes the app's webhook (ADR 010); the worker
+acts with the connection each profile names and records every run transition to the store, which the API serves
+(ADR 011). Next: the review eval over stored runs, then phase 4.
 Then 4 Phoenix adapters and Codex; 5 dashboard, Cloud Run, write-up.
 
 ## Dependency policy

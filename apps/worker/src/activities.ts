@@ -17,7 +17,7 @@ import {
   type ReviewResult,
 } from '@zenthos/application';
 import type { Approval, GateResult, PullRequest, Review, Run, Spec, Workspace } from '@zenthos/domain';
-import type { CodingAgentPort, IssueTrackerPort, RepoProfilesPort, ReviewerPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
+import type { CodingAgentPort, IssueTrackerPort, RepoProfilesPort, ReviewerPort, RunsPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
 
 export type ActivityDeps = {
   issueTracker: IssueTrackerPort;
@@ -28,6 +28,7 @@ export type ActivityDeps = {
   reviewer: ReviewerPort;
   repoContext: string;
   profiles: RepoProfilesPort;
+  runs: RunsPort;
 };
 
 /**
@@ -69,6 +70,8 @@ export function createActivities(deps: ActivityDeps) {
     review: (run: Run): Promise<ReviewResult> => withHeartbeat(async () => reviewChange(deps, run, await profile(run))),
     reviewFeedback: async (review: Review): Promise<string> => reviewFeedback(review),
     cleanup: (workspace: Workspace): Promise<void> => deps.sandbox.cleanup(workspace),
+    /** The projection everything outside the workflow reads (ADR 011); called after every state change. */
+    recordRun: (run: Run): Promise<void> => deps.runs.save(run),
     /** Pure, but kept beside the activities so the workflow bundle stays free of application code. */
     gateFeedback: async (gates: GateResult[]): Promise<string> => gateFeedback(gates),
   };

@@ -40,6 +40,7 @@ export const runQuery = defineQuery<Run>(WORKFLOW_CONTRACT.runQuery);
 export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
   const policy = { ...DEFAULT_APPROVAL_POLICY, ...input.approval };
   let run = await activities.intake(input.key);
+  await activities.recordRun(run);
   let decision: Decision | undefined;
   setHandler(approvalDecisionSignal, (value) => {
     decision = value;
@@ -51,22 +52,26 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
     decision = undefined;
     return value;
   };
-  /** Every transition goes through `run` so the query handler always sees the latest state. */
-  const advance = (event: RunEvent) => (run = applyEvent(run, event));
+  /** Every transition goes through `run`, so the query handler and the stored projection always see the latest state. */
+  const advance = async (event: RunEvent): Promise<Run> => {
+    run = applyEvent(run, event);
+    await activities.recordRun(run);
+    return run;
+  };
 
   for (let round = 1; round <= policy.maxDraftRounds; round++) {
     run = { ...run, spec: await activities.draftSpec(run) };
-    advance('spec_drafted');
+    await advance('spec_drafted');
 
     const outcome = await waitForDecision(input.key, policy, () => decision !== undefined, takeDecision);
     if (outcome === 'approved') {
-      advance('spec_approved');
+      await advance('spec_approved');
       break;
     }
-    if (outcome === 'timeout') return advance('escalated');
-    advance('spec_rejected');
+    if (outcome === 'timeout') return await advance('escalated');
+    await advance('spec_rejected');
   }
-  if (run.state !== 'spec_approved') return advance('escalated');
+  if (run.state !== 'spec_approved') return await advance('escalated');
 
   const implementRounds = input.maxImplementRounds ?? run.policy.maxImplementRounds;
   const reviewRounds = input.maxReviewRounds ?? run.policy.maxReviewRounds;
@@ -80,45 +85,45 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
     for (let round = 1; round <= implementRounds; round++) {
       const { implementation, diff } = await longActivities.implement(run, workspace, feedback);
       run = { ...run, estimatedCostUsd: run.estimatedCostUsd + implementation.estimatedCostUsd, tokens: addTokens(run.tokens, implementation.tokens) };
-      advance('implemented');
+      await advance('implemented');
 
       const gates = await longActivities.runGates(run, workspace, diff, baselineFailures);
       run = { ...run, gates };
       if (gates.every((gate) => gate.passed)) return 'passed';
       if (round < implementRounds && canRetryAfter(gates)) {
         feedback = await activities.gateFeedback(gates);
-        advance('gates_failed');
+        await advance('gates_failed');
         continue;
       }
       await activities.pushWorkInProgress(run, workspace, gates);
       await activities.cleanup(workspace);
-      advance('escalated');
+      await advance('escalated');
       return 'escalated';
     }
-    advance('escalated');
+    await advance('escalated');
     return 'escalated';
   };
 
   let feedback: string | undefined;
   for (let reviewRound = 0; reviewRound <= reviewRounds; reviewRound++) {
     if ((await implementUntilGatesPass(feedback)) === 'escalated') return run;
-    advance('gates_passed');
+    await advance('gates_passed');
     run = { ...run, pullRequest: await activities.openPullRequest(run, workspace, run.gates ?? []) };
-    advance('mr_opened');
+    await advance('mr_opened');
 
     const { review, gate } = await longActivities.review(run);
     run = { ...run, review, gates: [...(run.gates ?? []), gate] };
     if (gate.passed) {
       await activities.cleanup(workspace);
-      return advance('review_passed');
+      return await advance('review_passed');
     }
     if (reviewRound < reviewRounds) {
       feedback = await activities.reviewFeedback(review);
-      advance('review_failed');
+      await advance('review_failed');
       continue;
     }
     await activities.cleanup(workspace);
-    return advance('escalated');
+    return await advance('escalated');
   }
   return run;
 }

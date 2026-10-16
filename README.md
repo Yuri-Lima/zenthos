@@ -14,7 +14,8 @@ against a four-line rubric and posts the scores and findings as a comment; below
 one more round with the findings, and humans always merge. Regression evals built from the repository's merged
 history score both agents and block a prompt change that lowers them. A REST API keeps provider connections and
 repository profiles in Postgres with secrets sealed at rest, connects GitHub through the App manifest flow, and
-takes the App's webhook so a label starts or decides a run without polling. Every model call is traced in LangFuse. Tested with
+takes the App's webhook so a label starts or decides a run without polling. Every run transition is recorded to
+Postgres, so the API lists runs after the workflow is gone. Every model call is traced in LangFuse. Tested with
 Temporal's time-skipping environment, a local bare git remote, and fakes for the agent.
 
 ## Quick start

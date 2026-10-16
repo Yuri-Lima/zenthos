@@ -1,6 +1,7 @@
-import { providerConnectionsContract, repoProfilesContract } from '@zenthos/ports';
+import { providerConnectionsContract, repoProfilesContract, runsContract } from '@zenthos/ports';
 import { Pool } from 'pg';
 import { migrate } from './migrations.js';
+import { PostgresRuns } from './postgres-runs.js';
 import { PostgresProviderConnections, PostgresRepoProfiles } from './postgres-stores.js';
 import { SecretBox } from './secret-box.js';
 
@@ -12,8 +13,8 @@ describe('Postgres stores', () => {
   const box = new SecretBox('c'.repeat(64));
 
   beforeAll(async () => {
-    await pool.query('DROP TABLE IF EXISTS repo_profiles, provider_connections, schema_migrations');
-    expect(await migrate(pool)).toEqual(['001-provider-connections-and-repo-profiles']);
+    await pool.query('DROP TABLE IF EXISTS runs, repo_profiles, provider_connections, schema_migrations');
+    expect(await migrate(pool)).toEqual(['001-provider-connections-and-repo-profiles', '002-runs']);
     expect(await migrate(pool)).toEqual([]);
   });
 
@@ -21,6 +22,7 @@ describe('Postgres stores', () => {
 
   for (const [name, check] of Object.entries(providerConnectionsContract)) it(`connections: ${name}`, () => check(new PostgresProviderConnections(pool, box)));
   for (const [name, check] of Object.entries(repoProfilesContract)) it(`profiles: ${name}`, () => check(new PostgresRepoProfiles(pool)));
+  for (const [name, check] of Object.entries(runsContract)) it(`runs: ${name}`, () => check(new PostgresRuns(pool), 'owner/repo#1'));
 
   it('keeps credentials sealed in the row', async () => {
     const { rows } = await pool.query<{ secret: Buffer; public: unknown }>('SELECT secret, public FROM provider_connections LIMIT 1').catch(() => ({ rows: [] }));

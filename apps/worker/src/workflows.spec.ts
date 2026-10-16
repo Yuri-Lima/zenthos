@@ -35,7 +35,7 @@ function fakeActivities(options: { approvals?: Approval[]; failDraftsBeforeSucce
   let draftFailures = options.failDraftsBeforeSuccess ?? 0;
   let failingGates = options.failingGateRounds ?? 0;
   let failingReviews = options.failingReviewRounds ?? 0;
-  const calls = { intake: 0, draftSpec: 0, readApproval: 0, implement: 0, runGates: 0, openPullRequest: 0, cleanup: 0, pushed: 0, review: 0, feedback: [] as (string | undefined)[], baselines: [] as string[][] };
+  const calls = { intake: 0, draftSpec: 0, readApproval: 0, implement: 0, runGates: 0, openPullRequest: 0, cleanup: 0, pushed: 0, review: 0, feedback: [] as (string | undefined)[], baselines: [] as string[][], recorded: [] as string[] };
   const activities: Activities = {
     prepare: async () => workspace,
     baseline: async () => options.baselineFailures ?? [],
@@ -69,6 +69,9 @@ function fakeActivities(options: { approvals?: Approval[]; failDraftsBeforeSucce
     openPullRequest: async () => {
       calls.openPullRequest++;
       return { url: 'https://github.com/owner/repo/pull/9', number: 9 };
+    },
+    recordRun: async (run) => {
+      calls.recorded.push(run.state);
     },
     cleanup: async () => {
       calls.cleanup++;
@@ -143,6 +146,7 @@ describe('ticketRunWorkflow', () => {
     expect(run.history.map((h) => h.event)).toEqual(['spec_drafted', 'spec_approved', 'implemented', 'gates_passed', 'mr_opened', 'review_passed']);
     expect(calls.readApproval).toBe(2);
     expect(calls.review).toBe(1);
+    expect(calls.recorded).toEqual(['intake', 'spec_drafted', 'spec_approved', 'implemented', 'gates_passed', 'mr_opened', 'reviewed']);
     expect(calls.cleanup).toBe(1);
     expect(APPROVAL_LABELS.approved).toBeDefined();
   });

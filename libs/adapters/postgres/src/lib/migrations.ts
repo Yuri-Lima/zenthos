@@ -27,6 +27,21 @@ export const MIGRATIONS: { name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    name: '002-runs',
+    sql: `
+      CREATE TABLE runs (
+        id uuid PRIMARY KEY,
+        ticket_key text NOT NULL,
+        state text NOT NULL,
+        run jsonb NOT NULL,
+        created_at timestamptz NOT NULL,
+        updated_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX runs_ticket_key_created_at ON runs (ticket_key, created_at DESC);
+      CREATE INDEX runs_state_created_at ON runs (state, created_at DESC);
+    `,
+  },
 ];
 
 export async function migrate(pool: Pool): Promise<string[]> {

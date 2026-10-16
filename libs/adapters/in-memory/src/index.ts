@@ -7,3 +7,4 @@ export * from './lib/in-memory-reviewer.js';
 export * from './lib/in-memory-stores.js';
 export * from './lib/in-memory-run-control.js';
 export * from './lib/in-memory-github-apps.js';
+export * from './lib/in-memory-runs.js';
