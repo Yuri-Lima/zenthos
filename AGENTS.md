@@ -70,6 +70,8 @@ bans vendor SDKs inside domain, ports and application. Every project carries a `
   import `@zenthos/domain` (pure) and nothing with node or vendor imports; `bundlerOptions` in
   `libs/adapters/temporal` resolves the workspace sources for the workflow bundle.
 - Agent graphs take a LangChain `Runnable` as the model and are tested with `RunnableLambda` fakes (ADR 004).
+  Each graph is built by one function (`buildSpecWriterGraph`, `buildReviewerGraph`) that the port adapter and
+  the Studio entries in `libs/agents/src/studio` share; never a second copy of a graph for Studio.
 - Prompts carry a version string (`SPEC_WRITER_VERSION`); bump it when the wording changes.
 - No API keys in the repo or in CI. Model access comes from an `ant auth login` profile on a laptop and from
   Workload Identity Federation elsewhere; GitHub access from a GitHub App; `docs/authentication.md` has both.
@@ -98,6 +100,7 @@ pnpm cli run owner/repo#123
 pnpm cli approve owner/repo#123
 pnpm cli state owner/repo#123
 pnpm api               # REST API on :3200, OpenAPI at /docs (RUN_CONTROL=temporal to drive real runs)
+pnpm studio            # LangGraph Studio dev server on :2024 for the spec_writer and reviewer graphs (langgraph.json)
 pnpm nx run @zenthos/worker:contract -- owner/repo#123   # live GitHub check: comment, commit attribution, cleanup
 pnpm nx run @zenthos/worker:review -- owner/repo#123 spec.json   # re-review the open pull request of a run (ADR 008)
 pnpm nx run @zenthos/worker:eval-dataset -- owner/repo            # golden dataset from merged pull requests (ADR 009)

@@ -55,3 +55,6 @@ test-output
 **/.env
 *.pem
 libs/evals/results/
+
+# LangGraph API
+.langgraph_api

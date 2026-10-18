@@ -9,11 +9,13 @@
     "infra:reset": "docker compose down -v",
     "worker": "tsx --conditions=@zenthos/source apps/worker/src/main.ts",
     "cli": "tsx --conditions=@zenthos/source apps/cli/src/main.ts",
-    "api": "nx run @zenthos/api:serve"
+    "api": "nx run @zenthos/api:serve",
+    "studio": "NODE_OPTIONS=--conditions=@zenthos/source langgraphjs dev --no-browser"
   },
   "private": true,
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@langchain/langgraph-cli": "^1.5.4",
     "@nx/eslint": "23.3.0",
     "@nx/eslint-plugin": "23.3.0",
     "@nx/jest": "23.3.0",

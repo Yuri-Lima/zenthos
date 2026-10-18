@@ -1,0 +1,8 @@
+{
+  "node_version": "20",
+  "graphs": {
+    "spec_writer": "./libs/agents/src/studio/spec-writer.ts:graph",
+    "reviewer": "./libs/agents/src/studio/reviewer.ts:graph"
+  },
+  "env": ".env"
+}

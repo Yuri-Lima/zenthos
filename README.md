@@ -29,6 +29,7 @@ pnpm infra:up      # Temporal UI http://localhost:8080, LangFuse http://localhos
 pnpm check         # typecheck, lint, test
 pnpm worker        # start the worker (dry run: in-memory tracker and spec writer)
 pnpm cli run memory#1 && pnpm cli approve memory#1 && pnpm cli state memory#1   # the dry-run ticket
+pnpm studio        # LangGraph Studio: open https://smith.langchain.com/studio?baseUrl=http://localhost:2024 (free LangSmith login)
 ```
 
 For a real run set `ISSUE_TRACKER=github`, `GITHUB_TOKEN`, `SPEC_WRITER=anthropic` and the LangFuse keys in
