@@ -11,3 +11,5 @@ allowBuilds:
   unrs-resolver: false
   protobufjs: true
   '@scarf/scarf': set this to true or false
+  lmdb: false
+  msgpackr-extract: false

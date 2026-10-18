@@ -1,0 +1,56 @@
+{
+  "app": {
+    "tagline": "Agent Operating System",
+    "signOut": "Sign out",
+    "anonymous": "anonymous (sign-in is off)"
+  },
+  "signIn": {
+    "title": "Sign in",
+    "body": "ZenthOs signs you in through GitHub, with the same App that acts on your repositories. Only allowlisted logins get in.",
+    "button": "Sign in with GitHub",
+    "notAllowed": "If GitHub sent you back here, your login is not on the allowlist."
+  },
+  "common": {
+    "cancel": "Cancel"
+  },
+  "runs": {
+    "title": "Runs",
+    "start": "Start a run",
+    "startConfirm": "Start",
+    "ticketKey": "Ticket key",
+    "ticket": "Ticket",
+    "state": "State",
+    "cost": "Cost",
+    "requestedBy": "Requested by",
+    "created": "Created",
+    "anyState": "Any state",
+    "empty": "No runs yet. Start one with a ticket key, or add the zenthos:run label on an issue."
+  },
+  "run": {
+    "tokens": "tokens",
+    "pullRequest": "PR #{{number}}",
+    "approve": "Approve spec",
+    "reject": "Reject spec",
+    "openTicket": "open ticket",
+    "spec": "Specification",
+    "criteria": "Acceptance criteria",
+    "outOfScope": "Out of scope",
+    "gates": "Gates",
+    "review": "Review",
+    "history": "History",
+    "notFound": "No run for this ticket."
+  },
+  "state": {
+    "intake": "intake",
+    "spec_drafted": "spec drafted, waiting for you",
+    "spec_approved": "spec approved",
+    "implemented": "implemented",
+    "gates_passed": "gates passed",
+    "mr_opened": "pull request open",
+    "reviewed": "reviewed",
+    "verified": "verified",
+    "done": "done",
+    "failed": "failed",
+    "needs_human": "needs a human"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "app": {
+    "tagline": "Sistema operacional de agentes",
+    "signOut": "Sair",
+    "anonymous": "anônimo (login desligado)"
+  },
+  "signIn": {
+    "title": "Entrar",
+    "body": "O ZenthOs faz o login pelo GitHub, com o mesmo App que atua nos seus repositórios. Só entram logins da lista permitida.",
+    "button": "Entrar com GitHub",
+    "notAllowed": "Se o GitHub devolveu você para cá, seu login não está na lista permitida."
+  },
+  "common": {
+    "cancel": "Cancelar"
+  },
+  "runs": {
+    "title": "Execuções",
+    "start": "Iniciar execução",
+    "startConfirm": "Iniciar",
+    "ticketKey": "Chave do ticket",
+    "ticket": "Ticket",
+    "state": "Estado",
+    "cost": "Custo",
+    "requestedBy": "Pedido por",
+    "created": "Criado",
+    "anyState": "Qualquer estado",
+    "empty": "Nenhuma execução ainda. Inicie uma com a chave de um ticket ou adicione a etiqueta zenthos:run em uma issue."
+  },
+  "run": {
+    "tokens": "tokens",
+    "pullRequest": "PR #{{number}}",
+    "approve": "Aprovar spec",
+    "reject": "Rejeitar spec",
+    "openTicket": "abrir ticket",
+    "spec": "Especificação",
+    "criteria": "Critérios de aceite",
+    "outOfScope": "Fora do escopo",
+    "gates": "Portões",
+    "review": "Revisão",
+    "history": "Histórico",
+    "notFound": "Nenhuma execução para este ticket."
+  },
+  "state": {
+    "intake": "entrada",
+    "spec_drafted": "spec redigida, aguardando você",
+    "spec_approved": "spec aprovada",
+    "implemented": "implementado",
+    "gates_passed": "portões aprovados",
+    "mr_opened": "pull request aberto",
+    "reviewed": "revisado",
+    "verified": "verificado",
+    "done": "concluído",
+    "failed": "falhou",
+    "needs_human": "precisa de uma pessoa"
+  }
+}

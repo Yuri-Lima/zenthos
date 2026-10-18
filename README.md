@@ -30,6 +30,8 @@ pnpm check         # typecheck, lint, test
 pnpm worker        # start the worker (dry run: in-memory tracker and spec writer)
 pnpm cli run memory#1 && pnpm cli approve memory#1 && pnpm cli state memory#1   # the dry-run ticket
 pnpm studio        # LangGraph Studio: open https://smith.langchain.com/studio?baseUrl=http://localhost:2024 (free LangSmith login)
+pnpm api           # REST API on :3200, OpenAPI at /docs
+pnpm dashboard     # Angular dashboard on :4200; with ZENTHOS_AUTH=github it asks you to sign in with GitHub
 ```
 
 For a real run set `ISSUE_TRACKER=github`, `GITHUB_TOKEN`, `SPEC_WRITER=anthropic` and the LangFuse keys in

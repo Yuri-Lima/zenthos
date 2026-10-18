@@ -58,3 +58,5 @@ libs/evals/results/
 
 # LangGraph API
 .langgraph_api
+
+.angular

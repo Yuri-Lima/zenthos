@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { height: 100%; margin: 0; }
+body { font-family: Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif; background: #f6f7f9; color: #1a2229; }
+a { color: inherit; }
+.zen-card { background: #fff; border: 1px solid #e2e6ea; border-radius: 12px; }
+.zen-chip { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 10px; font-size: 0.78rem; font-weight: 500; white-space: nowrap; }
+.zen-chip.success { background: #e3f1e8; color: #2f7a4f; }
+.zen-chip.info { background: #e4edf3; color: #2b5c7f; }
+.zen-chip.warn { background: #f7edd6; color: #9a6400; }
+.zen-chip.danger { background: #f6e3e0; color: #a8362b; }
+.zen-chip.secondary { background: #eceff2; color: #5b6770; }

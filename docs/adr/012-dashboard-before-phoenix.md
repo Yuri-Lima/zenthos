@@ -14,8 +14,11 @@ improve the Legal Connect workflow with numbers in front of them, before swappin
 - **Phase 4 is the dashboard and Legal Connect hardening; phase 5 is Phoenix; phase 6 is Cloud Run and
   the write-up.** Nothing in Phoenix reshapes the core: the ports already cover a second tracker, SCM and
   CI, and the provider list is one domain constant.
-- **Angular with PrimeNG and Tailwind**, standalone bootstrap, English and Portuguese from JSON. The same
-  stack as Phoenix's UI, so the kit is known and the write-up compares like with like.
+- **Angular with Angular Material and Tailwind**, standalone bootstrap, English and Portuguese from JSON.
+  PrimeNG was the first choice, as in Phoenix, but the PrimeNG that matches Angular 22 (version 22) is no
+  longer MIT: it needs a PrimeUI license key in the client bundle, renewed yearly, or it shows a license
+  notice. For a public repository, an MIT kit with no key wins; Angular Material is the one with the same
+  reach. Decided 18 Oct 2026 after seeing the notice on the first page.
 - **Sign in with GitHub through the connected App (ADR 007); authorization is an allowlist of GitHub
   logins in configuration.** Explicit and auditable; a collaborator check against the connected
   repositories can replace it later without touching the pages.

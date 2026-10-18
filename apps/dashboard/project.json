@@ -1,0 +1,112 @@
+{
+  "name": "@zenthos/dashboard",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "zen",
+  "sourceRoot": "apps/dashboard/src",
+  "tags": [
+    "scope:app"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/dashboard",
+        "browser": "apps/dashboard/src/main.ts",
+        "tsConfig": "apps/dashboard/tsconfig.app.json",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/dashboard/public"
+          }
+        ],
+        "styles": [
+          "node_modules/@angular/material/prebuilt-themes/azure-blue.css",
+          "apps/dashboard/src/styles.css"
+        ]
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "500kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ],
+          "outputHashing": "all",
+          "fileReplacements": [
+            {
+              "replace": "apps/dashboard/src/environments/environment.ts",
+              "with": "apps/dashboard/src/environments/environment.production.ts"
+            }
+          ]
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "configurations": {
+        "production": {
+          "buildTarget": "@zenthos/dashboard:build:production"
+        },
+        "development": {
+          "buildTarget": "@zenthos/dashboard:build:development"
+        }
+      },
+      "options": {
+        "port": 4200,
+        "prebundle": {
+          "exclude": [
+            "@zenthos/api-client",
+            "openapi-fetch"
+          ]
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{projectRoot}/test-output/jest/coverage"
+      ],
+      "options": {
+        "jestConfig": "apps/dashboard/jest.config.cjs",
+        "tsConfig": "apps/dashboard/tsconfig.spec.json"
+      }
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "buildTarget": "dashboard:build",
+        "staticFilePath": "dist/apps/dashboard/browser",
+        "spa": true
+      }
+    },
+    "typecheck": {
+      "command": "tsc --noEmit -p apps/dashboard/tsconfig.app.json",
+      "options": {
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  }
+}
