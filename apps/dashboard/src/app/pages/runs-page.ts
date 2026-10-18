@@ -1,5 +1,4 @@
-import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -12,84 +11,107 @@ import { RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { poll } from '../core/poll';
 import { RunsService, type Run } from '../core/runs';
-import { RUN_STATES, STATE_SEVERITY, usd } from '../shared/run-state';
+import { age, ATTENTION_STATES, IN_FLIGHT_STATES, RUN_STATES, usd } from '../shared/run-state';
+import { StatusChip } from '../shared/status-chip';
+
+type Quick = 'all' | 'attention' | 'inflight';
 
 @Component({
   selector: 'zen-runs-page',
-  imports: [DatePipe, FormsModule, RouterLink, TranslateModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule],
+  imports: [FormsModule, RouterLink, TranslateModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, StatusChip],
+  styles: `
+    .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-bottom: 16px; }
+    .tile { text-align: left; padding: 10px 14px; display: grid; gap: 2px; cursor: pointer; font: inherit; color: inherit; }
+    .tile .v { font-family: var(--zen-mono); font-size: 22px; font-weight: 500; line-height: 1.1; }
+    .tile .k { font-size: 12px; color: var(--zen-muted); }
+    .tile.on { border-color: var(--zen-accent); box-shadow: inset 0 0 0 1px var(--zen-accent); }
+    .tile.warn .v { color: var(--zen-warn); }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .key { font-family: var(--zen-mono); font-size: 13px; }
+    .title { color: var(--zen-muted); font-size: 12.5px; max-width: 52ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    td.r, th.r { text-align: right; }
+  `,
   template: `
-    <div class="flex flex-wrap items-center gap-3 mb-4">
-      <h1 class="text-xl font-semibold m-0">{{ 'runs.title' | translate }}</h1>
+    <div class="toolbar">
+      <div><div class="eyebrow">{{ 'runs.eyebrow' | translate }}</div><h1 class="text-lg font-semibold m-0">{{ 'runs.title' | translate }}</h1></div>
       <span class="flex-1"></span>
-      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-56">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-60">
         <mat-label>{{ 'runs.state' | translate }}</mat-label>
-        <mat-select [(ngModel)]="state" (selectionChange)="refresh()">
+        <mat-select [(ngModel)]="state" (selectionChange)="quick.set('all'); refresh()">
           <mat-option [value]="undefined">{{ 'runs.anyState' | translate }}</mat-option>
-          @for (option of states; track option) {
-            <mat-option [value]="option">{{ 'state.' + option | translate }}</mat-option>
-          }
+          @for (option of states; track option) {<mat-option [value]="option">{{ 'state.' + option | translate }}</mat-option>}
         </mat-select>
       </mat-form-field>
       <button mat-flat-button (click)="starting.set(!starting())"><mat-icon>play_arrow</mat-icon>{{ 'runs.start' | translate }}</button>
     </div>
 
+    <div class="strip" role="group" [attr.aria-label]="'runs.attention' | translate">
+      <button class="surface tile" [class.on]="quick() === 'all'" (click)="setQuick('all')"><span class="v num">{{ all().length }}</span><span class="k">{{ 'runs.total' | translate }}</span></button>
+      <button class="surface tile warn" [class.on]="quick() === 'attention'" (click)="setQuick('attention')"><span class="v num">{{ attention().length }}</span><span class="k">{{ 'runs.waiting' | translate }}</span></button>
+      <button class="surface tile" [class.on]="quick() === 'inflight'" (click)="setQuick('inflight')"><span class="v num">{{ inFlight().length }}</span><span class="k">{{ 'runs.inFlight' | translate }}</span></button>
+      <div class="surface tile" aria-live="polite"><span class="v num">{{ usd(totalCost()) }}</span><span class="k">{{ 'runs.totalCost' | translate }}</span></div>
+    </div>
+
     @if (starting()) {
-      <form class="zen-card p-4 mb-4 flex flex-wrap items-end gap-3" (ngSubmit)="start()">
+      <form class="surface p-3 mb-3 flex flex-wrap items-end gap-3" (ngSubmit)="start()">
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-80">
           <mat-label>{{ 'runs.ticketKey' | translate }}</mat-label>
-          <input matInput id="ticket" name="ticket" [(ngModel)]="ticketKey" placeholder="owner/repo#123" autocomplete="off" />
+          <input matInput id="ticket" name="ticket" [(ngModel)]="ticketKey" placeholder="owner/repo#123" autocomplete="off" class="mono" />
         </mat-form-field>
         <button mat-flat-button type="submit" [disabled]="!ticketKey.includes('#')">{{ 'runs.startConfirm' | translate }}</button>
         <button mat-button type="button" (click)="starting.set(false)">{{ 'common.cancel' | translate }}</button>
-        @if (error(); as message) {
-          <p class="text-sm text-red-700 m-0 basis-full">{{ message }}</p>
-        }
+        @if (error(); as message) {<p class="text-sm m-0 basis-full" style="color: var(--zen-crit)">{{ message }}</p>}
       </form>
     }
 
-    <div class="zen-card overflow-x-auto">
-      @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-      <table mat-table [dataSource]="runs()" class="w-full">
+    <div class="surface overflow-x-auto">
+      @if (loading()) {<mat-progress-bar mode="indeterminate" />}
+      <table mat-table [dataSource]="rows()" class="w-full">
         <ng-container matColumnDef="ticket">
           <th mat-header-cell *matHeaderCellDef>{{ 'runs.ticket' | translate }}</th>
           <td mat-cell *matCellDef="let run">
-            <a [routerLink]="['/runs', run.ticket.key]" class="font-medium no-underline text-sky-800">{{ run.ticket.key }}</a>
-            <div class="text-sm text-slate-500">{{ run.ticket.title }}</div>
+            <a [routerLink]="['/runs', run.ticket.key]" class="link key">{{ run.ticket.key }}</a>
+            <div class="title" [title]="run.ticket.title">{{ run.ticket.title }}</div>
           </td>
         </ng-container>
         <ng-container matColumnDef="state">
           <th mat-header-cell *matHeaderCellDef>{{ 'runs.state' | translate }}</th>
-          <td mat-cell *matCellDef="let run"><span class="zen-chip" [class]="'zen-chip ' + severity[run.state]">{{ 'state.' + run.state | translate }}</span></td>
+          <td mat-cell *matCellDef="let run"><zen-status-chip [state]="run.state" /></td>
         </ng-container>
         <ng-container matColumnDef="cost">
-          <th mat-header-cell *matHeaderCellDef>{{ 'runs.cost' | translate }}</th>
-          <td mat-cell *matCellDef="let run" class="tabular-nums">{{ usd(run.estimatedCostUsd) }}</td>
+          <th mat-header-cell *matHeaderCellDef class="r">{{ 'runs.cost' | translate }}</th>
+          <td mat-cell *matCellDef="let run" class="r mono">{{ usd(run.estimatedCostUsd) }}</td>
         </ng-container>
         <ng-container matColumnDef="requestedBy">
           <th mat-header-cell *matHeaderCellDef>{{ 'runs.requestedBy' | translate }}</th>
-          <td mat-cell *matCellDef="let run">{{ run.requestedBy ?? '' }}</td>
+          <td mat-cell *matCellDef="let run" class="mono">{{ run.requestedBy ?? '·' }}</td>
         </ng-container>
-        <ng-container matColumnDef="created">
-          <th mat-header-cell *matHeaderCellDef>{{ 'runs.created' | translate }}</th>
-          <td mat-cell *matCellDef="let run" class="whitespace-nowrap">{{ run.createdAt | date: 'short' }}</td>
+        <ng-container matColumnDef="age">
+          <th mat-header-cell *matHeaderCellDef class="r">{{ 'runs.age' | translate }}</th>
+          <td mat-cell *matCellDef="let run" class="r mono whitespace-nowrap" [title]="run.createdAt">{{ age(run.createdAt) }}</td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="columns"></tr>
         <tr mat-row *matRowDef="let row; columns: columns"></tr>
-        <tr class="mat-row" *matNoDataRow><td class="mat-cell p-4 text-slate-500" [attr.colspan]="columns.length">{{ 'runs.empty' | translate }}</td></tr>
+        <tr class="mat-row" *matNoDataRow><td class="mat-cell p-4 muted" [attr.colspan]="columns.length">{{ 'runs.empty' | translate }}</td></tr>
       </table>
     </div>
   `,
 })
 export class RunsPage {
   private readonly service = inject(RunsService);
-  readonly runs = signal<Run[]>([]);
+  readonly all = signal<Run[]>([]);
   readonly loading = signal(true);
   readonly starting = signal(false);
   readonly error = signal<string | undefined>(undefined);
-  readonly severity = STATE_SEVERITY;
+  readonly quick = signal<Quick>('all');
+  readonly attention = computed(() => this.all().filter((r) => ATTENTION_STATES.includes(r.state)));
+  readonly inFlight = computed(() => this.all().filter((r) => IN_FLIGHT_STATES.includes(r.state)));
+  readonly totalCost = computed(() => this.all().reduce((sum, r) => sum + r.estimatedCostUsd, 0));
+  readonly rows = computed(() => (this.quick() === 'attention' ? this.attention() : this.quick() === 'inflight' ? this.inFlight() : this.all()));
   readonly usd = usd;
+  readonly age = age;
   readonly states = RUN_STATES;
-  readonly columns = ['ticket', 'state', 'cost', 'requestedBy', 'created'];
+  readonly columns = ['ticket', 'state', 'cost', 'requestedBy', 'age'];
   state: Run['state'] | undefined;
   ticketKey = '';
 
@@ -97,8 +119,14 @@ export class RunsPage {
     poll(() => void this.refresh());
   }
 
+  setQuick(value: Quick) {
+    this.state = undefined;
+    this.quick.set(value);
+    void this.refresh();
+  }
+
   async refresh() {
-    this.runs.set(await this.service.list(this.state));
+    this.all.set(await this.service.list(this.state));
     this.loading.set(false);
   }
 

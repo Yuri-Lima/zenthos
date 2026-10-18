@@ -21,7 +21,7 @@
     ],
     "targets": {
       "generate": {
-        "command": "pnpm nx run @zenthos/api:openapi && openapi-typescript apps/api/openapi.json -o libs/api-client/src/lib/schema.d.ts",
+        "command": "pnpm nx run @zenthos/api:openapi && openapi-typescript apps/api/openapi.json -o libs/api-client/src/lib/schema.ts",
         "options": {
           "cwd": "{workspaceRoot}"
         }

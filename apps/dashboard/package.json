@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "@zenthos/api-client": "workspace:*"
+    "@zenthos/api-client": "workspace:*",
+    "@zenthos/domain": "workspace:*"
   }
 }

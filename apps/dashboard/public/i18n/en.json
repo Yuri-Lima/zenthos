@@ -2,7 +2,8 @@
   "app": {
     "tagline": "Agent Operating System",
     "signOut": "Sign out",
-    "anonymous": "anonymous (sign-in is off)"
+    "anonymous": "sign-in off",
+    "language": "Switch language"
   },
   "signIn": {
     "title": "Sign in",
@@ -24,7 +25,14 @@
     "requestedBy": "Requested by",
     "created": "Created",
     "anyState": "Any state",
-    "empty": "No runs yet. Start one with a ticket key, or add the zenthos:run label on an issue."
+    "empty": "No runs yet. Start one with a ticket key, or add the zenthos:run label on an issue.",
+    "eyebrow": "Pipeline",
+    "age": "Age",
+    "attention": "Attention",
+    "total": "runs",
+    "waiting": "waiting for a person",
+    "inFlight": "in flight",
+    "totalCost": "estimated spend"
   },
   "run": {
     "tokens": "tokens",
@@ -38,7 +46,34 @@
     "gates": "Gates",
     "review": "Review",
     "history": "History",
-    "notFound": "No run for this ticket."
+    "notFound": "No run for this ticket.",
+    "pipeline": "Pipeline",
+    "timeline": "Timeline",
+    "graph": "State machine",
+    "view": "View",
+    "clickToInspect": "Click a step to inspect it",
+    "graphAria": "The run's state machine with the path this run took",
+    "visits": "visited {{n}} times",
+    "started": "run started",
+    "sincePrevious": "since the previous step",
+    "branch": "branch",
+    "inScope": "In scope",
+    "touchedAreas": "Touched areas",
+    "noSpec": "No spec yet.",
+    "noGates": "No gates have run yet.",
+    "noReview": "No review yet.",
+    "findings": "Findings",
+    "cost": "Cost",
+    "estimate": "estimate at list price",
+    "inputTokens": "input tokens",
+    "outputTokens": "output tokens",
+    "cacheRead": "cache read",
+    "ceiling": "cost ceiling",
+    "costNote": "Estimates come from the agents' own token counts at list price; the invoice is the Console's number.",
+    "offRamp": {
+      "needs_human": "This run left the path and waits for a person: resume it from the state it was in, or abandon it.",
+      "failed": "This run failed and will not continue."
+    }
   },
   "state": {
     "intake": "intake",
@@ -47,6 +82,35 @@
     "implemented": "implemented",
     "gates_passed": "gates passed",
     "mr_opened": "pull request open",
+    "reviewed": "reviewed",
+    "verified": "verified",
+    "done": "done",
+    "failed": "failed",
+    "needs_human": "needs a human"
+  },
+  "nav": {
+    "runs": "Runs",
+    "metrics": "Metrics",
+    "settings": "Settings",
+    "soon": "Next slice"
+  },
+  "gate": {
+    "pass": "pass",
+    "fail": "fail",
+    "skipped": "skipped"
+  },
+  "severity": {
+    "blocker": "blocker",
+    "major": "major",
+    "minor": "minor"
+  },
+  "stateShort": {
+    "intake": "intake",
+    "spec_drafted": "spec drafted",
+    "spec_approved": "spec approved",
+    "implemented": "implemented",
+    "gates_passed": "gates passed",
+    "mr_opened": "PR open",
     "reviewed": "reviewed",
     "verified": "verified",
     "done": "done",

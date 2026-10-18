@@ -250,6 +250,9 @@ importers:
       '@zenthos/api-client':
         specifier: workspace:*
         version: link:../../libs/api-client
+      '@zenthos/domain':
+        specifier: workspace:*
+        version: link:../../libs/domain
 
   apps/worker:
     dependencies:

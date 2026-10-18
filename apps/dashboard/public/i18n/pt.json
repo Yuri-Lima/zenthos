@@ -2,7 +2,8 @@
   "app": {
     "tagline": "Sistema operacional de agentes",
     "signOut": "Sair",
-    "anonymous": "anônimo (login desligado)"
+    "anonymous": "login desligado",
+    "language": "Trocar idioma"
   },
   "signIn": {
     "title": "Entrar",
@@ -24,7 +25,14 @@
     "requestedBy": "Pedido por",
     "created": "Criado",
     "anyState": "Qualquer estado",
-    "empty": "Nenhuma execução ainda. Inicie uma com a chave de um ticket ou adicione a etiqueta zenthos:run em uma issue."
+    "empty": "Nenhuma execução ainda. Inicie uma com a chave de um ticket ou adicione a etiqueta zenthos:run em uma issue.",
+    "eyebrow": "Pipeline",
+    "age": "Idade",
+    "attention": "Atenção",
+    "total": "execuções",
+    "waiting": "aguardando uma pessoa",
+    "inFlight": "em andamento",
+    "totalCost": "gasto estimado"
   },
   "run": {
     "tokens": "tokens",
@@ -38,7 +46,34 @@
     "gates": "Portões",
     "review": "Revisão",
     "history": "Histórico",
-    "notFound": "Nenhuma execução para este ticket."
+    "notFound": "Nenhuma execução para este ticket.",
+    "pipeline": "Pipeline",
+    "timeline": "Linha do tempo",
+    "graph": "Máquina de estados",
+    "view": "Visão",
+    "clickToInspect": "Clique em um passo para inspecionar",
+    "graphAria": "A máquina de estados da execução com o caminho percorrido",
+    "visits": "visitado {{n}} vezes",
+    "started": "execução iniciada",
+    "sincePrevious": "desde o passo anterior",
+    "branch": "branch",
+    "inScope": "No escopo",
+    "touchedAreas": "Áreas tocadas",
+    "noSpec": "Ainda sem spec.",
+    "noGates": "Nenhum portão rodou ainda.",
+    "noReview": "Ainda sem revisão.",
+    "findings": "Achados",
+    "cost": "Custo",
+    "estimate": "estimativa a preço de lista",
+    "inputTokens": "tokens de entrada",
+    "outputTokens": "tokens de saída",
+    "cacheRead": "cache lido",
+    "ceiling": "teto de custo",
+    "costNote": "As estimativas vêm da contagem de tokens dos próprios agentes a preço de lista; a fatura é o número do Console.",
+    "offRamp": {
+      "needs_human": "Esta execução saiu do caminho e aguarda uma pessoa: retome do estado em que estava, ou abandone.",
+      "failed": "Esta execução falhou e não vai continuar."
+    }
   },
   "state": {
     "intake": "entrada",
@@ -52,5 +87,34 @@
     "done": "concluído",
     "failed": "falhou",
     "needs_human": "precisa de uma pessoa"
+  },
+  "nav": {
+    "runs": "Execuções",
+    "metrics": "Métricas",
+    "settings": "Configurações",
+    "soon": "Próxima fatia"
+  },
+  "gate": {
+    "pass": "passou",
+    "fail": "falhou",
+    "skipped": "pulado"
+  },
+  "severity": {
+    "blocker": "bloqueador",
+    "major": "maior",
+    "minor": "menor"
+  },
+  "stateShort": {
+    "intake": "entrada",
+    "spec_drafted": "spec redigida",
+    "spec_approved": "spec aprovada",
+    "implemented": "implementado",
+    "gates_passed": "portões ok",
+    "mr_opened": "PR aberto",
+    "reviewed": "revisado",
+    "verified": "verificado",
+    "done": "concluído",
+    "failed": "falhou",
+    "needs_human": "precisa de pessoa"
   }
 }

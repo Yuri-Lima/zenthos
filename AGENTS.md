@@ -47,7 +47,7 @@ These win over any pattern below when the two conflict. The goal is a codebase a
 | `libs/adapters/temporal` | `RunControlPort` over the Temporal client and the workflow bundler config, shared by the API, the CLI and the worker | domain, ports |
 | `apps/api` | NestJS REST API: provider connections, the GitHub manifest and install flows, repository profiles, runs from the stored projection, metrics computed from it, the GitHub webhook; OpenAPI at `/docs` and committed as `openapi.json` (ADR 010, ADR 011) | everything |
 | `apps/dashboard` | Angular dashboard (Material + Tailwind, en/pt JSON under `public/i18n`): sign-in gate, runs list, run detail with approve and reject, start a run; only the generated client reaches the API; polls until server-sent events exist (ADR 012) | api-client |
-| `libs/api-client` | The typed client the dashboard uses: `schema.d.ts` generated from `apps/api/openapi.json` with openapi-typescript, `createApiClient` over openapi-fetch; never hand-edited (ADR 003) | nothing |
+| `libs/api-client` | The typed client the dashboard uses: `schema.ts` generated from `apps/api/openapi.json` with openapi-typescript, `createApiClient` over openapi-fetch; never hand-edited (ADR 003) | nothing |
 | `apps/worker` | Temporal worker: `workflows.ts` (one workflow per ticket), `activities.ts` (thin, call use cases), `config.ts` (zod-validated env), `composition.ts` (the adapters, chosen once), `repos.ts` (the dry-run repository profiles), `scripts/` (contract check, manual review, evals) | anything |
 | `apps/cli` | `zenthos run|approve|reject|state <ticket-key>` against the running worker | anything |
 | `docs/adr` | Architecture decision records | |
@@ -75,6 +75,9 @@ bans vendor SDKs inside domain, ports and application. Every project carries a `
   Each graph is built by one function (`buildSpecWriterGraph`, `buildReviewerGraph`) that the port adapter and
   the Studio entries in `libs/agents/src/studio` share; never a second copy of a graph for Studio.
 - Prompts carry a version string (`SPEC_WRITER_VERSION`); bump it when the wording changes.
+- Dashboard (ADR 013): colours only through the tokens in `styles.scss`; status is always icon + label + colour
+  through `StatusChip`; state order, graph edges, gate and rubric names come from `@zenthos/domain`, never a
+  list in the UI; `state.*` and `stateShort.*` are the two translations of one state.
 - No API keys in the repo or in CI. Model access comes from an `ant auth login` profile on a laptop and from
   Workload Identity Federation elsewhere; GitHub access from a GitHub App; `docs/authentication.md` has both.
   Claude Code's claude.ai login is for a developer's own laptop only; shared deployments give the coding agent
