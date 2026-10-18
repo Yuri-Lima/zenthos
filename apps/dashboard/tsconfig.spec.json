@@ -3,6 +3,8 @@
   "compilerOptions": {
     "outDir": "./out-tsc/jest",
     "rootDir": ".",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "composite": false,
     "emitDeclarationOnly": false,
     "declaration": false,
