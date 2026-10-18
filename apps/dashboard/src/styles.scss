@@ -67,6 +67,9 @@ a { color: inherit; }
 .zen-chip.crit { background: var(--zen-crit); color: #fff; }
 .zen-chip.neutral { background: var(--zen-neutral-soft); color: var(--zen-neutral); }
 
+/* toolbar fields sit at the height of the buttons beside them (36px); they use a placeholder, not a floating label */
+.zen-toolbar-field { @include mat.form-field-density(-5); }
+
 /* material density tweaks for a data table that reads like an instrument panel */
 .mat-mdc-table { background: transparent !important; }
 .mat-mdc-header-cell { white-space: nowrap; font-family: var(--zen-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--zen-muted); border-bottom-color: var(--zen-line) !important; }

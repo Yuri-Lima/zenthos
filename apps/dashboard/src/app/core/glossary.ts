@@ -15,6 +15,10 @@ export class GlossaryService {
   readonly edges = signal<GlossaryResponse['edges']>([]);
   private loading?: Promise<void>;
 
+  constructor() {
+    void this.load();
+  }
+
   load(): Promise<void> {
     this.loading ??= this.api.GET('/glossary').then(({ data }) => {
       this.terms.set(data?.terms ?? []);
@@ -32,6 +36,12 @@ export class GlossaryService {
     const key = `glossary.${term.id}`;
     const translated = this.translate.instant(key) as string;
     return translated && translated !== key ? translated : term.definition;
+  }
+
+  /** The definition for a tooltip: empty until the glossary has loaded or when the id is unknown. */
+  tip(id: string): string {
+    const term = this.term(id);
+    return term ? this.definition(term) : '';
   }
 
   title(term: Term): string {

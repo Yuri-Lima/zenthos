@@ -1,18 +1,20 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule } from '@ngx-translate/core';
 import type { RunState } from '@zenthos/domain';
+import { GlossaryService } from '../../core/glossary';
 import type { Run } from '../../core/runs';
 import { OFF_RAMPS, STATE_META, stepsFor } from '../../shared/run-state';
 
 /** The canonical path as a stepper. Steps come from RUN_STATES, their status from the run's history; click one to inspect it. */
 @Component({
   selector: 'zen-pipeline-view',
-  imports: [DatePipe, MatIconModule, TranslateModule],
+  imports: [DatePipe, MatIconModule, MatTooltipModule, TranslateModule],
   styles: `
     .track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0; list-style: none; margin: 0; padding: 0; }
-    .step { position: relative; display: grid; justify-items: center; gap: 6px; padding: 12px 6px 10px; border: 0; background: none; font: inherit; color: var(--zen-muted); cursor: pointer; border-radius: var(--zen-radius); text-align: center; }
+    .step { position: relative; display: grid; grid-template-rows: 28px 2.4em auto; align-content: start; justify-items: center; gap: 6px; padding: 12px 6px 10px; border: 0; background: none; font: inherit; color: var(--zen-muted); cursor: pointer; border-radius: var(--zen-radius); text-align: center; }
     .step:hover { background: var(--zen-surface-2); }
     .step::before { content: ''; position: absolute; top: 25px; left: -50%; right: 50%; height: 2px; background: var(--zen-line); z-index: 0; }
     .step:first-child::before { display: none; }
@@ -22,7 +24,7 @@ import { OFF_RAMPS, STATE_META, stepsFor } from '../../shared/run-state';
     .done .dot { border-color: var(--zen-accent); background: var(--zen-accent); color: #fff; }
     .current .dot { border-color: var(--zen-accent); color: var(--zen-accent); box-shadow: 0 0 0 4px var(--zen-accent-soft); }
     .step.selected { outline: 2px solid var(--zen-accent); outline-offset: -2px; }
-    .label { font-size: 12px; line-height: 1.2; }
+    .label { font-size: 12px; line-height: 1.2; align-self: start; }
     .done .label, .current .label { color: var(--zen-fg); }
     .current .label { font-weight: 600; }
     .meta { font-family: var(--zen-mono); font-size: 10.5px; color: var(--zen-muted); }
@@ -34,7 +36,7 @@ import { OFF_RAMPS, STATE_META, stepsFor } from '../../shared/run-state';
     <ol class="track" [attr.aria-label]="'run.pipeline' | translate">
       @for (step of steps(); track step.state) {
         <li class="contents">
-          <button type="button" class="step" [class]="'step ' + step.status" [class.selected]="selected() === step.state" [attr.aria-current]="step.status === 'current' ? 'step' : null" (click)="pick.emit(step.state)">
+          <button type="button" class="step" [class]="'step ' + step.status" [class.selected]="selected() === step.state" [attr.aria-current]="step.status === 'current' ? 'step' : null" [matTooltip]="glossary.tip('state_' + step.state)" matTooltipShowDelay="400" (click)="pick.emit(step.state)">
             @if (step.visits > 1) {<span class="visits" [title]="'run.visits' | translate: { n: step.visits }">×{{ step.visits }}</span>}
             <span class="dot"><mat-icon aria-hidden="true">{{ step.status === 'done' ? 'check' : meta[step.state].icon }}</mat-icon></span>
             <span class="label">{{ 'stateShort.' + step.state | translate }}</span>
@@ -56,6 +58,7 @@ export class PipelineView {
   readonly selected = input<RunState | undefined>();
   readonly pick = output<RunState>();
   readonly meta = STATE_META;
+  readonly glossary = inject(GlossaryService);
   readonly steps = computed(() => stepsFor(this.run()));
   readonly offRamp = computed(() => (OFF_RAMPS.includes(this.run().state) ? this.run().state : undefined));
 }

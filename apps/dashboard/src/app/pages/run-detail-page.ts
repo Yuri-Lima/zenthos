@@ -2,9 +2,11 @@ import { Component, DestroyRef, effect, inject, input, OnInit, signal, viewChild
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import type { RunState } from '@zenthos/domain';
+import { GlossaryService } from '../core/glossary';
 import { poll } from '../core/poll';
 import { RunsService, type Run } from '../core/runs';
 import { awaitsDecision, usd } from '../shared/run-state';
@@ -22,11 +24,14 @@ const TAB_FOR: Partial<Record<RunState, number>> = { spec_drafted: 0, spec_appro
 
 @Component({
   selector: 'zen-run-detail-page',
-  imports: [RouterLink, TranslateModule, MatButtonModule, MatButtonToggleModule, MatIconModule, StatusChip, TermLink, PipelineView, TimelineView, GraphView, Inspector],
+  imports: [RouterLink, TranslateModule, MatButtonModule, MatButtonToggleModule, MatIconModule, MatTooltipModule, StatusChip, TermLink, PipelineView, TimelineView, GraphView, Inspector],
   styles: `
     .head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 6px 0 4px; }
     h1 { font-family: var(--zen-mono); font-size: 18px; font-weight: 500; margin: 0; }
-    .facts { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12.5px; color: var(--zen-muted); margin-bottom: 14px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+    .facts { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--zen-muted); margin-bottom: 14px; }
+    .facts > span { display: inline-flex; align-items: baseline; gap: 6px; }
+    .modes mat-button-toggle mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 6px; vertical-align: -4px; }
     .facts b { color: var(--zen-fg); font-weight: 500; font-family: var(--zen-mono); }
     .modes { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
     .view { padding: 10px 12px; margin-bottom: 14px; }
@@ -37,13 +42,14 @@ const TAB_FOR: Partial<Record<RunState, number>> = { spec_drafted: 0, spec_appro
       <header class="head">
         <h1>{{ run.ticket.key }}</h1>
         <zen-status-chip [state]="run.state" />
-        <span class="flex-1"></span>
+        <div class="actions">
         @if (run.pullRequest; as pr) {<a mat-stroked-button [href]="pr.url" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon>{{ 'run.pullRequest' | translate: { number: pr.number } }}</a>}
         <a mat-stroked-button [href]="run.ticket.url" target="_blank" rel="noopener"><mat-icon>confirmation_number</mat-icon>{{ 'run.openTicket' | translate }}</a>
         @if (awaitsDecision(run)) {
           <button mat-flat-button (click)="decide('approved')" [disabled]="busy()"><mat-icon>check</mat-icon>{{ 'run.approve' | translate }}</button>
           <button mat-stroked-button (click)="decide('rejected')" [disabled]="busy()"><mat-icon>close</mat-icon>{{ 'run.reject' | translate }}</button>
         }
+        </div>
       </header>
       <div class="facts">
         <span>{{ run.ticket.title }}</span>
@@ -56,9 +62,9 @@ const TAB_FOR: Partial<Record<RunState, number>> = { spec_drafted: 0, spec_appro
       <div class="modes">
         <span class="eyebrow">{{ 'run.view' | translate }}</span>
         <mat-button-toggle-group [value]="mode()" (change)="mode.set($event.value)" [hideSingleSelectionIndicator]="true" [attr.aria-label]="'run.view' | translate">
-          <mat-button-toggle value="pipeline"><mat-icon>linear_scale</mat-icon> <zen-term id="view_pipeline">{{ 'run.pipeline' | translate }}</zen-term></mat-button-toggle>
-          <mat-button-toggle value="timeline"><mat-icon>timeline</mat-icon> <zen-term id="view_timeline">{{ 'run.timeline' | translate }}</zen-term></mat-button-toggle>
-          <mat-button-toggle value="graph"><mat-icon>account_tree</mat-icon> <zen-term id="view_graph">{{ 'run.graph' | translate }}</zen-term></mat-button-toggle>
+          <mat-button-toggle value="pipeline" [matTooltip]="glossary.tip('view_pipeline')" matTooltipShowDelay="300"><mat-icon>linear_scale</mat-icon>{{ 'run.pipeline' | translate }}</mat-button-toggle>
+          <mat-button-toggle value="timeline" [matTooltip]="glossary.tip('view_timeline')" matTooltipShowDelay="300"><mat-icon>timeline</mat-icon>{{ 'run.timeline' | translate }}</mat-button-toggle>
+          <mat-button-toggle value="graph" [matTooltip]="glossary.tip('view_graph')" matTooltipShowDelay="300"><mat-icon>account_tree</mat-icon>{{ 'run.graph' | translate }}</mat-button-toggle>
         </mat-button-toggle-group>
         <span class="muted text-xs">{{ 'run.clickToInspect' | translate }}</span>
       </div>
@@ -78,6 +84,7 @@ const TAB_FOR: Partial<Record<RunState, number>> = { spec_drafted: 0, spec_appro
   `,
 })
 export class RunDetailPage implements OnInit {
+  readonly glossary = inject(GlossaryService);
   private readonly service = inject(RunsService);
   readonly key = input.required<string>();
   readonly run = signal<Run | undefined>(undefined);
