@@ -148,7 +148,14 @@ type ConnectMode = 'manifest' | 'app' | 'token' | undefined;
               <span class="muted text-xs">{{ 'settings.since' | translate }} {{ c.createdAt | date: 'mediumDate' }}</span>
               <div class="actions">
                 <button mat-stroked-button (click)="check(c)" [disabled]="checking() === c.id" [matTooltip]="glossary.tip('setting_health_check')" matTooltipShowDelay="300"><mat-icon>monitor_heart</mat-icon>{{ 'settings.check' | translate }}</button>
-                @if (c.installUrl) {<a mat-stroked-button [href]="c.installUrl" [matTooltip]="glossary.tip('setting_installation')" matTooltipShowDelay="300"><mat-icon>add_link</mat-icon>{{ 'settings.install' | translate }}</a>}
+                <!-- the same GitHub page installs the app or, where it is installed, changes its repositories; the label follows the state -->
+                @if (c.installUrl; as url) {
+                  @if (c.installations.length) {
+                    <a mat-button [href]="url" [matTooltip]="'settings.manageHint' | translate" matTooltipShowDelay="300"><mat-icon>tune</mat-icon>{{ 'settings.manage' | translate }}</a>
+                  } @else {
+                    <a mat-flat-button [href]="url" [matTooltip]="glossary.tip('setting_installation')" matTooltipShowDelay="300"><mat-icon>add_link</mat-icon>{{ 'settings.install' | translate }}</a>
+                  }
+                }
                 <button mat-button (click)="removeConnection(c)" [attr.aria-label]="('settings.remove' | translate) + ' ' + c.name"><mat-icon>delete</mat-icon>{{ 'settings.remove' | translate }}</button>
               </div>
             </header>

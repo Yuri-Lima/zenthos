@@ -36,7 +36,9 @@ describe('SettingsPage', () => {
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('.setup')).not.toBeNull();
     expect(host.textContent).toContain('zenthos-yl');
-    expect(host.querySelector('a[href="https://github.com/apps/zenthos-yl/installations/new"]')).not.toBeNull();
+    const link = host.querySelector('a[href="https://github.com/apps/zenthos-yl/installations/new"]');
+    expect(link?.textContent).toContain('settings.install');
+    expect(link?.classList).toContain('mat-mdc-unelevated-button');
     fixture.destroy();
   });
 
@@ -51,6 +53,20 @@ describe('SettingsPage', () => {
     expect(posts).toEqual(['/providers/{id}/check']);
     expect(host.textContent).toContain('settings.checkOk');
     expect(host.textContent).toContain('settings.checkRepos');
+    fixture.destroy();
+  });
+});
+
+describe('SettingsPage install link', () => {
+  it('turns into a quiet "manage repositories" link once the app is installed somewhere', async () => {
+    const installed = { ...app, installations: [{ installationId: 1, account: 'o', repositories: ['o/r'] }] };
+    const api = { GET: async (path: string) => ({ data: path === '/providers' ? [installed] : [], response: ok }) };
+    TestBed.configureTestingModule({ imports: [SettingsPage, TranslateModule.forRoot()], providers: [provideZonelessChangeDetection(), provideRouter([]), { provide: API, useValue: api }] });
+    const fixture = TestBed.createComponent(SettingsPage);
+    await settle(fixture);
+    const link = (fixture.nativeElement as HTMLElement).querySelector(`a[href="${app.installUrl}"]`);
+    expect(link?.textContent).toContain('settings.manage');
+    expect(link?.classList).not.toContain('mat-mdc-unelevated-button');
     fixture.destroy();
   });
 });

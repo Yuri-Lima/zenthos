@@ -350,7 +350,7 @@
     },
     "since": "desde",
     "check": "Verificar",
-    "install": "Instalar em repositórios",
+    "install": "Instalar no GitHub",
     "remove": "Remover",
     "edit": "Editar",
     "healthy": "aceito",
@@ -374,7 +374,10 @@
     "confirmRemoveConnection": "Remover a conexão {{name}}? Repositórios que a usam passam a usar as credenciais do ambiente.",
     "confirmRemoveRepo": "Remover o perfil de {{repo}}? Execuções para ele serão recusadas.",
     "checkOk": "O GitHub aceita estas credenciais como {{actsAs}}.",
-    "checkRepos": "Instalações atualizadas: {{n}} repositórios."
+    "checkRepos": "Instalações atualizadas: {{n}} repositórios.",
+    "manage": "Gerenciar repositórios no GitHub",
+    "manageHint": "Adicione ou remova, no GitHub, os repositórios em que este app pode agir; depois clique em Verificar para atualizar a lista aqui.",
+    "addThisRepo": "Adicionar este repositório no GitHub"
   },
   "repoForm": {
     "newTitle": "Adicionar um repositório",

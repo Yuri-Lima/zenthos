@@ -103,7 +103,7 @@ const blank = (): Form => ({
           <div class="warn" role="status">
             <mat-icon aria-hidden="true">warning</mat-icon>
             <span>{{ 'settings.notCovered' | translate }}</span>
-            @if (selectedConnection()?.installUrl; as url) {<a mat-button [href]="url">{{ 'settings.install' | translate }}</a>}
+            @if (selectedConnection()?.installUrl; as url) {<a mat-button [href]="url" [matTooltip]="'settings.manageHint' | translate">{{ 'settings.addThisRepo' | translate }}</a>}
           </div>
         }
       </fieldset>
