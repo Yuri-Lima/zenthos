@@ -123,7 +123,9 @@ sends the agent back once (ADR 008); the evals measure both agents against merge
 change that lowers the scores (ADR 009); the REST API keeps provider connections and repository profiles in
 Postgres with secrets sealed, connects GitHub by the manifest flow and takes the app's webhook (ADR 010); the worker
 acts with the connection each profile names and records every run transition to the store, which the API serves
-(ADR 011). Next: the review eval over stored runs, then phase 4.
+(ADR 011). Phases were swapped (ADR 012): phase 4 is the Angular dashboard (PrimeNG, en/pt, Sign in with GitHub
+with an allowlist, generated OpenAPI client, metrics from the runs store) plus Legal Connect hardening; phase 5
+is Phoenix (YouTrack, GitLab, TeamCity, Codex); phase 6 is Cloud Run and the write-up.
 Then 4 Phoenix adapters and Codex; 5 dashboard, Cloud Run, write-up.
 
 ## Dependency policy
