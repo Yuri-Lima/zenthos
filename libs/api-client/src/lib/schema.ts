@@ -310,6 +310,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/glossary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every term the product uses, with its definition, kind, relations and deciding ADR */
+        get: operations["GlossaryController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1112,6 +1129,44 @@ export interface operations {
                         };
                         runs: number;
                     }[];
+                };
+            };
+        };
+    };
+    GlossaryController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        terms: {
+                            id: string;
+                            /** @enum {string} */
+                            kind: "concept" | "state" | "event" | "gate" | "metric" | "rubric" | "view" | "setting";
+                            title: string;
+                            definition: string;
+                            related: {
+                                to: string;
+                                /** @enum {string} */
+                                rel: "part_of" | "leads_to" | "guarded_by" | "decided_by" | "measured_by" | "shown_in" | "see_also";
+                            }[];
+                            adr?: number;
+                        }[];
+                        edges: {
+                            from: string;
+                            to: string;
+                            rel: string;
+                        }[];
+                    };
                 };
             };
         };

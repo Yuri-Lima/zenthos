@@ -46,7 +46,7 @@ These win over any pattern below when the two conflict. The goal is a codebase a
 | `libs/adapters/postgres` | Provider connections (secrets sealed at rest) and repository profiles in Postgres; the schema as ordered statements (ADR 010) | domain, ports |
 | `libs/adapters/temporal` | `RunControlPort` over the Temporal client and the workflow bundler config, shared by the API, the CLI and the worker | domain, ports |
 | `apps/api` | NestJS REST API: provider connections, the GitHub manifest and install flows, repository profiles, runs from the stored projection, metrics computed from it, the GitHub webhook; OpenAPI at `/docs` and committed as `openapi.json` (ADR 010, ADR 011) | everything |
-| `apps/dashboard` | Angular dashboard (Material + Tailwind, en/pt JSON under `public/i18n`): sign-in gate, runs list, run detail with approve and reject, start a run; only the generated client reaches the API; polls until server-sent events exist (ADR 012) | api-client |
+| `apps/dashboard` | Angular dashboard (Material + Tailwind, en/pt JSON under `public/i18n`): sign-in gate, runs list, run detail with approve and reject, start a run, glossary with inline help (ADR 014); only the generated client reaches the API; polls until server-sent events exist (ADR 012) | api-client |
 | `libs/api-client` | The typed client the dashboard uses: `schema.ts` generated from `apps/api/openapi.json` with openapi-typescript, `createApiClient` over openapi-fetch; never hand-edited (ADR 003) | nothing |
 | `apps/worker` | Temporal worker: `workflows.ts` (one workflow per ticket), `activities.ts` (thin, call use cases), `config.ts` (zod-validated env), `composition.ts` (the adapters, chosen once), `repos.ts` (the dry-run repository profiles), `scripts/` (contract check, manual review, evals) | anything |
 | `apps/cli` | `zenthos run|approve|reject|state <ticket-key>` against the running worker | anything |
@@ -78,6 +78,11 @@ bans vendor SDKs inside domain, ports and application. Every project carries a `
 - Dashboard (ADR 013): colours only through the tokens in `styles.scss`; status is always icon + label + colour
   through `StatusChip`; state order, graph edges, gate and rubric names come from `@zenthos/domain`, never a
   list in the UI; `state.*` and `stateShort.*` are the two translations of one state.
+- Glossary (ADR 014): every term is defined once in `libs/domain/src/lib/glossary.ts`; definitions of states,
+  events, gates, metrics and rubric lines are keyed by the domain constants, so a new one fails to compile until
+  it is defined; `GET /glossary` serves it; the dashboard wraps labels in `zen-term` for inline help and lists
+  it at `/glossary`; Portuguese lives under `glossary.*` and `glossaryTitle.*` in `pt.json`, one key per term id,
+  and a test fails when one is missing.
 - No API keys in the repo or in CI. Model access comes from an `ant auth login` profile on a laptop and from
   Workload Identity Federation elsewhere; GitHub access from a GitHub App; `docs/authentication.md` has both.
   Claude Code's claude.ai login is for a developer's own laptop only; shared deployments give the coding agent

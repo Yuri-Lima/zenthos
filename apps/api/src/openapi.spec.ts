@@ -14,7 +14,7 @@ describe('OpenAPI document', () => {
     await app.init();
     try {
       const document = openApiDocument(app);
-      for (const path of ['/runs', '/repos/{owner}/{name}', '/providers', '/metrics', '/webhooks/github']) expect(document.paths[path]).toBeDefined();
+      for (const path of ['/runs', '/repos/{owner}/{name}', '/providers', '/metrics', '/glossary', '/webhooks/github']) expect(document.paths[path]).toBeDefined();
       expect(document.paths['/metrics'].get?.responses['200']).toBeDefined();
       expect(document.paths['/runs'].get?.responses['200']).toBeDefined();
       const committed = JSON.parse(readFileSync('openapi.json', 'utf8'));

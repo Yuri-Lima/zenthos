@@ -2450,6 +2450,133 @@
           "metrics"
         ]
       }
+    },
+    "/glossary": {
+      "get": {
+        "operationId": "GlossaryController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "terms": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "concept",
+                              "state",
+                              "event",
+                              "gate",
+                              "metric",
+                              "rubric",
+                              "view",
+                              "setting"
+                            ]
+                          },
+                          "title": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "definition": {
+                            "type": "string",
+                            "minLength": 20
+                          },
+                          "related": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "to": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "rel": {
+                                  "type": "string",
+                                  "enum": [
+                                    "part_of",
+                                    "leads_to",
+                                    "guarded_by",
+                                    "decided_by",
+                                    "measured_by",
+                                    "shown_in",
+                                    "see_also"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "to",
+                                "rel"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "adr": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "title",
+                          "definition",
+                          "related"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "edges": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "from": {
+                            "type": "string"
+                          },
+                          "to": {
+                            "type": "string"
+                          },
+                          "rel": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "from",
+                          "to",
+                          "rel"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "terms",
+                    "edges"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "Every term the product uses, with its definition, kind, relations and deciding ADR",
+        "tags": [
+          "glossary"
+        ]
+      }
     }
   },
   "info": {
