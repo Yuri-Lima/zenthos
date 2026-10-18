@@ -41,6 +41,9 @@ in the worker's environment and in `apps/worker/src/repos.ts`.
 - One long-lived secret remains: the deployment key. On a laptop it sits in `.env`; on Cloud Run it comes
   from Secret Manager. `pnpm nx run @zenthos/worker:rotate-key` re-seals every row under a new key in one
   transaction; then the API and the worker restart with the new value.
+- The API's controllers import two pure GitHub helpers, the manifest builder and the webhook signature check,
+  straight from the GitHub adapter package rather than through a port. They are driving-side code using a
+  framework-free helper, not a core dependency on an adapter; accepted, revisit if a second provider needs them.
 - Manifest state is kept in the API process for ten minutes; a restart mid-flow means starting over, which
   is acceptable for a flow a person runs once.
 - GitHub must reach the API for the webhook and the callbacks; on a laptop that is a tunnel, and the

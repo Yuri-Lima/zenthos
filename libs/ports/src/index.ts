@@ -16,6 +16,7 @@ export * from './lib/stores.contract.js';
 export * from './lib/run-control.port.js';
 export * from './lib/run-control.contract.js';
 export * from './lib/github-apps.port.js';
+export * from './lib/github-apps.contract.js';
 export * from './lib/runs.port.js';
 export * from './lib/runs.contract.js';
 export * from './lib/sessions.port.js';

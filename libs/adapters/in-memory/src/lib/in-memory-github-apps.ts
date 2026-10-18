@@ -17,8 +17,8 @@ export class InMemoryGitHubApps implements GitHubAppsPort {
     return this.installations.find((i) => i.installationId === installationId) ?? { installationId, account: 'memory', repositories: [] };
   }
 
-  /** A code of the form `user:<login>` signs that login in; anything else is `memory`. */
-  async signInUser(_app: unknown, code: string): Promise<GitHubUser> {
+  /** A code of the form `user:<login>` signs that login in; anything else is `memory`. The redirect URI plays no part here. */
+  async signInUser(...[, code]: Parameters<GitHubAppsPort['signInUser']>): Promise<GitHubUser> {
     const login = code.startsWith('user:') ? code.slice(5) : 'memory';
     return { login, id: 1, avatarUrl: `https://avatars.example.test/${login}` };
   }
