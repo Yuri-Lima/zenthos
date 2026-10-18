@@ -10,5 +10,11 @@
     "failed": 0,
     "review_score": 2.4166666666666665,
     "review_agreement": 0
+  },
+  "reviewer/v1@nairaromero-mara-sandra-connect-runs": {
+    "items": 1,
+    "failed": 0,
+    "review_score": 3.25,
+    "review_agreement": 0
   }
 }

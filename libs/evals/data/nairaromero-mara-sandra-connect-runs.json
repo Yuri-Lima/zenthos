@@ -1,0 +1,96 @@
+{
+  "repo": "nairaromero/mara-sandra-connect",
+  "source": "runs",
+  "builtAt": "2026-10-18T09:52:36.255Z",
+  "items": [
+    {
+      "ticketKey": "nairaromero/mara-sandra-connect#300",
+      "pullRequest": {
+        "number": 460,
+        "url": "https://github.com/nairaromero/mara-sandra-connect/pull/460"
+      },
+      "files": [
+        "e2e/tests/selecao-rolagem.spec.ts",
+        "src/components/agenda/agenda-sheet.tsx",
+        "src/components/tarefas/tarefa-sheet.tsx",
+        "src/components/ui/selecao.tsx"
+      ],
+      "verdict": "accepted",
+      "spec": {
+        "ticketKey": "nairaromero/mara-sandra-connect#300",
+        "problem": "Dentro de painéis modais (Sheet/Dialog), a lista aberta pelo seletor compartilhado <Selecao> não rola com roda do mouse, trackpad ou toque. Quem procura um cliente rolando no painel de tarefa não chega aos últimos itens. Além disso, quando a consulta de casos falha, os painéis de tarefa e de Agenda mostram uma lista vazia sem aviso. Leitura mais estreita adotada: entram só os itens de 'O que fazer agora'. Ficam fora o cache opcional com React Query, tudo o que está em 'Adiado' e o card absorvido #338, que ainda não diz em qual tela o problema aparece. O defeito de rolagem não foi reproduzido no navegador. Se o E2E de rolagem passar sem o conserto, a parte de rolagem fecha sem mudança no componente.",
+        "inScope": [
+          "E2E de reprodução: abrir o seletor de cliente no painel de tarefa (tarefa-sheet) e rolar a lista até o último item com roda do mouse e com toque.",
+          "Passar a prop modal ao <Popover> dentro de src/components/ui/selecao.tsx, um único ponto que vale para os 25 usos. Só se o E2E de reprodução falhar sem o conserto.",
+          "Mostrar erro visível quando a consulta de casos (listarCasosResumo) falhar em tarefa-sheet.tsx e agenda-sheet.tsx, no lugar do .catch(() => {}) atual, usando os helpers de src/lib/leitura.ts.",
+          "Conferir por E2E a rolagem do <Selecao> também no diálogo de editar solicitação e no painel da Agenda.",
+          "Garantir que o foco não 'salte' ao abrir o seletor dentro de painel modal.",
+          "Garantir que busca e seleção do <Selecao> continuam funcionando."
+        ],
+        "outOfScope": [
+          "Cache da lista de casos na sessão com React Query (marcado como opcional no ticket).",
+          "Busca no servidor paginada, RPC de seletor, extensão unaccent, debounce, carregar ao rolar e buscar o cliente selecionado à parte (adiados).",
+          "Índices pg_trgm/GIN ou qualquer migration de banco.",
+          "Card absorvido #338 (barra de rolagem visível ou indicador em src/components/ui/select.tsx): a tela e o filtro ainda não foram identificados.",
+          "Seletor do Drive e anexos de cumprimento citados no texto original: o componente antigo foi apagado e o novo texto não os lista."
+        ],
+        "acceptanceCriteria": [
+          {
+            "id": "AC-1",
+            "statement": "No painel de tarefa, com o seletor de cliente aberto, rolar a lista com a roda do mouse leva o último cliente da lista para a área visível.",
+            "testHint": "Playwright, novo e2e/tests/selecao-rolagem.spec.ts, storageState interno, banco local com mais casos do que cabem na lista. Abrir o painel Nova tarefa, clicar no seletor de cliente, posicionar o mouse sobre a lista (role=listbox) e chamar page.mouse.wheel(0, 400) em loop. Ler o nome do último caso pela mesma fonte de dados e afirmar com expect(page.getByRole('option', { name: ultimo })).toBeInViewport(). Afirmar também que o scrollTop da lista aumentou."
+          },
+          {
+            "id": "AC-2",
+            "statement": "No painel de tarefa, com o seletor de cliente aberto, arrastar o dedo sobre a lista (toque) faz a lista rolar até o último cliente.",
+            "testHint": "Playwright com contexto hasTouch: true e isMobile, na mesma spec. Abrir o seletor de cliente no painel de tarefa e simular o arrasto com Input.dispatchTouchEvent via CDPSession (touchStart, touchMove repetido para cima, touchEnd) sobre a lista. Afirmar que o scrollTop da lista aumentou e que a última opção fica toBeInViewport()."
+          },
+          {
+            "id": "AC-3",
+            "statement": "No painel de tarefa, digitar parte do nome de um cliente no seletor filtra as opções. Escolher uma delas fecha a lista e mostra o nome do cliente no campo.",
+            "testHint": "Playwright, mesmo setup. Abrir o seletor, preencher o campo de busca com um trecho de nome existente e afirmar que todas as opções visíveis contêm o trecho. Clicar numa opção e afirmar que o listbox não está visível e que o botão do seletor tem o texto do cliente escolhido."
+          },
+          {
+            "id": "AC-4",
+            "statement": "Ao abrir o seletor de cliente no painel de tarefa, o foco vai para o campo de busca dentro da lista e a posição de rolagem do painel não muda.",
+            "testHint": "Playwright: abrir o painel de tarefa, rolar o conteúdo do painel até o seletor e guardar o scrollTop do SheetContent. Abrir o seletor e afirmar que document.activeElement é o input de busca dentro do conteúdo do popover e que o scrollTop do SheetContent é igual ao valor guardado."
+          },
+          {
+            "id": "AC-5",
+            "statement": "Quando a consulta de casos falha, o painel de tarefa mostra uma mensagem de erro em vez de apresentar o seletor de cliente vazio sem aviso.",
+            "testHint": "Playwright: usar page.route para responder 500 à requisição REST da consulta usada por listarCasosResumo (casos com nome do cliente). Abrir o painel Nova tarefa e afirmar que uma mensagem de erro sobre o carregamento de casos/clientes fica visível (toast ou texto inline)."
+          },
+          {
+            "id": "AC-6",
+            "statement": "Quando a consulta de casos falha, o painel da Agenda mostra uma mensagem de erro em vez de apresentar o seletor de cliente vazio sem aviso.",
+            "testHint": "Playwright: usar page.route para responder 500 à mesma requisição de casos, abrir o painel de criação na Agenda (agenda-sheet) e afirmar que a mensagem de erro de carregamento de casos/clientes fica visível."
+          },
+          {
+            "id": "AC-7",
+            "statement": "No diálogo de editar solicitação, um <Selecao> com lista longa rola com a roda do mouse até a última opção.",
+            "testHint": "Playwright, mesma spec: abrir uma solicitação existente no banco local, abrir o diálogo de editar e abrir o <Selecao> com mais opções do que cabem na lista. Fazer mouse.wheel sobre o listbox e afirmar que a última opção fica toBeInViewport()."
+          },
+          {
+            "id": "AC-8",
+            "statement": "No painel da Agenda, o seletor de cliente rola com a roda do mouse até o último cliente.",
+            "testHint": "Playwright, mesma spec: abrir o painel de criação na Agenda, abrir o seletor de cliente e fazer mouse.wheel sobre o listbox. Afirmar que a opção com o nome do último caso fica toBeInViewport()."
+          }
+        ],
+        "touchedAreas": [
+          "src/components/ui/selecao.tsx",
+          "src/components/tarefas/tarefa-sheet.tsx",
+          "src/components/agenda/agenda-sheet.tsx",
+          "src/lib/leitura.ts (uso de lerLista; sem mudança esperada)",
+          "e2e/tests/selecao-rolagem.spec.ts (novo)",
+          "e2e/unit/leituras-checadas.test.ts (lista de leituras que ainda ignoram erro deve perder as duas entradas)"
+        ],
+        "risks": [
+          "Tornar o Popover modal muda o comportamento nos 25 usos do <Selecao>. Ele passa a prender o foco, bloquear a rolagem e tornar o resto da página inerte enquanto está aberto. Isso pode afetar usos fora de painéis modais e popovers aninhados.",
+          "Popover modal aninhado em Dialog/Sheet modal empilha dois bloqueios de rolagem (react-remove-scroll). Ao fechar, pointer-events ou overflow do body podem ficar presos.",
+          "Eventos sintéticos de roda/toque no Playwright headless podem não reproduzir o bloqueio real do navegador. O E2E pode passar sem o conserto e ainda assim o defeito existir para pessoas, e o ticket manda fechar nesse caso.",
+          "Os E2E dependem de haver no banco local mais casos e opções do que cabem na lista. Se a cópia do staging tiver poucos dados, o teste não exercita a rolagem."
+        ]
+      }
+    }
+  ]
+}
