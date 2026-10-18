@@ -37,6 +37,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PWD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_SEEDS: postgres
+      # Closed workflows stay visible in the Temporal UI for 30 days (auto-setup defaults to 24h). Applies when
+      # the namespace is first created; an existing one is changed with `temporal operator namespace update`.
+      DEFAULT_NAMESPACE_RETENTION: ${ZENTHOS_TEMPORAL_RETENTION:-30d}
     ports:
       - 127.0.0.1:7233:7233
 
