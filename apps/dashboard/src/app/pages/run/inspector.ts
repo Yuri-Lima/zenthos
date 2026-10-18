@@ -7,11 +7,12 @@ import { REVIEW_RUBRIC, type RunState } from '@zenthos/domain';
 import type { Run } from '../../core/runs';
 import { gateSeverity, usd } from '../../shared/run-state';
 import { StatusChip } from '../../shared/status-chip';
+import { TermLink } from '../../shared/term';
 
 /** The payload behind the selected step: spec, gates, review, cost, raw. Names come from the domain, so they match the pull request. */
 @Component({
   selector: 'zen-inspector',
-  imports: [DecimalPipe, JsonPipe, MatIconModule, MatTabsModule, TranslateModule, StatusChip],
+  imports: [DecimalPipe, JsonPipe, MatIconModule, MatTabsModule, TranslateModule, StatusChip, TermLink],
   styles: `
     .pane { padding: 14px 4px 4px; display: grid; gap: 10px; }
     h3 { font-size: 12px; margin: 0; font-family: var(--zen-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--zen-muted); }
@@ -60,7 +61,7 @@ import { StatusChip } from '../../shared/status-chip';
               @for (gate of run().gates; track gate.gate) {
                 <div class="gate">
                   <zen-status-chip [custom]="{ severity: gateSeverity(gate), icon: gate.passed ? (gate.detail ? 'skip_next' : 'check') : 'close', label: gate.passed ? (gate.detail ? 'gate.skipped' : 'gate.pass') : 'gate.fail' }" />
-                  <span><span class="mono text-sm">{{ gate.gate }}</span>@if (gate.detail) {<div class="hint">{{ gate.detail }}</div>}</span>
+                  <span><zen-term [id]="'gate_' + gate.gate"><span class="mono text-sm">{{ gate.gate }}</span></zen-term>@if (gate.detail) {<div class="hint">{{ gate.detail }}</div>}</span>
                 </div>
               }
             </div>
@@ -73,7 +74,7 @@ import { StatusChip } from '../../shared/status-chip';
             <p class="m-0">{{ review.summary }}</p>
             <div class="scores">
               @for (s of scores(); track s.key) {
-                <div class="surface score"><span class="v">{{ s.score }}<small>/5</small></span><span class="k">{{ s.label }}</span><span class="e" [title]="s.definition">{{ s.evidence }}</span></div>
+                <div class="surface score"><span class="v">{{ s.score }}<small>/5</small></span><span class="k"><zen-term [id]="'rubric_' + s.key">{{ s.label }}</zen-term></span><span class="e" [title]="s.definition">{{ s.evidence }}</span></div>
               }
             </div>
             @if (review.findings.length) {

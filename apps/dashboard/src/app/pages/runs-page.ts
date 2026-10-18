@@ -13,12 +13,13 @@ import { poll } from '../core/poll';
 import { RunsService, type Run } from '../core/runs';
 import { age, ATTENTION_STATES, IN_FLIGHT_STATES, RUN_STATES, usd } from '../shared/run-state';
 import { StatusChip } from '../shared/status-chip';
+import { TermLink } from '../shared/term';
 
 type Quick = 'all' | 'attention' | 'inflight';
 
 @Component({
   selector: 'zen-runs-page',
-  imports: [FormsModule, RouterLink, TranslateModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, StatusChip],
+  imports: [FormsModule, RouterLink, TranslateModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, MatSelectModule, MatTableModule, StatusChip, TermLink],
   styles: `
     .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-bottom: 16px; }
     .tile { text-align: left; padding: 10px 14px; display: grid; gap: 2px; cursor: pointer; font: inherit; color: inherit; }
@@ -47,9 +48,9 @@ type Quick = 'all' | 'attention' | 'inflight';
 
     <div class="strip" role="group" [attr.aria-label]="'runs.attention' | translate">
       <button class="surface tile" [class.on]="quick() === 'all'" (click)="setQuick('all')"><span class="v num">{{ all().length }}</span><span class="k">{{ 'runs.total' | translate }}</span></button>
-      <button class="surface tile warn" [class.on]="quick() === 'attention'" (click)="setQuick('attention')"><span class="v num">{{ attention().length }}</span><span class="k">{{ 'runs.waiting' | translate }}</span></button>
+      <button class="surface tile warn" [class.on]="quick() === 'attention'" (click)="setQuick('attention')"><span class="v num">{{ attention().length }}</span><span class="k"><zen-term id="view_attention_strip">{{ 'runs.waiting' | translate }}</zen-term></span></button>
       <button class="surface tile" [class.on]="quick() === 'inflight'" (click)="setQuick('inflight')"><span class="v num">{{ inFlight().length }}</span><span class="k">{{ 'runs.inFlight' | translate }}</span></button>
-      <div class="surface tile" aria-live="polite"><span class="v num">{{ usd(totalCost()) }}</span><span class="k">{{ 'runs.totalCost' | translate }}</span></div>
+      <div class="surface tile" aria-live="polite"><span class="v num">{{ usd(totalCost()) }}</span><span class="k"><zen-term id="cost_estimate">{{ 'runs.totalCost' | translate }}</zen-term></span></div>
     </div>
 
     @if (starting()) {
@@ -75,7 +76,7 @@ type Quick = 'all' | 'attention' | 'inflight';
           </td>
         </ng-container>
         <ng-container matColumnDef="state">
-          <th mat-header-cell *matHeaderCellDef>{{ 'runs.state' | translate }}</th>
+          <th mat-header-cell *matHeaderCellDef><zen-term id="state_machine">{{ 'runs.state' | translate }}</zen-term></th>
           <td mat-cell *matCellDef="let run"><zen-status-chip [state]="run.state" /></td>
         </ng-container>
         <ng-container matColumnDef="cost">

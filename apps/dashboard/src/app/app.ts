@@ -31,6 +31,8 @@ import { SessionService } from './core/session';
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav"><mat-icon>view_timeline</mat-icon>{{ 'nav.runs' | translate }}</a>
         <span class="nav soon" [matTooltip]="'nav.soon' | translate"><mat-icon>monitoring</mat-icon>{{ 'nav.metrics' | translate }}</span>
         <span class="nav soon" [matTooltip]="'nav.soon' | translate"><mat-icon>tune</mat-icon>{{ 'nav.settings' | translate }}</span>
+        <span class="flex-1"></span>
+        <a routerLink="/glossary" routerLinkActive="active" class="nav"><mat-icon>menu_book</mat-icon>{{ 'nav.glossary' | translate }}</a>
       </nav>
       <div class="min-w-0">
         <header class="topbar">

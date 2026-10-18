@@ -92,7 +92,8 @@
     "runs": "Runs",
     "metrics": "Metrics",
     "settings": "Settings",
-    "soon": "Next slice"
+    "soon": "Next slice",
+    "glossary": "Glossary"
   },
   "gate": {
     "pass": "pass",
@@ -116,5 +117,30 @@
     "done": "done",
     "failed": "failed",
     "needs_human": "needs a human"
+  },
+  "glossaryPage": {
+    "eyebrow": "Knowledge base",
+    "title": "Glossary",
+    "search": "Search terms",
+    "all": "All"
+  },
+  "termKind": {
+    "concept": "Concepts",
+    "state": "States",
+    "event": "Events",
+    "gate": "Gates",
+    "metric": "Metrics",
+    "rubric": "Rubric",
+    "view": "Views",
+    "setting": "Settings"
+  },
+  "relation": {
+    "part_of": "part of",
+    "leads_to": "leads to",
+    "guarded_by": "guarded by",
+    "decided_by": "decided by",
+    "measured_by": "measured by",
+    "shown_in": "shown in",
+    "see_also": "see also"
   }
 }

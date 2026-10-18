@@ -9,6 +9,7 @@ import { poll } from '../core/poll';
 import { RunsService, type Run } from '../core/runs';
 import { awaitsDecision, usd } from '../shared/run-state';
 import { StatusChip } from '../shared/status-chip';
+import { TermLink } from '../shared/term';
 import { GraphView } from './run/graph-view';
 import { Inspector } from './run/inspector';
 import { PipelineView } from './run/pipeline-view';
@@ -21,7 +22,7 @@ const TAB_FOR: Partial<Record<RunState, number>> = { spec_drafted: 0, spec_appro
 
 @Component({
   selector: 'zen-run-detail-page',
-  imports: [RouterLink, TranslateModule, MatButtonModule, MatButtonToggleModule, MatIconModule, StatusChip, PipelineView, TimelineView, GraphView, Inspector],
+  imports: [RouterLink, TranslateModule, MatButtonModule, MatButtonToggleModule, MatIconModule, StatusChip, TermLink, PipelineView, TimelineView, GraphView, Inspector],
   styles: `
     .head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 6px 0 4px; }
     h1 { font-family: var(--zen-mono); font-size: 18px; font-weight: 500; margin: 0; }
@@ -46,7 +47,7 @@ const TAB_FOR: Partial<Record<RunState, number>> = { spec_drafted: 0, spec_appro
       </header>
       <div class="facts">
         <span>{{ run.ticket.title }}</span>
-        <span>{{ 'runs.cost' | translate }} <b>{{ usd(run.estimatedCostUsd) }}</b></span>
+        <span><zen-term id="cost_estimate">{{ 'runs.cost' | translate }}</zen-term> <b>{{ usd(run.estimatedCostUsd) }}</b></span>
         <span>{{ 'run.tokens' | translate }} <b>{{ run.tokens.inputTokens + run.tokens.outputTokens }}</b></span>
         @if (run.requestedBy) {<span>{{ 'runs.requestedBy' | translate }} <b>{{ run.requestedBy }}</b></span>}
         @if (run.branch) {<span>{{ 'run.branch' | translate }} <b>{{ run.branch }}</b></span>}
@@ -55,9 +56,9 @@ const TAB_FOR: Partial<Record<RunState, number>> = { spec_drafted: 0, spec_appro
       <div class="modes">
         <span class="eyebrow">{{ 'run.view' | translate }}</span>
         <mat-button-toggle-group [value]="mode()" (change)="mode.set($event.value)" [hideSingleSelectionIndicator]="true" [attr.aria-label]="'run.view' | translate">
-          <mat-button-toggle value="pipeline"><mat-icon>linear_scale</mat-icon> {{ 'run.pipeline' | translate }}</mat-button-toggle>
-          <mat-button-toggle value="timeline"><mat-icon>timeline</mat-icon> {{ 'run.timeline' | translate }}</mat-button-toggle>
-          <mat-button-toggle value="graph"><mat-icon>account_tree</mat-icon> {{ 'run.graph' | translate }}</mat-button-toggle>
+          <mat-button-toggle value="pipeline"><mat-icon>linear_scale</mat-icon> <zen-term id="view_pipeline">{{ 'run.pipeline' | translate }}</zen-term></mat-button-toggle>
+          <mat-button-toggle value="timeline"><mat-icon>timeline</mat-icon> <zen-term id="view_timeline">{{ 'run.timeline' | translate }}</zen-term></mat-button-toggle>
+          <mat-button-toggle value="graph"><mat-icon>account_tree</mat-icon> <zen-term id="view_graph">{{ 'run.graph' | translate }}</zen-term></mat-button-toggle>
         </mat-button-toggle-group>
         <span class="muted text-xs">{{ 'run.clickToInspect' | translate }}</span>
       </div>
