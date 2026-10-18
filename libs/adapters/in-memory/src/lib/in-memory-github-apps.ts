@@ -1,4 +1,4 @@
-import type { GitHubAppManifestResult, GitHubUser, Installation } from '@zenthos/domain';
+import type { GitHubAppManifestResult, GitHubCredentials, GitHubUser, Installation } from '@zenthos/domain';
 import type { GitHubAppsPort } from '@zenthos/ports';
 
 /** Answers the manifest exchange and installation lookups from canned data. */
@@ -21,5 +21,16 @@ export class InMemoryGitHubApps implements GitHubAppsPort {
   async signInUser(...[, code]: Parameters<GitHubAppsPort['signInUser']>): Promise<GitHubUser> {
     const login = code.startsWith('user:') ? code.slice(5) : 'memory';
     return { login, id: 1, avatarUrl: `https://avatars.example.test/${login}` };
+  }
+
+  async listInstallations(): Promise<Installation[]> {
+    return this.installations;
+  }
+
+  /** Credentials whose token or private key is `rejected` fail, as GitHub would answer 401; the rest act as `memory`. */
+  async whoAmI(credentials: GitHubCredentials): Promise<string> {
+    const secret = credentials.type === 'github-token' ? credentials.token : credentials.privateKey;
+    if (secret === 'rejected') throw new Error('Bad credentials');
+    return credentials.type === 'github-token' ? 'memory' : this.manifestResult.slug;
   }
 }

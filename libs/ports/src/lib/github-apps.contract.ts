@@ -11,5 +11,7 @@ export const githubAppsContract: Record<string, (port: GitHubAppsPort, fixture: 
     const installation = await port.describeInstallation({ type: 'github-app', appId: app.appId, privateKey: app.privateKey }, installationId);
     assert.equal(installation.installationId, installationId);
     assert.ok(Array.isArray(installation.repositories));
+    assert.ok((await port.whoAmI({ type: 'github-app', appId: app.appId, privateKey: app.privateKey })).length > 0);
+    assert.ok(Array.isArray(await port.listInstallations({ type: 'github-app', appId: app.appId, privateKey: app.privateKey })));
   },
 };

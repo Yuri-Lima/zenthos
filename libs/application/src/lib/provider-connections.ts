@@ -1,5 +1,16 @@
-import { createConnection, DomainError, withInstallation, withoutInstallation, withRepositories, type GitHubAppManifestResult, type Installation, type ProviderConnection, type WebhookCommand } from '@zenthos/domain';
-import type { ProviderConnectionsPort, RepoProfilesPort, RunControlPort } from '@zenthos/ports';
+import { createConnection, DomainError, withInstallation, withoutInstallation, withRepositories, type ConnectionCheck, type GitHubAppManifestResult, type GitHubCredentials, type Installation, type ProviderConnection, type WebhookCommand } from '@zenthos/domain';
+import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort } from '@zenthos/ports';
+
+type ConnectDeps = { connections: ProviderConnectionsPort; githubApps: GitHubAppsPort };
+
+/** Credentials are asked once before they are stored, so a typo fails at the form and not in the middle of a run. */
+async function verified(githubApps: GitHubAppsPort, credentials: GitHubCredentials): Promise<string> {
+  try {
+    return await githubApps.whoAmI(credentials);
+  } catch (error) {
+    throw new DomainError('invalid_credentials', { reason: error instanceof Error ? error.message : String(error) });
+  }
+}
 
 /**
  * Use case 8: a GitHub App created through the manifest flow becomes a provider connection. The id is
@@ -24,9 +35,10 @@ export async function connectGitHubApp({ connections }: { connections: ProviderC
  * given, Sign in with GitHub once its OAuth client id and secret are. Connecting the same app again updates it.
  */
 export async function connectExistingGitHubApp(
-  { connections }: { connections: ProviderConnectionsPort },
+  { connections, githubApps }: ConnectDeps,
   input: { name: string; appId: string; privateKey: string; webhookSecret?: string; clientId?: string; clientSecret?: string },
 ): Promise<ProviderConnection> {
+  await verified(githubApps, { type: 'github-app', appId: input.appId, privateKey: input.privateKey });
   const existing = await connections.findByAppId(input.appId);
   const app = input.webhookSecret ? { slug: input.name, webhookSecret: input.webhookSecret, clientId: input.clientId, clientSecret: input.clientSecret } : undefined;
   const connection = existing
@@ -36,11 +48,32 @@ export async function connectExistingGitHubApp(
   return connection;
 }
 
-/** A personal token as the interim connection for one account. */
-export async function connectGitHubToken({ connections }: { connections: ProviderConnectionsPort }, name: string, token: string): Promise<ProviderConnection> {
+/** A personal token as the interim connection for one account, checked against GitHub before it is stored. */
+export async function connectGitHubToken({ connections, githubApps }: ConnectDeps, name: string, token: string): Promise<ProviderConnection> {
+  await verified(githubApps, { type: 'github-token', token });
   const connection = createConnection({ provider: 'github', name, credentials: { type: 'github-token', token } });
   await connections.save(connection);
   return connection;
+}
+
+/**
+ * The health check behind the settings page, never a throw: one authenticated read with the stored credentials,
+ * and for an app, its installations refreshed from GitHub and stored. The install redirect and the webhook keep
+ * them current when they can reach the API; this catches up when they could not (a laptop without a public URL).
+ */
+export async function checkConnection({ connections, githubApps }: ConnectDeps, connectionId: string, now = new Date()): Promise<ConnectionCheck> {
+  const connection = await connections.get(connectionId);
+  if (!connection) throw new DomainError('connection_not_found', { connectionId });
+  const checkedAt = now.toISOString();
+  try {
+    const actsAs = await githubApps.whoAmI(connection.credentials);
+    if (connection.credentials.type !== 'github-app') return { ok: true, actsAs, checkedAt };
+    const installations = await githubApps.listInstallations(connection.credentials);
+    await connections.save({ ...connection, installations });
+    return { ok: true, actsAs, repositories: installations.reduce((n, i) => n + i.repositories.length, 0), checkedAt };
+  } catch (error) {
+    return { ok: false, reason: error instanceof Error ? error.message : String(error), checkedAt };
+  }
 }
 
 /** Use case 9: the install callback or the webhook tells us where the app is now installed. */

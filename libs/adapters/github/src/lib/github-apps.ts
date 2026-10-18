@@ -26,4 +26,20 @@ export class OctokitGitHubApps implements GitHubAppsPort {
     const { data } = await octokit.rest.users.getAuthenticated();
     return { login: data.login, id: data.id, avatarUrl: data.avatar_url };
   }
+
+  async listInstallations(credentials: Extract<GitHubCredentials, { type: 'github-app' }>): Promise<Installation[]> {
+    const app = new Octokit({ authStrategy: createAppAuth, auth: { appId: credentials.appId, privateKey: credentials.privateKey } });
+    const installations = await app.paginate(app.rest.apps.listInstallations, { per_page: 100 });
+    return Promise.all(installations.map((installation) => this.describeInstallation(credentials, installation.id)));
+  }
+
+  /** One authenticated read: GET /app for an app (signed with its key), GET /user for a token. */
+  async whoAmI(credentials: GitHubCredentials): Promise<string> {
+    if (credentials.type === 'github-token') {
+      const { data } = await new Octokit({ auth: credentials.token }).rest.users.getAuthenticated();
+      return data.login;
+    }
+    const { data } = await new Octokit({ authStrategy: createAppAuth, auth: { appId: credentials.appId, privateKey: credentials.privateKey } }).rest.apps.getAuthenticated();
+    return data?.slug ?? data?.name ?? credentials.appId;
+  }
 }

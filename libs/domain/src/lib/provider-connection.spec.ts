@@ -1,4 +1,4 @@
-import { createConnection, installUrl, redactConnection, withInstallation, withoutInstallation, withRepositories } from './provider-connection.js';
+import { coversRepository, createConnection, installUrl, redactConnection, withInstallation, withoutInstallation, withRepositories } from './provider-connection.js';
 
 describe('provider connection', () => {
   const connection = createConnection({
@@ -10,7 +10,7 @@ describe('provider connection', () => {
 
   it('redacts every secret and keeps what a person needs to see', () => {
     const shown = redactConnection(withInstallation(connection, { installationId: 3, account: 'owner', repositories: ['owner/repo'] }));
-    expect(shown).toEqual({ id: connection.id, provider: 'github', name: 'zenthos', kind: 'github-app', appSlug: 'zenthos', installations: [{ installationId: 3, account: 'owner', repositories: ['owner/repo'] }], createdAt: connection.createdAt });
+    expect(shown).toEqual({ id: connection.id, provider: 'github', name: 'zenthos', kind: 'github-app', appSlug: 'zenthos', installations: [{ installationId: 3, account: 'owner', repositories: ['owner/repo'] }], installUrl: 'https://github.com/apps/zenthos/installations/new', createdAt: connection.createdAt });
     expect(JSON.stringify(shown)).not.toContain('pem');
     expect(JSON.stringify(shown)).not.toContain('cs');
   });
@@ -27,5 +27,17 @@ describe('provider connection', () => {
   it('knows where the app is installed from', () => {
     expect(installUrl(connection)).toBe('https://github.com/apps/zenthos/installations/new');
     expect(installUrl(createConnection({ provider: 'github', name: 'token', credentials: { type: 'github-token', token: 't' } }))).toBeUndefined();
+  });
+});
+
+describe('coversRepository and the public view', () => {
+  it('an app covers only where it is installed, a token is unknown, and the public view carries the install link', () => {
+    const app = createConnection({ provider: 'github', name: 'zenthos-yl', credentials: { type: 'github-app', appId: '1', privateKey: 'pem' }, app: { slug: 'zenthos-yl', webhookSecret: 'w' }, installations: [{ installationId: 1, account: 'o', repositories: ['o/a'] }] });
+    const view = redactConnection(app);
+    expect(view.installUrl).toBe('https://github.com/apps/zenthos-yl/installations/new');
+    expect(JSON.stringify(view)).not.toContain('pem');
+    expect(coversRepository(view, 'o/a')).toBe(true);
+    expect(coversRepository(view, 'o/b')).toBe(false);
+    expect(coversRepository({ kind: 'github-token', installations: [] }, 'o/b')).toBeUndefined();
   });
 });

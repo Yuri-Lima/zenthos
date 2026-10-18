@@ -16,6 +16,7 @@ export const ERROR_CODES = {
   invalid_connection: 'The provider connection does not match its schema',
   invalid_profile: 'The repository profile is inconsistent',
   connection_not_found: 'No provider connection with that id',
+  invalid_credentials: 'The provider rejected these credentials',
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

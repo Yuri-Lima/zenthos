@@ -2,8 +2,8 @@ import { randomBytes } from 'node:crypto';
 import { Controller, Get, Inject, NotFoundException, Post, Query, Res, Body, Delete, Param, HttpCode } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { githubAppManifest, manifestFormUrl } from '@zenthos/adapter-github';
-import { connectExistingGitHubApp, connectGitHubApp, connectGitHubToken, recordInstallation } from '@zenthos/application';
-import { installUrl, PublicConnectionSchema, redactConnection } from '@zenthos/domain';
+import { checkConnection, connectExistingGitHubApp, connectGitHubApp, connectGitHubToken, recordInstallation } from '@zenthos/application';
+import { ConnectionCheckSchema, installUrl, PublicConnectionSchema, redactConnection } from '@zenthos/domain';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { API_PORTS, type ApiPorts } from '../ports.js';
@@ -39,7 +39,7 @@ export class ProvidersController {
   }
 
   @Post('github/token')
-  @ApiOperation({ summary: 'Connect GitHub with a personal token (interim for one account)' })
+  @ApiOperation({ summary: 'Connect GitHub with a personal token (interim for one account); GitHub is asked first and a refused token is not stored' })
   @ApiBody({ schema: jsonSchema(TokenBody) })
   @ApiOkResponse({ schema: jsonSchema(PublicConnectionSchema) })
   async connectToken(@Body() body: unknown) {
@@ -48,7 +48,7 @@ export class ProvidersController {
   }
 
   @Post('github/app')
-  @ApiOperation({ summary: 'Connect a GitHub App created by hand: app id, private key, the webhook secret, and the OAuth client id and secret for Sign in with GitHub; the same app again updates it' })
+  @ApiOperation({ summary: 'Connect a GitHub App created by hand: app id, private key, the webhook secret, and the OAuth client id and secret for Sign in with GitHub; the key is checked against GitHub first; the same app again updates it' })
   @ApiBody({ schema: jsonSchema(AppBody) })
   @ApiOkResponse({ schema: jsonSchema(PublicConnectionSchema) })
   async connectApp(@Body() body: unknown) {
@@ -78,17 +78,30 @@ export class ProvidersController {
     if (!pending || pending.expiresAt < Date.now()) throw new NotFoundException('unknown or expired manifest state');
     const result = await this.ports.githubApps.exchangeManifestCode(code);
     const connection = await connectGitHubApp(this.ports, result, pending.connectionId);
-    res.redirect(installUrl(connection) ?? '/providers');
+    res.redirect(installUrl(connection) ?? this.settingsUrl(connection.id));
   }
 
   @Get('github/install/callback')
-  @ApiOperation({ summary: 'GitHub returns here after an install; the installation is read and recorded' })
-  @ApiOkResponse({ schema: jsonSchema(PublicConnectionSchema) })
-  async finishInstall(@Query('connection') connectionId: string, @Query('installation_id') installationId: string) {
+  @ApiOperation({ summary: 'GitHub returns here after an install; the installation is read, recorded, and the browser goes back to the dashboard settings' })
+  async finishInstall(@Query('connection') connectionId: string, @Query('installation_id') installationId: string, @Res() res: Response) {
     const connection = await this.ports.connections.get(connectionId);
     if (!connection || connection.credentials.type !== 'github-app') throw new NotFoundException('no GitHub App connection with that id');
     const installation = await this.ports.githubApps.describeInstallation(connection.credentials, Number(installationId));
-    return redactConnection(await recordInstallation(this.ports, connectionId, installation));
+    await recordInstallation(this.ports, connectionId, installation);
+    res.redirect(this.settingsUrl(connectionId));
+  }
+
+  @Post(':id/check')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Ask GitHub whether the stored credentials still work, and refresh an app\'s installations from GitHub; answers with who they act as and how many repositories they reach, or why not' })
+  @ApiOkResponse({ schema: jsonSchema(ConnectionCheckSchema) })
+  check(@Param('id') id: string) {
+    return checkConnection(this.ports, id);
+  }
+
+  /** The dashboard's settings page, with the connection that just changed, so the page can say so. */
+  private settingsUrl(connectionId: string) {
+    return `${this.config.ZENTHOS_DASHBOARD_ORIGIN}/settings?connected=${encodeURIComponent(connectionId)}`;
   }
 
   @Delete(':id')

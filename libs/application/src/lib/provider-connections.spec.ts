@@ -1,6 +1,6 @@
 import { createRun, repoProfile, type ProviderConnection, type RepoProfile, type Run } from '@zenthos/domain';
-import type { ProviderConnectionsPort, RepoProfilesPort, RunControlPort } from '@zenthos/ports';
-import { applyWebhookCommand, connectExistingGitHubApp, connectGitHubApp, recordInstallation } from './provider-connections.js';
+import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort } from '@zenthos/ports';
+import { applyWebhookCommand, checkConnection, connectExistingGitHubApp, connectGitHubApp, connectGitHubToken, recordInstallation } from './provider-connections.js';
 
 /** Map-backed fakes; the application layer may not import adapters, even in tests. */
 class Connections implements ProviderConnectionsPort {
@@ -29,9 +29,34 @@ class Runs implements RunControlPort {
   state = async (ticketKey: string) => this.runs.get(ticketKey);
 }
 
+/** Answers like GitHub: a secret spelled `rejected` is refused. */
+const githubApps = {
+  whoAmI: async (c: { type: string; token?: string; privateKey?: string }) => {
+    if ((c.token ?? c.privateKey) === 'rejected') throw new Error('Bad credentials');
+    return c.type === 'github-token' ? 'octocat' : 'zenthos-dev';
+  },
+  listInstallations: async () => [{ installationId: 5, account: 'owner', repositories: ['owner/a', 'owner/b'] }],
+} as unknown as GitHubAppsPort;
+
 const manifest = { appId: '42', slug: 'zenthos-dev', privateKey: 'pem', webhookSecret: 'whs', clientId: 'c', clientSecret: 'cs' };
 
 describe('provider connections', () => {
+  it('checks credentials before storing them, and reports the health of a stored connection without throwing', async () => {
+    const connections = new Connections();
+    await expect(connectGitHubToken({ connections, githubApps }, 'me', 'rejected')).rejects.toMatchObject({ code: 'invalid_credentials' });
+    await expect(connectExistingGitHubApp({ connections, githubApps }, { name: 'x', appId: '1', privateKey: 'rejected' })).rejects.toMatchObject({ code: 'invalid_credentials' });
+    expect(await connections.list()).toEqual([]);
+    const token = await connectGitHubToken({ connections, githubApps }, 'me', 'ghp_ok');
+    const now = new Date('2026-10-18T12:00:00Z');
+    expect(await checkConnection({ connections, githubApps }, token.id, now)).toEqual({ ok: true, actsAs: 'octocat', checkedAt: now.toISOString() });
+    await connections.save({ ...token, credentials: { type: 'github-token', token: 'rejected' } });
+    expect(await checkConnection({ connections, githubApps }, token.id, now)).toEqual({ ok: false, reason: 'Bad credentials', checkedAt: now.toISOString() });
+    const app = await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-dev', appId: '11', privateKey: 'pem' });
+    expect(await checkConnection({ connections, githubApps }, app.id, now)).toMatchObject({ ok: true, actsAs: 'zenthos-dev', repositories: 2 });
+    expect((await connections.get(app.id))?.installations).toEqual([{ installationId: 5, account: 'owner', repositories: ['owner/a', 'owner/b'] }]);
+    await expect(checkConnection({ connections, githubApps }, 'missing')).rejects.toMatchObject({ code: 'connection_not_found' });
+  });
+
   it('connects an app from the manifest result and records installations', async () => {
     const connections = new Connections();
     const connection = await connectGitHubApp({ connections }, manifest);
@@ -43,13 +68,13 @@ describe('provider connections', () => {
 
   it('connects an app created by hand, with the webhook only when its secret is known', async () => {
     const connections = new Connections();
-    const silent = await connectExistingGitHubApp({ connections }, { name: 'zenthos-dev', appId: '9', privateKey: 'pem' });
+    const silent = await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-dev', appId: '9', privateKey: 'pem' });
     expect(silent.app).toBeUndefined();
-    const hooked = await connectExistingGitHubApp({ connections }, { name: 'zenthos-hooked', appId: '10', privateKey: 'pem', webhookSecret: 'whs' });
+    const hooked = await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-hooked', appId: '10', privateKey: 'pem', webhookSecret: 'whs' });
     expect(hooked.app).toEqual({ slug: 'zenthos-hooked', webhookSecret: 'whs' });
     expect((await connections.findByAppId('9'))?.id).toBe(silent.id);
     expect((await connections.findByAppId('10'))?.id).toBe(hooked.id);
-    const updated = await connectExistingGitHubApp({ connections }, { name: 'zenthos-hooked', appId: '10', privateKey: 'pem2', webhookSecret: 'whs', clientId: 'Iv1.c', clientSecret: 'cs' });
+    const updated = await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-hooked', appId: '10', privateKey: 'pem2', webhookSecret: 'whs', clientId: 'Iv1.c', clientSecret: 'cs' });
     expect(updated.id).toBe(hooked.id);
     expect(updated.app?.clientId).toBe('Iv1.c');
     expect((await connections.list()).filter((c) => c.credentials.type === 'github-app' && c.credentials.appId === '10')).toHaveLength(1);

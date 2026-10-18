@@ -62,14 +62,42 @@ export const PublicConnectionSchema = z.object({
   kind: z.enum(['github-app', 'github-token']),
   appSlug: z.string().optional(),
   installations: z.array(InstallationSchema),
+  /** Where a person installs the app on more repositories; only apps have one. */
+  installUrl: z.string().optional(),
   createdAt: z.iso.datetime(),
 });
 
 export type PublicConnection = z.infer<typeof PublicConnectionSchema>;
 
-export function redactConnection({ id, provider, name, credentials, app, installations, createdAt }: ProviderConnection): PublicConnection {
-  return { id, provider, name, kind: credentials.type, appSlug: app?.slug, installations, createdAt };
+export function redactConnection(connection: ProviderConnection): PublicConnection {
+  const { id, provider, name, credentials, app, installations, createdAt } = connection;
+  return { id, provider, name, kind: credentials.type, appSlug: app?.slug, installations, installUrl: installUrl(connection), createdAt };
 }
+
+/**
+ * Whether a connection can act on a repository: an app only where it is installed; a token's reach is not
+ * known without asking GitHub, so `undefined`. The settings page warns on `false`; the worker decides for real.
+ */
+export function coversRepository(connection: Pick<PublicConnection, 'kind' | 'installations'>, repo: string): boolean | undefined {
+  if (connection.kind === 'github-token') return undefined;
+  return connection.installations.some((installation) => installation.repositories.includes(repo));
+}
+
+/**
+ * The answer to "do these credentials still work?": who they act as and, for an app, how many repositories its
+ * installations reach once refreshed from GitHub; the provider's reason when they do not work.
+ */
+export const ConnectionCheckSchema = z.object({
+  ok: z.boolean(),
+  /** The app slug or the token's login, as the provider reports it. */
+  actsAs: z.string().optional(),
+  /** Apps only: repositories across every installation, as GitHub lists them now. */
+  repositories: z.number().int().min(0).optional(),
+  /** Why the provider refused the credentials; absent when it accepted them. */
+  reason: z.string().optional(),
+  checkedAt: z.iso.datetime(),
+});
+export type ConnectionCheck = z.infer<typeof ConnectionCheckSchema>;
 
 export function createConnection(input: Omit<ProviderConnection, 'id' | 'createdAt' | 'installations'> & { installations?: Installation[] }, id: string = globalThis.crypto.randomUUID(), now = new Date()): ProviderConnection {
   return parseConnection({ ...input, id, installations: input.installations ?? [], createdAt: now.toISOString() });
@@ -92,4 +120,6 @@ export function withoutInstallation(connection: ProviderConnection, installation
 }
 
 /** The GitHub URL where a person installs the app on more repositories (ADR 007). */
-export const installUrl = (connection: ProviderConnection): string | undefined => connection.app && `https://github.com/apps/${connection.app.slug}/installations/new`;
+export function installUrl(connection: ProviderConnection): string | undefined {
+  return connection.app && `https://github.com/apps/${connection.app.slug}/installations/new`;
+}

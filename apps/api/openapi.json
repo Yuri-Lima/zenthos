@@ -188,6 +188,9 @@
                           "additionalProperties": false
                         }
                       },
+                      "installUrl": {
+                        "type": "string"
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -306,6 +309,9 @@
                         "additionalProperties": false
                       }
                     },
+                    "installUrl": {
+                      "type": "string"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -326,7 +332,7 @@
             }
           }
         },
-        "summary": "Connect GitHub with a personal token (interim for one account)",
+        "summary": "Connect GitHub with a personal token (interim for one account); GitHub is asked first and a refused token is not stored",
         "tags": [
           "providers"
         ]
@@ -440,6 +446,9 @@
                         "additionalProperties": false
                       }
                     },
+                    "installUrl": {
+                      "type": "string"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time",
@@ -460,7 +469,7 @@
             }
           }
         },
-        "summary": "Connect a GitHub App created by hand: app id, private key, the webhook secret, and the OAuth client id and secret for Sign in with GitHub; the same app again updates it",
+        "summary": "Connect a GitHub App created by hand: app id, private key, the webhook secret, and the OAuth client id and secret for Sign in with GitHub; the key is checked against GitHub first; the same app again updates it",
         "tags": [
           "providers"
         ]
@@ -536,79 +545,59 @@
         ],
         "responses": {
           "200": {
+            "description": ""
+          }
+        },
+        "summary": "GitHub returns here after an install; the installation is read, recorded, and the browser goes back to the dashboard settings",
+        "tags": [
+          "providers"
+        ]
+      }
+    },
+    "/providers/{id}/check": {
+      "post": {
+        "operationId": "ProvidersController_check",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "description": "",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid",
-                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    "ok": {
+                      "type": "boolean"
                     },
-                    "provider": {
-                      "type": "string",
-                      "enum": [
-                        "github"
-                      ]
-                    },
-                    "name": {
+                    "actsAs": {
                       "type": "string"
                     },
-                    "kind": {
-                      "type": "string",
-                      "enum": [
-                        "github-app",
-                        "github-token"
-                      ]
+                    "repositories": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
                     },
-                    "appSlug": {
+                    "reason": {
                       "type": "string"
                     },
-                    "installations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "installationId": {
-                            "type": "integer",
-                            "exclusiveMinimum": 0,
-                            "maximum": 9007199254740991
-                          },
-                          "account": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "repositories": {
-                            "type": "array",
-                            "items": {
-                              "type": "string",
-                              "minLength": 1
-                            }
-                          }
-                        },
-                        "required": [
-                          "installationId",
-                          "account",
-                          "repositories"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "createdAt": {
+                    "checkedAt": {
                       "type": "string",
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
                     }
                   },
                   "required": [
-                    "id",
-                    "provider",
-                    "name",
-                    "kind",
-                    "installations",
-                    "createdAt"
+                    "ok",
+                    "checkedAt"
                   ],
                   "additionalProperties": false
                 }
@@ -616,7 +605,7 @@
             }
           }
         },
-        "summary": "GitHub returns here after an install; the installation is read and recorded",
+        "summary": "Ask GitHub whether the stored credentials still work, and refresh an app's installations from GitHub; answers with who they act as and how many repositories they reach, or why not",
         "tags": [
           "providers"
         ]

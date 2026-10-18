@@ -5,7 +5,7 @@ import { signInWithGitHub } from './sign-in.js';
 const withOAuth = createConnection({ provider: 'github', name: 'app', credentials: { type: 'github-app', appId: '1', privateKey: 'pem' }, app: { slug: 'app', webhookSecret: 's', clientId: 'Iv1.x', clientSecret: 'cs' } });
 const withoutOAuth = createConnection({ provider: 'github', name: 'plain', credentials: { type: 'github-app', appId: '2', privateKey: 'pem' } });
 const connectionsOf = (list: ProviderConnection[]): ProviderConnectionsPort => ({ get: async () => undefined, findByAppId: async () => undefined, list: async () => list, save: async () => undefined, remove: async () => undefined });
-const githubApps: GitHubAppsPort = { exchangeManifestCode: async () => { throw new Error('unused'); }, describeInstallation: async () => { throw new Error('unused'); }, signInUser: async (_app, code) => ({ login: code, id: 7 }) };
+const githubApps: GitHubAppsPort = { exchangeManifestCode: async () => { throw new Error('unused'); }, describeInstallation: async () => { throw new Error('unused'); }, signInUser: async (_app, code) => ({ login: code, id: 7 }), whoAmI: async () => { throw new Error('unused'); }, listInstallations: async () => [] };
 const sessionsOf = (created: Session[]): SessionsPort => ({ create: async (s) => void created.push(s), get: async () => undefined, remove: async () => undefined });
 const input = { code: 'Yuri', redirectUri: 'http://localhost:3200/auth/github/callback', allowedLogins: ['yuri'], sessionId: 'x'.repeat(64), ttlHours: 24, now: new Date('2026-10-18T10:00:00Z') };
 

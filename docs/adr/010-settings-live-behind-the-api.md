@@ -48,3 +48,21 @@ in the worker's environment and in `apps/worker/src/repos.ts`.
   is acceptable for a flow a person runs once.
 - GitHub must reach the API for the webhook and the callbacks; on a laptop that is a tunnel, and the
   label polling in the worker remains the fallback when there is none.
+
+## Amendment, 2026-10-18: the settings pages
+
+- **Credentials are checked before they are stored.** A pasted token or a hand-made app's key goes through
+  one authenticated read (`GitHubAppsPort.whoAmI`); a refusal is `invalid_credentials` and nothing is saved.
+  The same read is the health check the settings page runs on demand (`POST /providers/:id/check`).
+- **The health check also refreshes an app's installations** from GitHub (`listInstallations`) and stores
+  them. The install redirect and the webhook remain the primary path; on a laptop without a public URL they
+  never arrive, and the stored list was empty while the app was in fact installed. The check catches up.
+- **Coverage is a domain rule** (`coversRepository`): an app covers a repository only where it is installed;
+  a token's reach is unknown without asking GitHub. The settings page warns on a profile whose app does not
+  cover it; the worker still decides for real at run time.
+- **The first-run steps are derived, not stored**: a connection exists, it may act somewhere, a repository
+  profile exists. Each turns green as soon as it is true; nothing tracks "wizard completed".
+- **GitHub's redirects land on the dashboard**: after a manifest without an app page, and after an install,
+  the API sends the browser to `ZENTHOS_DASHBOARD_ORIGIN/settings?connected=<id>`.
+- **Gate commands are picked from the allowed commands** in the form, so the domain's subset rule cannot be
+  broken from the UI; the API still enforces it for every other caller.

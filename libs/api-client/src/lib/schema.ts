@@ -114,7 +114,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Connect GitHub with a personal token (interim for one account) */
+        /** Connect GitHub with a personal token (interim for one account); GitHub is asked first and a refused token is not stored */
         post: operations["ProvidersController_connectToken"];
         delete?: never;
         options?: never;
@@ -131,7 +131,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Connect a GitHub App created by hand: app id, private key, the webhook secret, and the OAuth client id and secret for Sign in with GitHub; the same app again updates it */
+        /** Connect a GitHub App created by hand: app id, private key, the webhook secret, and the OAuth client id and secret for Sign in with GitHub; the key is checked against GitHub first; the same app again updates it */
         post: operations["ProvidersController_connectApp"];
         delete?: never;
         options?: never;
@@ -180,10 +180,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GitHub returns here after an install; the installation is read and recorded */
+        /** GitHub returns here after an install; the installation is read, recorded, and the browser goes back to the dashboard settings */
         get: operations["ProvidersController_finishInstall"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/providers/{id}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask GitHub whether the stored credentials still work, and refresh an app's installations from GitHub; answers with who they act as and how many repositories they reach, or why not */
+        post: operations["ProvidersController_check"];
         delete?: never;
         options?: never;
         head?: never;
@@ -463,6 +480,7 @@ export interface operations {
                             account: string;
                             repositories: string[];
                         }[];
+                        installUrl?: string;
                         /** Format: date-time */
                         createdAt: string;
                     }[];
@@ -505,6 +523,7 @@ export interface operations {
                             account: string;
                             repositories: string[];
                         }[];
+                        installUrl?: string;
                         /** Format: date-time */
                         createdAt: string;
                     };
@@ -551,6 +570,7 @@ export interface operations {
                             account: string;
                             repositories: string[];
                         }[];
+                        installUrl?: string;
                         /** Format: date-time */
                         createdAt: string;
                     };
@@ -611,23 +631,33 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
+                content?: never;
+            };
+        };
+    };
+    ProvidersController_check: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
                     "application/json": {
-                        /** Format: uuid */
-                        id: string;
-                        /** @enum {string} */
-                        provider: "github";
-                        name: string;
-                        /** @enum {string} */
-                        kind: "github-app" | "github-token";
-                        appSlug?: string;
-                        installations: {
-                            installationId: number;
-                            account: string;
-                            repositories: string[];
-                        }[];
+                        ok: boolean;
+                        actsAs?: string;
+                        repositories?: number;
+                        reason?: string;
                         /** Format: date-time */
-                        createdAt: string;
+                        checkedAt: string;
                     };
                 };
             };
