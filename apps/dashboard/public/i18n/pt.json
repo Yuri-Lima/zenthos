@@ -93,8 +93,7 @@
     "runs": "Execuções",
     "metrics": "Métricas",
     "settings": "Configurações",
-    "glossary": "Glossário",
-    "soon": "Próxima etapa"
+    "glossary": "Glossário"
   },
   "gate": {
     "pass": "passou",
@@ -210,21 +209,26 @@
     "setting_connection": "Conexão de provedor",
     "setting_allowlist": "Lista de permitidos",
     "setting_manifest": "Fluxo de manifesto",
-    "metric_spec_approval_rate": "taxa de aprovação de specs",
-    "metric_clean_merge_rate": "taxa de merge limpo",
-    "metric_ticket_to_pr_minutes": "minutos de ticket a PR",
-    "metric_cost_per_ticket_usd": "custo por ticket (USD)",
-    "metric_tokens_per_ticket": "tokens por ticket",
-    "metric_gate_failures": "falhas de portão",
-    "metric_reviewer_agreement": "concordância do revisor",
-    "metric_regression_score": "pontuação de regressão",
-    "metric_human_minutes_per_ticket": "minutos humanos por ticket",
+    "metric_spec_approval_rate": "Taxa de aprovação de specs",
+    "metric_clean_merge_rate": "Taxa de merge limpo",
+    "metric_ticket_to_pr_minutes": "Ticket até PR",
+    "metric_cost_per_ticket_usd": "Custo por ticket",
+    "metric_tokens_per_ticket": "Tokens por ticket",
+    "metric_gate_failures": "Falhas de portão",
+    "metric_reviewer_agreement": "Concordância do revisor",
+    "metric_regression_score": "Pontuação de regressão",
+    "metric_human_minutes_per_ticket": "Minutos humanos por ticket",
     "setting_installation": "Instalação",
     "setting_health_check": "Verificação de saúde",
     "setting_allowed_commands": "Comandos permitidos",
     "setting_gate_commands": "Comandos de portão",
     "setting_implement_rounds": "Rodadas de implementação",
-    "setting_review_rounds": "Rodadas de revisão"
+    "setting_review_rounds": "Rodadas de revisão",
+    "agent_spec_writer": "Redator de especificações",
+    "agent_coding_agent": "Agente de código",
+    "agent_reviewer": "Revisor",
+    "trace_check": "Verificação no LangFuse",
+    "view_metrics": "Página de métricas"
   },
   "glossary": {
     "run": "Um ticket atravessando o pipeline, da entrada até um pull request mesclado ou uma parada. Um workflow Temporal por ticket; seu estado só muda pela máquina de estados e cada mudança é armazenada.",
@@ -292,21 +296,26 @@
     "setting_connection": "As credenciais com as quais o pipeline age em um provedor: um GitHub App (padrão) ou um token. Credenciais e segredos do app são selados em repouso; a API só mostra a metade pública.",
     "setting_allowlist": "Os logins do GitHub autorizados a entrar no painel após Entrar com GitHub. Vazia não admite ninguém.",
     "setting_manifest": "Como o GitHub é conectado: a API envia o navegador ao GitHub com um manifesto de app, o GitHub devolve um código, a API o troca pelas credenciais do app e armazena uma conexão.",
-    "metric_spec_approval_rate": "Specs aprovadas divididas por specs rascunhadas. Unidade: razão; fonte: execuções.",
-    "metric_clean_merge_rate": "PRs mesclados sem mudança humana de código divididos por PRs abertos. Unidade: razão; fonte: SCM.",
-    "metric_ticket_to_pr_minutes": "Minutos da entrada até o PR aberto, mediana. Unidade: minutos; fonte: execuções.",
-    "metric_cost_per_ticket_usd": "Média das estimativas de custo dos próprios modelos a preço de tabela por execução; a fatura vem do Console. Unidade: USD; fonte: execuções.",
-    "metric_tokens_per_ticket": "Média de tokens de entrada mais saída reportados pelos modelos por execução. Unidade: contagem; fonte: execuções.",
-    "metric_gate_failures": "Resultados de portão falhos, contados por portão. Unidade: contagem; fonte: execuções.",
-    "metric_reviewer_agreement": "O veredito do revisor coincide com o veredito humano no conjunto rotulado. Unidade: razão; fonte: avaliações.",
-    "metric_regression_score": "Pontuação de avaliação por versão de prompt e etapa. Unidade: pontuação; fonte: avaliações.",
-    "metric_human_minutes_per_ticket": "Minutos que humanos gastaram em aprovações e revisões de uma execução. Unidade: minutos; fonte: aprovações.",
+    "metric_spec_approval_rate": "Specs aprovadas divididas por specs rascunhadas.",
+    "metric_clean_merge_rate": "PRs mesclados sem mudança humana de código divididos por PRs abertos.",
+    "metric_ticket_to_pr_minutes": "Minutos da entrada até o PR aberto, mediana.",
+    "metric_cost_per_ticket_usd": "Média das estimativas de custo dos próprios modelos a preço de tabela por execução; a fatura vem do Console.",
+    "metric_tokens_per_ticket": "Média de tokens de entrada mais saída reportados pelos modelos por execução.",
+    "metric_gate_failures": "Resultados de portão falhos, contados por portão.",
+    "metric_reviewer_agreement": "O veredito do revisor coincide com o veredito humano no conjunto rotulado.",
+    "metric_regression_score": "Pontuação de avaliação por versão de prompt e etapa.",
+    "metric_human_minutes_per_ticket": "Minutos que humanos gastaram em aprovações e revisões de uma execução.",
     "setting_installation": "Onde um GitHub App está instalado: uma conta e os repositórios que ele pode tocar. O app só age ali; instalá-lo em mais repositórios acontece no GitHub, e a página de configurações mostra o resultado.",
     "setting_health_check": "Uma leitura autenticada com as credenciais armazenadas: o GitHub responde como quem elas agem, ou por que as recusa; para um app, suas instalações são atualizadas a partir do GitHub ao mesmo tempo. Roda antes de um token ou app existente ser armazenado, e sob demanda na página de configurações.",
     "setting_allowed_commands": "As linhas de comando exatas que o agente de código e os portões podem rodar no sandbox, uma por linha. Comparadas exatamente após juntar espaços: sem curingas, sem prefixos, nada mais roda.",
     "setting_gate_commands": "Os comandos permitidos que devem sair com 0 antes de abrir um pull request. Sempre um subconjunto dos comandos permitidos; um que já falha na branch base é pulado com uma nota.",
     "setting_implement_rounds": "Quantas vezes o agente de código pode implementar antes de a execução escalar. Cada nova tentativa vê os portões que falharam.",
-    "setting_review_rounds": "Quantas reimplementações uma revisão reprovada pode disparar antes de a execução escalar. Zero significa que uma revisão reprovada vai direto para uma pessoa."
+    "setting_review_rounds": "Quantas reimplementações uma revisão reprovada pode disparar antes de a execução escalar. Zero significa que uma revisão reprovada vai direto para uma pessoa.",
+    "agent_spec_writer": "O workflow de LLM que rascunha a especificação: um grafo LangGraph que escreve, verifica o rascunho contra o esquema e escreve de novo com os problemas quando falha. Uma chamada de modelo por rascunho, sem ferramentas; rastreado no LangFuse.",
+    "agent_coding_agent": "O único agente de verdade: Claude Code, sem interface, no sandbox, decide seus próprios passos por até sessenta turnos, edita arquivos e roda só comandos permitidos. Ele reporta o próprio custo; não é rastreado no LangFuse.",
+    "agent_reviewer": "O workflow de LLM que revisa o pull request: um grafo LangGraph que pontua as quatro linhas da rubrica em paralelo e reúne achados, publicados como comentário. Sem ferramentas; rastreado no LangFuse.",
+    "trace_check": "O custo armazenado de cada agente rastreado comparado com o que o LangFuse registrou para a mesma execução. São precificados separadamente, então coincidem dentro de 5% ou um centavo; execuções armazenadas antes de os custos serem guardados por agente não podem ser comparadas.",
+    "view_metrics": "As nove métricas com suas definições ao lado dos números, calculadas a partir das execuções armazenadas; as que vivem em outro lugar dizem onde. Abaixo, cada execução com seu custo dividido por agente e a verificação no LangFuse sob demanda."
   },
   "settings": {
     "eyebrow": "Configuração",
@@ -399,5 +408,68 @@
     "forbiddenHint": "Uma mudança que toque estes precisa de uma pessoa.",
     "alwaysForbidden": "Sempre proibidos: os arquivos que definem os portões",
     "save": "Salvar perfil"
+  },
+  "metrics": {
+    "eyebrow": "Medição",
+    "title": "Métricas",
+    "window": "Calculadas a partir das {{n}} execuções armazenadas",
+    "source": {
+      "runs": "execuções",
+      "scm": "GitHub",
+      "evals": "avaliações",
+      "approvals": "aprovações"
+    },
+    "sourceHint": {
+      "runs": "Calculada pela API a partir das execuções armazenadas",
+      "scm": "Precisa do GitHub: quem mudou o código antes do merge",
+      "evals": "Vive nas linhas de base das avaliações, por versão de prompt",
+      "approvals": "Precisa do tempo gasto por pessoas, que nada registra ainda"
+    },
+    "elsewhere": {
+      "scm": "Ainda não calculada: precisa dos commits de cada pull request mesclado no GitHub, para separar os do bot dos de uma pessoa.",
+      "evals": "Não calculada aqui: as suítes de avaliação a medem por versão de prompt (pnpm nx run @zenthos/worker:eval); suas linhas de base são o número.",
+      "approvals": "Ainda não calculada: nada registra quanto tempo uma pessoa gastou; a espera por uma aprovação não é o tempo gasto nela.",
+      "runs": ""
+    },
+    "tokens": {
+      "input": "entrada",
+      "output": "saída",
+      "cacheRead": "leitura de cache",
+      "cacheWrite": "escrita de cache"
+    },
+    "approvals": "{{approved}} aprovadas de {{drafted}} rascunhos",
+    "totalSpend": "{{total}} nessas execuções",
+    "fromRuns": "de {{n}} execuções",
+    "runsTitle": "Execuções, custo por agente e LangFuse",
+    "runsIntro": "A estimativa de cada execução dividida pelo agente que a gastou. O redator de especificações e o revisor são rastreados no LangFuse, então sua parte pode ser verificada lá.",
+    "howCheck": "Como a verificação funciona",
+    "byAgent": "Por agente",
+    "toPr": "Ticket até PR",
+    "check": "Verificar no LangFuse",
+    "notSplit": "registrada antes de os custos serem divididos por agente",
+    "agentShort": {
+      "spec_writer": "spec",
+      "coding_agent": "código",
+      "reviewer": "revisão"
+    },
+    "agentName": {
+      "spec_writer": "Redator de especificações",
+      "reviewer": "Revisor"
+    },
+    "agent": "Agente",
+    "stored": "Armazenado",
+    "langfuseTokens": "Tokens no LangFuse",
+    "verdict": "Veredito",
+    "verdicts": {
+      "match": "coincide",
+      "mismatch": "difere",
+      "not_recorded": "sem divisão",
+      "not_traced": "fora do LangFuse"
+    },
+    "tolerance": "Coincidir significa dentro de {{pct}}% ou {{usd}}.",
+    "codingAgentUntraced": "O agente de código roda no Claude Code e não é rastreado no LangFuse.",
+    "openLangfuse": "Abrir a sessão no LangFuse",
+    "unavailable": "A API não tem chaves do LangFuse (LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY), então nada foi comparado.",
+    "checkShort": "LangFuse"
   }
 }

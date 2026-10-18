@@ -2,8 +2,9 @@ import { existsSync } from 'node:fs';
 import { OctokitGitHubApps } from '@zenthos/adapter-github/live';
 import { InMemoryGitHubApps, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryRunControl, InMemoryRuns, InMemorySessions } from '@zenthos/adapter-in-memory';
 import { migrate, PostgresProviderConnections, PostgresRepoProfiles, PostgresRuns, PostgresSessions, SecretBox } from '@zenthos/adapter-postgres';
+import { LangfuseTraceUsage } from '@zenthos/adapter-langfuse';
 import { TemporalRunControl } from '@zenthos/adapter-temporal';
-import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort, RunsPort, SessionsPort } from '@zenthos/ports';
+import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort, RunsPort, SessionsPort, TraceUsagePort } from '@zenthos/ports';
 import pg from 'pg';
 import { loadConfig, type ApiConfig } from './config.js';
 
@@ -37,5 +38,9 @@ export async function composePorts(config: ApiConfig): Promise<ApiPorts> {
     closers.push(() => temporal.close());
   }
   const githubApps: GitHubAppsPort = config.GITHUB_APPS === 'octokit' ? new OctokitGitHubApps() : new InMemoryGitHubApps();
-  return { connections, profiles, runs, runStore, githubApps, sessions, close: async () => void (await Promise.all(closers.map((close) => close()))) };
+  const traces: TraceUsagePort | undefined =
+    config.LANGFUSE_PUBLIC_KEY && config.LANGFUSE_SECRET_KEY
+      ? new LangfuseTraceUsage({ baseUrl: config.LANGFUSE_BASE_URL, publicKey: config.LANGFUSE_PUBLIC_KEY, secretKey: config.LANGFUSE_SECRET_KEY, projectId: config.LANGFUSE_PROJECT_ID })
+      : undefined;
+  return { connections, profiles, runs, runStore, githubApps, sessions, traces, close: async () => void (await Promise.all(closers.map((close) => close()))) };
 }

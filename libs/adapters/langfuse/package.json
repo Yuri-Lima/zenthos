@@ -24,6 +24,8 @@
     "@langfuse/langchain": "^5.13.1",
     "@langfuse/otel": "^5.13.1",
     "@opentelemetry/sdk-trace-node": "^2.12.0",
+    "@zenthos/domain": "workspace:*",
+    "@zenthos/ports": "workspace:*",
     "tslib": "^2.3.0"
   }
 }

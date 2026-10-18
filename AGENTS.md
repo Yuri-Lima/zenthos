@@ -40,13 +40,13 @@ These win over any pattern below when the two conflict. The goal is a codebase a
 | `libs/domain` | Entities, run state machine, zod schemas, gates, policies, metrics, error codes | nothing but zod and node |
 | `libs/ports` | One interface per adapter family, each with a `*.contract.ts` test | domain |
 | `libs/application` | One file per use case | domain, ports |
-| `libs/adapters/*` | One library per concrete adapter: `in-memory` (tests and dry runs), `github` (issues and pull requests), `langfuse` (tracing callbacks), `git-sandbox` (a clone per run with the command allowlist), `claude-code` (headless Claude Code with the same allowlist) | domain, ports |
+| `libs/adapters/*` | One library per concrete adapter: `in-memory` (tests and dry runs), `github` (issues and pull requests), `langfuse` (tracing callbacks, and reading a run's usage back for the check, ADR 015), `git-sandbox` (a clone per run with the command allowlist), `claude-code` (headless Claude Code with the same allowlist) | domain, ports |
 | `libs/agents` | LangGraph graphs that implement agent ports. Spec writer: draft, validate against the schema, retry with the errors | domain, ports, LangChain |
 | `libs/evals` | Golden dataset schema, metrics, regression check and the port-based suite runner (ADR 009) | domain, ports |
 | `libs/adapters/postgres` | Provider connections (secrets sealed at rest) and repository profiles in Postgres; the schema as ordered statements (ADR 010) | domain, ports |
 | `libs/adapters/temporal` | `RunControlPort` over the Temporal client and the workflow bundler config, shared by the API, the CLI and the worker | domain, ports |
 | `apps/api` | NestJS REST API: provider connections with a credential check before storing and on demand, the GitHub manifest and install flows, repository profiles, runs from the stored projection, metrics computed from it, the GitHub webhook; OpenAPI at `/docs` and committed as `openapi.json` (ADR 010, ADR 011) | everything |
-| `apps/dashboard` | Angular dashboard (Material + Tailwind, en/pt JSON under `public/i18n`): sign-in gate, runs list, run detail with approve and reject, start a run, settings for providers and repository profiles with derived first-run steps (ADR 010), glossary with inline help (ADR 014); only the generated client reaches the API; polls until server-sent events exist (ADR 012) | api-client |
+| `apps/dashboard` | Angular dashboard (Material + Tailwind, en/pt JSON under `public/i18n`): sign-in gate, runs list, run detail with approve and reject, start a run, settings for providers and repository profiles with derived first-run steps (ADR 010), metrics with cost by agent and the LangFuse check (ADR 015), glossary with inline help (ADR 014); only the generated client reaches the API; polls until server-sent events exist (ADR 012) | api-client |
 | `libs/api-client` | The typed client the dashboard uses: `schema.ts` generated from `apps/api/openapi.json` with openapi-typescript, `createApiClient` over openapi-fetch; never hand-edited (ADR 003) | nothing |
 | `apps/worker` | Temporal worker: `workflows.ts` (one workflow per ticket), `activities.ts` (thin, call use cases), `config.ts` (zod-validated env), `composition.ts` (the adapters, chosen once), `repos.ts` (the dry-run repository profiles), `scripts/` (contract check, manual review, evals) | anything |
 | `apps/cli` | `zenthos run|approve|reject|state <ticket-key>` against the running worker | anything |
@@ -78,6 +78,9 @@ bans vendor SDKs inside domain, ports and application. Every project carries a `
 - Dashboard (ADR 013): colours only through the tokens in `styles.scss`; status is always icon + label + colour
   through `StatusChip`; state order, graph edges, gate and rubric names come from `@zenthos/domain`, never a
   list in the UI; `state.*` and `stateShort.*` are the two translations of one state.
+- Usage is recorded per agent (ADR 015): every `withUsage` names the agent; only the workflow traces under the bare
+  ticket key, evals and manual commands pass their purpose to `specWriter`/`reviewer` so their calls trace beside the
+  run's session (`traceSessionId`), never inside it.
 - Glossary (ADR 014): every term is defined once in `libs/domain/src/lib/glossary.ts`; definitions of states,
   events, gates, metrics and rubric lines are keyed by the domain constants, so a new one fails to compile until
   it is defined; `GET /glossary` serves it; the dashboard wraps labels in `zen-term` for inline help and lists

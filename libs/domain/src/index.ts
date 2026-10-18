@@ -17,3 +17,4 @@ export * from './lib/provider-connection.js';
 export * from './lib/webhook.js';
 export * from './lib/session.js';
 export * from './lib/glossary.js';
+export * from './lib/agent-usage.js';

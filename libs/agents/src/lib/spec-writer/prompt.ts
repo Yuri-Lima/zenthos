@@ -1,5 +1,6 @@
+import { TRACE_VERSION_PREFIX } from '@zenthos/domain';
 /** Bump the version when the wording changes; LangFuse groups traces and scores by it. */
-export const SPEC_WRITER_VERSION = 'spec-writer/v1';
+export const SPEC_WRITER_VERSION = `${TRACE_VERSION_PREFIX.spec_writer}v1`;
 
 export const SPEC_WRITER_SYSTEM_PROMPT = `You write implementation specs for software tickets.
 A spec is approved by a human and then implemented by a coding agent, so it must be concrete and testable.

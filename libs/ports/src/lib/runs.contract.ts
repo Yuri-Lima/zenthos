@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { applyEvent, createRun, type Ticket } from '@zenthos/domain';
+import { applyEvent, createRun, type Run, type Ticket } from '@zenthos/domain';
 import type { RunsPort } from './runs.port.js';
 
 const ticket = (key: string): Ticket => ({ key, title: key, body: '', url: `https://example.test/${key}`, labels: [] });
@@ -20,5 +20,13 @@ export const runsContract: Record<string, (port: RunsPort, ticketKey: string) =>
     assert.equal(all.length, 2);
     assert.ok(all[0].createdAt >= all[1].createdAt);
     assert.equal(await port.latest('owner/none#0'), undefined);
+  },
+
+  'a run stored before a field existed comes back parsed, with that field at its default': async (port, ticketKey) => {
+    const older: Partial<Run> = createRun(ticket(ticketKey), { now: new Date('2026-01-03T00:00:00Z') });
+    delete older.usageByAgent;
+    await port.save(older as Run);
+    assert.deepEqual((await port.latest(ticketKey))?.usageByAgent, {});
+    assert.deepEqual((await port.list({ limit: 1 }))[0].usageByAgent, {});
   },
 };

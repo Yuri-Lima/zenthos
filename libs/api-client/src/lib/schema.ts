@@ -327,6 +327,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/metrics/traces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compare one run's stored cost per agent with what LangFuse recorded for its session */
+        get: operations["MetricsController_traces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/glossary": {
         parameters: {
             query?: never;
@@ -875,6 +892,18 @@ export interface operations {
                             cacheReadTokens: number;
                             cacheWriteTokens: number;
                         };
+                        /** @default {} */
+                        usageByAgent: {
+                            [key: string]: {
+                                tokens: {
+                                    inputTokens: number;
+                                    outputTokens: number;
+                                    cacheReadTokens: number;
+                                    cacheWriteTokens: number;
+                                };
+                                estimatedCostUsd: number;
+                            };
+                        };
                         policy: {
                             costCeilingUsd: number;
                             diffBudgetLines: number;
@@ -972,6 +1001,18 @@ export interface operations {
                             outputTokens: number;
                             cacheReadTokens: number;
                             cacheWriteTokens: number;
+                        };
+                        /** @default {} */
+                        usageByAgent: {
+                            [key: string]: {
+                                tokens: {
+                                    inputTokens: number;
+                                    outputTokens: number;
+                                    cacheReadTokens: number;
+                                    cacheWriteTokens: number;
+                                };
+                                estimatedCostUsd: number;
+                            };
                         };
                         policy: {
                             costCeilingUsd: number;
@@ -1159,6 +1200,55 @@ export interface operations {
                         };
                         runs: number;
                     }[];
+                };
+            };
+        };
+    };
+    MetricsController_traces: {
+        parameters: {
+            query: {
+                ticket: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ticketKey: string;
+                        available: boolean;
+                        sessionUrl?: string;
+                        comparison: {
+                            /** @enum {string} */
+                            agent: "spec_writer" | "reviewer";
+                            stored?: {
+                                tokens: {
+                                    inputTokens: number;
+                                    outputTokens: number;
+                                    cacheReadTokens: number;
+                                    cacheWriteTokens: number;
+                                };
+                                estimatedCostUsd: number;
+                            };
+                            traced?: {
+                                estimatedCostUsd: number;
+                                totalTokens: number;
+                            };
+                            /** @enum {string} */
+                            verdict: "match" | "mismatch" | "not_recorded" | "not_traced";
+                        }[];
+                        tolerance: {
+                            relative: number;
+                            absoluteUsd: number;
+                        };
+                        error?: string;
+                    };
                 };
             };
         };

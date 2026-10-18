@@ -64,7 +64,7 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
 
   for (let round = 1; round <= policy.maxDraftRounds; round++) {
     const draft = await activities.draftSpec(run);
-    run = { ...withUsage(run, draft), spec: draft.spec };
+    run = { ...withUsage(run, draft, 'spec_writer'), spec: draft.spec };
     await advance('spec_drafted');
 
     const outcome = await waitForDecision(input.key, policy, () => decision !== undefined, takeDecision);
@@ -88,7 +88,7 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
   const implementUntilGatesPass = async (feedback: string | undefined): Promise<'passed' | 'escalated'> => {
     for (let round = 1; round <= implementRounds; round++) {
       const { implementation, diff } = await longActivities.implement(run, workspace, feedback);
-      run = withUsage(run, implementation);
+      run = withUsage(run, implementation, 'coding_agent');
       await advance('implemented');
 
       const gates = await longActivities.runGates(run, workspace, diff, baselineFailures);
@@ -116,7 +116,7 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
     await advance('mr_opened');
 
     const { review, gate, ...reviewUsage } = await longActivities.review(run);
-    run = { ...withUsage(run, reviewUsage), review, gates: [...(run.gates ?? []), gate] };
+    run = { ...withUsage(run, reviewUsage, 'reviewer'), review, gates: [...(run.gates ?? []), gate] };
     if (gate.passed) {
       await activities.cleanup(workspace);
       return await advance('review_passed');

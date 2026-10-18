@@ -9,6 +9,7 @@ import { createGitHubClients } from '@zenthos/adapter-github/live';
 import { InMemoryCodingAgent, InMemoryIssueTracker, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryReviewer, InMemoryRuns, InMemoryScm, InMemorySpecWriter, LocalSandbox } from '@zenthos/adapter-in-memory';
 import { migrate, PostgresProviderConnections, PostgresRepoProfiles, PostgresRuns, SecretBox } from '@zenthos/adapter-postgres';
 import { credentialsForRepo } from '@zenthos/application';
+import { traceSessionId, type TracePurpose } from '@zenthos/domain';
 import pg from 'pg';
 import { noTracing, startLangfuseTracing } from '@zenthos/adapter-langfuse';
 import { costEstimator, createAnthropicReviewerModels, createAnthropicSpecModel, LangGraphReviewer, LangGraphSpecWriter, REVIEWER_VERSION, SPEC_WRITER_VERSION, verifyAnthropicAccess } from '@zenthos/agents';
@@ -68,13 +69,14 @@ export function tracing(config: WorkerConfig) {
     : noTracing;
 }
 
-export async function specWriter(config: WorkerConfig, trace: ReturnType<typeof tracing>): Promise<SpecWriterPort> {
+/** `purpose` names the trace session (ADR 015): the workflow traces as `run`, evals and manual commands beside it. */
+export async function specWriter(config: WorkerConfig, trace: ReturnType<typeof tracing>, purpose: TracePurpose = 'run'): Promise<SpecWriterPort> {
   if (config.SPEC_WRITER === 'memory') return new InMemorySpecWriter();
   const modelConfig = { model: config.ZENTHOS_SPEC_MODEL, apiKey: config.ANTHROPIC_API_KEY };
   await verifyAnthropicAccess(modelConfig);
   return new LangGraphSpecWriter({
     model: createAnthropicSpecModel(modelConfig),
-    callbacks: ({ ticket }) => trace.callbacks({ sessionId: ticket.key, version: SPEC_WRITER_VERSION }),
+    callbacks: ({ ticket }) => trace.callbacks({ sessionId: traceSessionId(ticket.key, purpose), version: SPEC_WRITER_VERSION }),
     estimateCost: costEstimator(modelConfig.model),
   });
 }
@@ -95,13 +97,13 @@ export function codingAgent(config: WorkerConfig): CodingAgentPort {
   return config.CODING_AGENT === 'claude-code' ? new ClaudeCodeAgent({ model: config.ZENTHOS_CODING_MODEL }) : new InMemoryCodingAgent();
 }
 
-export async function reviewer(config: WorkerConfig, trace: ReturnType<typeof tracing>): Promise<ReviewerPort> {
+export async function reviewer(config: WorkerConfig, trace: ReturnType<typeof tracing>, purpose: TracePurpose = 'run'): Promise<ReviewerPort> {
   if (config.REVIEWER === 'memory') return new InMemoryReviewer();
   const modelConfig = { model: config.ZENTHOS_REVIEW_MODEL, apiKey: config.ANTHROPIC_API_KEY };
   await verifyAnthropicAccess(modelConfig);
   return new LangGraphReviewer({
     models: createAnthropicReviewerModels(modelConfig),
-    callbacks: ({ spec }) => trace.callbacks({ sessionId: spec.ticketKey, version: REVIEWER_VERSION }),
+    callbacks: ({ spec }) => trace.callbacks({ sessionId: traceSessionId(spec.ticketKey, purpose), version: REVIEWER_VERSION }),
     estimateCost: costEstimator(modelConfig.model),
   });
 }

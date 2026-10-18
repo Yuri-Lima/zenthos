@@ -1,10 +1,10 @@
-import type { Run, RunState } from '@zenthos/domain';
+import { parseRun, type Run, type RunState } from '@zenthos/domain';
 import type { RunsPort } from '@zenthos/ports';
 import type { Pool } from 'pg';
 
 type RunRow = { run: Run };
 
-/** The whole run as jsonb, with the columns the API filters and sorts on beside it. */
+/** The whole run as jsonb, with the columns the API filters and sorts on beside it. Rows are parsed on the way out, so runs stored before a field existed come back with its default. */
 export class PostgresRuns implements RunsPort {
   constructor(private readonly pool: Pool) {}
 
@@ -18,11 +18,11 @@ export class PostgresRuns implements RunsPort {
 
   async latest(ticketKey: string): Promise<Run | undefined> {
     const { rows } = await this.pool.query<RunRow>('SELECT run FROM runs WHERE ticket_key = $1 ORDER BY created_at DESC LIMIT 1', [ticketKey]);
-    return rows[0]?.run;
+    return rows[0] && parseRun(rows[0].run);
   }
 
   async list({ state, limit = 100 }: { state?: RunState; limit?: number } = {}): Promise<Run[]> {
     const { rows } = await this.pool.query<RunRow>('SELECT run FROM runs WHERE ($1::text IS NULL OR state = $1) ORDER BY created_at DESC LIMIT $2', [state ?? null, limit]);
-    return rows.map((row) => row.run);
+    return rows.map((row) => parseRun(row.run));
   }
 }

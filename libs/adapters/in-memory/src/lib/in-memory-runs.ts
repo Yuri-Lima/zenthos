@@ -1,11 +1,12 @@
-import type { Run, RunState } from '@zenthos/domain';
+import { parseRun, type Run, type RunState } from '@zenthos/domain';
 import type { RunsPort } from '@zenthos/ports';
 
 export class InMemoryRuns implements RunsPort {
   readonly byId = new Map<string, Run>();
 
   async save(run: Run): Promise<void> {
-    this.byId.set(run.id, run);
+    // parsed like a row read back from Postgres, so both stores answer the same for older runs
+    this.byId.set(run.id, parseRun(run));
   }
 
   async latest(ticketKey: string): Promise<Run | undefined> {

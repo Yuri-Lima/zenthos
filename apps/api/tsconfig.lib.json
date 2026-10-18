@@ -13,9 +13,6 @@
   "include": ["src/**/*.ts"],
   "references": [
     {
-      "path": "../../libs/adapters/temporal/tsconfig.lib.json"
-    },
-    {
       "path": "../../libs/ports/tsconfig.lib.json"
     },
     {
@@ -25,7 +22,13 @@
       "path": "../../libs/application/tsconfig.lib.json"
     },
     {
+      "path": "../../libs/adapters/temporal/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/adapters/postgres/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/adapters/langfuse/tsconfig.lib.json"
     },
     {
       "path": "../../libs/adapters/in-memory/tsconfig.lib.json"

@@ -1,5 +1,5 @@
-import { InMemoryGitHubApps, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryRunControl, InMemoryRuns, InMemorySessions } from '@zenthos/adapter-in-memory';
-import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort, RunsPort, SessionsPort } from '@zenthos/ports';
+import { InMemoryGitHubApps, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryRunControl, InMemoryRuns, InMemorySessions, InMemoryTraceUsage } from '@zenthos/adapter-in-memory';
+import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort, RunsPort, SessionsPort, TraceUsagePort } from '@zenthos/ports';
 
 /** The ports the controllers use; one object, one injection token. Built by composition.ts. */
 export type ApiPorts = {
@@ -10,6 +10,8 @@ export type ApiPorts = {
   runStore: RunsPort;
   githubApps: GitHubAppsPort;
   sessions: SessionsPort;
+  /** What LangFuse recorded per run; absent when the API has no LangFuse keys, and the check says so. */
+  traces?: TraceUsagePort;
   close(): Promise<void>;
 };
 
@@ -23,5 +25,6 @@ export const inMemoryPorts = (): ApiPorts => ({
   runStore: new InMemoryRuns(),
   githubApps: new InMemoryGitHubApps(),
   sessions: new InMemorySessions(),
+  traces: new InMemoryTraceUsage(),
   close: async () => undefined,
 });

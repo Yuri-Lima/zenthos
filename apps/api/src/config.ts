@@ -21,6 +21,12 @@ const ConfigSchema = z.object({
   /** GitHub logins allowed into the dashboard, comma-separated. Empty admits nobody. */
   ZENTHOS_ALLOWED_LOGINS: z.string().default('').transform((value) => value.split(',').map((s) => s.trim()).filter(Boolean)),
   ZENTHOS_SESSION_HOURS: z.coerce.number().int().positive().default(168),
+  /** LangFuse, read back to check stored costs (ADR 015); without both keys the check reports itself unavailable. */
+  LANGFUSE_BASE_URL: z.string().url().default('http://localhost:3100'),
+  LANGFUSE_PUBLIC_KEY: z.string().min(1).optional(),
+  LANGFUSE_SECRET_KEY: z.string().min(1).optional(),
+  /** The project the worker traces into; docker-compose creates `zenthos-dev`. */
+  LANGFUSE_PROJECT_ID: z.string().min(1).default('zenthos-dev'),
 });
 
 export type ApiConfig = z.infer<typeof ConfigSchema>;

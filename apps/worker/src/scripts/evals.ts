@@ -69,7 +69,7 @@ async function run(suite: string, repo: string) {
   const clients = github(config, store);
   const repoContext = config.REPO_CONTEXT_FILE ? await readFile(config.REPO_CONTEXT_FILE, 'utf8') : '';
   const profile = await profileForTicket(store.profiles, dataset.items[0].ticketKey);
-  const deps = { issueTracker: issueTracker(config, clients), specWriter: await specWriter(config, trace), scm: scm(config, clients), reviewer: await reviewer(config, trace), repoContext };
+  const deps = { issueTracker: issueTracker(config, clients), specWriter: await specWriter(config, trace, 'eval'), scm: scm(config, clients), reviewer: await reviewer(config, trace, 'eval'), repoContext };
   try {
     const version = `${suite === 'spec' ? SPEC_WRITER_VERSION : REVIEWER_VERSION}@${datasetName(repo)}`;
     const result = suite === 'spec' ? await runSpecSuite(deps, dataset, { limit }) : await runReviewSuite(deps, dataset, profile, { limit });

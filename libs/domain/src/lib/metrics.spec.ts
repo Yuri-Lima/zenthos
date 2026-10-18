@@ -20,9 +20,10 @@ describe('computeMetrics', () => {
         gates: [pass('ci'), fail('review_threshold', 'low')],
       }),
       { tokens: { inputTokens: 1000, outputTokens: 200, cacheReadTokens: 50, cacheWriteTokens: 0 }, estimatedCostUsd: 6 },
+      'coding_agent',
     );
     const escalated = runWith(2, [{ event: 'spec_drafted', minutes: 1 }, { event: 'spec_rejected', minutes: 2 }, { event: 'spec_drafted', minutes: 3 }, { event: 'spec_rejected', minutes: 4 }, { event: 'escalated', minutes: 4 }]);
-    const fresh = withUsage(runWith(3, [{ event: 'spec_drafted', minutes: 1 }, { event: 'spec_approved', minutes: 2 }, { event: 'implemented', minutes: 10 }, { event: 'gates_passed', minutes: 12 }, { event: 'mr_opened', minutes: 13 }]), { tokens: { inputTokens: 500, outputTokens: 100, cacheReadTokens: 0, cacheWriteTokens: 0 }, estimatedCostUsd: 2 });
+    const fresh = withUsage(runWith(3, [{ event: 'spec_drafted', minutes: 1 }, { event: 'spec_approved', minutes: 2 }, { event: 'implemented', minutes: 10 }, { event: 'gates_passed', minutes: 12 }, { event: 'mr_opened', minutes: 13 }]), { tokens: { inputTokens: 500, outputTokens: 100, cacheReadTokens: 0, cacheWriteTokens: 0 }, estimatedCostUsd: 2 }, 'coding_agent');
     const metrics = Object.fromEntries(computeMetrics([merged, escalated, fresh]).map((m) => [m.metric, m]));
 
     expect(metrics['spec_approval_rate']).toMatchObject({ value: 0.5, breakdown: { drafted: 4, approved: 2 }, runs: 3 });

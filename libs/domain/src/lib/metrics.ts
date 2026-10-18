@@ -4,15 +4,15 @@ import type { Run } from './run.js';
 
 /** The one definition of each metric. The API, the dashboard and the write-up read it. */
 export const METRICS = {
-  spec_approval_rate: { description: 'Specs approved divided by specs drafted', unit: 'ratio', source: 'runs' },
-  clean_merge_rate: { description: 'PRs merged with no human code change divided by PRs opened', unit: 'ratio', source: 'scm' },
-  ticket_to_pr_minutes: { description: 'Minutes from intake to PR opened, median', unit: 'minutes', source: 'runs' },
-  cost_per_ticket_usd: { description: "Mean of the models' own cost estimates at list price per run; the invoice comes from the Console", unit: 'usd', source: 'runs' },
-  tokens_per_ticket: { description: 'Mean input plus output tokens the models reported per run', unit: 'count', source: 'runs' },
-  gate_failures: { description: 'Failed gate results, counted per gate', unit: 'count', source: 'runs' },
-  reviewer_agreement: { description: 'Reviewer verdict matches the human verdict on the labelled set', unit: 'ratio', source: 'evals' },
-  regression_score: { description: 'Eval score per prompt version and stage', unit: 'score', source: 'evals' },
-  human_minutes_per_ticket: { description: 'Minutes humans spent on approvals and reviews for a run', unit: 'minutes', source: 'approvals' },
+  spec_approval_rate: { title: 'Spec approval rate', description: 'Specs approved divided by specs drafted', unit: 'ratio', source: 'runs' },
+  clean_merge_rate: { title: 'Clean merge rate', description: 'PRs merged with no human code change divided by PRs opened', unit: 'ratio', source: 'scm' },
+  ticket_to_pr_minutes: { title: 'Ticket to PR', description: 'Minutes from intake to PR opened, median', unit: 'minutes', source: 'runs' },
+  cost_per_ticket_usd: { title: 'Cost per ticket', description: "Mean of the models' own cost estimates at list price per run; the invoice comes from the Console", unit: 'usd', source: 'runs' },
+  tokens_per_ticket: { title: 'Tokens per ticket', description: 'Mean input plus output tokens the models reported per run', unit: 'count', source: 'runs' },
+  gate_failures: { title: 'Gate failures', description: 'Failed gate results, counted per gate', unit: 'count', source: 'runs' },
+  reviewer_agreement: { title: 'Reviewer agreement', description: 'Reviewer verdict matches the human verdict on the labelled set', unit: 'ratio', source: 'evals' },
+  regression_score: { title: 'Regression score', description: 'Eval score per prompt version and stage', unit: 'score', source: 'evals' },
+  human_minutes_per_ticket: { title: 'Human minutes per ticket', description: 'Minutes humans spent on approvals and reviews for a run', unit: 'minutes', source: 'approvals' },
 } as const;
 
 export type Metric = keyof typeof METRICS;
@@ -46,7 +46,10 @@ const minutesBetween = (from: string, to: string) => (Date.parse(to) - Date.pars
  * value and their source named, so the dashboard shows the definition and says where the number lives.
  */
 export function computeMetrics(runs: Run[]): MetricValue[] {
-  const entry = (metric: Metric, value: number | null, count: number, breakdown?: Record<string, number>): MetricValue => ({ metric, ...METRICS[metric], value, runs: count, ...(breakdown ? { breakdown } : {}) });
+  const entry = (metric: Metric, value: number | null, count: number, breakdown?: Record<string, number>): MetricValue => {
+    const { description, unit, source } = METRICS[metric];
+    return { metric, description, unit, source, value, runs: count, ...(breakdown ? { breakdown } : {}) };
+  };
   const events = runs.flatMap((run) => run.history);
   const drafted = events.filter((e) => e.event === 'spec_drafted').length;
   const approved = events.filter((e) => e.event === 'spec_approved').length;

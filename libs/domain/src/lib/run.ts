@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { DomainError } from './errors.js';
 import { GateResultSchema } from './gate.js';
+import { addAgentUsage, UsageByAgentSchema, type AgentRole } from './agent-usage.js';
 import { addUsage, NO_TOKENS, PullRequestSchema, TokenUsageSchema, type Usage } from './implementation.js';
 import { ReviewSchema } from './review.js';
 import { DEFAULT_POLICY, RunPolicySchema, type RunPolicy } from './policies.js';
@@ -31,6 +32,8 @@ export const RunSchema = z.object({
   estimatedCostUsd: z.number().min(0),
   /** Sum of the token counts the models reported; the figure a bill is actually based on. */
   tokens: TokenUsageSchema,
+  /** The same usage split by agent, so each can be checked against LangFuse (ADR 015). Empty for runs stored before. */
+  usageByAgent: UsageByAgentSchema.default({}),
   /** The repository profile's policy, snapshotted at intake so every gate and the workflow read one value. */
   policy: RunPolicySchema,
   history: z.array(RunHistoryEntrySchema),
@@ -65,6 +68,7 @@ export function createRun(ticket: Ticket, options: { policy?: RunPolicy; now?: D
     ...(options.requestedBy ? { requestedBy: options.requestedBy } : {}),
     estimatedCostUsd: 0,
     tokens: NO_TOKENS,
+    usageByAgent: {},
     policy: options.policy ?? DEFAULT_POLICY,
     history: [],
   };
@@ -76,5 +80,9 @@ export function applyEvent(run: Run, event: RunEvent, now: Date = new Date(), by
   return { ...run, state: to, history: [...run.history, entry] };
 }
 
-/** The run's totals after one more agent call: the spec writer, the coding agent and the reviewer all add here. */
-export const withUsage = (run: Run, usage: Usage): Run => ({ ...run, ...addUsage({ tokens: run.tokens, estimatedCostUsd: run.estimatedCostUsd }, usage) });
+/** The run after one more agent call: its totals and that agent's share. The spec writer, the coding agent and the reviewer all add here. */
+export const withUsage = (run: Run, usage: Usage, agent: AgentRole): Run => ({
+  ...run,
+  ...addUsage({ tokens: run.tokens, estimatedCostUsd: run.estimatedCostUsd }, usage),
+  usageByAgent: addAgentUsage(run.usageByAgent ?? {}, agent, usage),
+});

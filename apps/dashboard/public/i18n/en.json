@@ -93,8 +93,7 @@
     "runs": "Runs",
     "metrics": "Metrics",
     "settings": "Settings",
-    "glossary": "Glossary",
-    "soon": "Next slice"
+    "glossary": "Glossary"
   },
   "gate": {
     "pass": "pass",
@@ -235,5 +234,68 @@
     "forbiddenHint": "A change touching these needs a person.",
     "alwaysForbidden": "Always forbidden: the files that define the gates",
     "save": "Save profile"
+  },
+  "metrics": {
+    "eyebrow": "Measurement",
+    "title": "Metrics",
+    "window": "Computed from the {{n}} stored runs",
+    "source": {
+      "runs": "runs",
+      "scm": "GitHub",
+      "evals": "evals",
+      "approvals": "approvals"
+    },
+    "sourceHint": {
+      "runs": "Computed by the API from the stored runs",
+      "scm": "Needs GitHub: who changed the code before the merge",
+      "evals": "Lives in the eval baselines, per prompt version",
+      "approvals": "Needs time spent by people, which nothing records yet"
+    },
+    "elsewhere": {
+      "scm": "Not computed yet: it needs each merged pull request's commits from GitHub, to tell the bot's from a person's.",
+      "evals": "Not computed here: the eval suites measure it per prompt version (pnpm nx run @zenthos/worker:eval); their baselines are the number.",
+      "approvals": "Not computed yet: nothing records how long a person spent; the wait for an approval is not the time spent on it.",
+      "runs": ""
+    },
+    "tokens": {
+      "input": "input",
+      "output": "output",
+      "cacheRead": "cache read",
+      "cacheWrite": "cache write"
+    },
+    "approvals": "{{approved}} approved of {{drafted}} drafts",
+    "totalSpend": "{{total}} across these runs",
+    "fromRuns": "from {{n}} runs",
+    "runsTitle": "Runs, cost by agent, and LangFuse",
+    "runsIntro": "Each run's estimate split by the agent that spent it. The spec writer and the reviewer are traced in LangFuse, so their share can be checked there.",
+    "howCheck": "How the check works",
+    "byAgent": "By agent",
+    "toPr": "Ticket to PR",
+    "check": "Check LangFuse",
+    "notSplit": "recorded before costs were split by agent",
+    "agentShort": {
+      "spec_writer": "spec",
+      "coding_agent": "code",
+      "reviewer": "review"
+    },
+    "agentName": {
+      "spec_writer": "Spec writer",
+      "reviewer": "Reviewer"
+    },
+    "agent": "Agent",
+    "stored": "Stored",
+    "langfuseTokens": "LangFuse tokens",
+    "verdict": "Verdict",
+    "verdicts": {
+      "match": "match",
+      "mismatch": "differs",
+      "not_recorded": "not split",
+      "not_traced": "not in LangFuse"
+    },
+    "tolerance": "Match means within {{pct}}% or {{usd}}.",
+    "codingAgentUntraced": "The coding agent runs in Claude Code and is not traced in LangFuse.",
+    "openLangfuse": "Open the session in LangFuse",
+    "unavailable": "The API has no LangFuse keys (LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY), so nothing was compared.",
+    "checkShort": "LangFuse"
   }
 }

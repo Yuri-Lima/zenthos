@@ -41,16 +41,17 @@
     "@nestjs/swagger": "^11.4.7",
     "@zenthos/adapter-github": "workspace:*",
     "@zenthos/adapter-in-memory": "workspace:*",
+    "@zenthos/adapter-langfuse": "workspace:*",
     "@zenthos/adapter-postgres": "workspace:*",
+    "@zenthos/adapter-temporal": "workspace:*",
     "@zenthos/application": "workspace:*",
     "@zenthos/domain": "workspace:*",
     "@zenthos/ports": "workspace:*",
+    "express": "^5.1.0",
+    "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
     "tslib": "^2.3.0",
-    "zod": "^4.6.6",
-    "@zenthos/adapter-temporal": "workspace:*",
-    "pg": "^8.23.1",
-    "express": "^5.1.0"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

@@ -1,8 +1,8 @@
-import { REVIEW_RUBRIC, type RubricKey } from '@zenthos/domain';
+import { REVIEW_RUBRIC, TRACE_VERSION_PREFIX, type RubricKey } from '@zenthos/domain';
 import type { ReviewInput } from '@zenthos/ports';
 
 /** Bump the version when the wording changes; LangFuse groups traces and scores by it. */
-export const REVIEWER_VERSION = 'reviewer/v1';
+export const REVIEWER_VERSION = `${TRACE_VERSION_PREFIX.reviewer}v1`;
 
 /** Diff text handed to the model; beyond this the tail is cut and the cut is declared. */
 export const DIFF_CHAR_BUDGET = 60_000;

@@ -1256,6 +1256,64 @@
                           ],
                           "additionalProperties": false
                         },
+                        "usageByAgent": {
+                          "default": {},
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string",
+                            "enum": [
+                              "spec_writer",
+                              "coding_agent",
+                              "reviewer"
+                            ]
+                          },
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "tokens": {
+                                "type": "object",
+                                "properties": {
+                                  "inputTokens": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "outputTokens": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "cacheReadTokens": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "cacheWriteTokens": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "inputTokens",
+                                  "outputTokens",
+                                  "cacheReadTokens",
+                                  "cacheWriteTokens"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "estimatedCostUsd": {
+                                "type": "number",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "tokens",
+                              "estimatedCostUsd"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
                         "policy": {
                           "type": "object",
                           "properties": {
@@ -1659,6 +1717,7 @@
                         "createdAt",
                         "estimatedCostUsd",
                         "tokens",
+                        "usageByAgent",
                         "policy",
                         "history"
                       ],
@@ -1768,6 +1827,64 @@
                               "cacheWriteTokens"
                             ],
                             "additionalProperties": false
+                          },
+                          "usageByAgent": {
+                            "default": {},
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string",
+                              "enum": [
+                                "spec_writer",
+                                "coding_agent",
+                                "reviewer"
+                              ]
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "tokens": {
+                                  "type": "object",
+                                  "properties": {
+                                    "inputTokens": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "outputTokens": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "cacheReadTokens": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "cacheWriteTokens": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "inputTokens",
+                                    "outputTokens",
+                                    "cacheReadTokens",
+                                    "cacheWriteTokens"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "estimatedCostUsd": {
+                                  "type": "number",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "tokens",
+                                "estimatedCostUsd"
+                              ],
+                              "additionalProperties": false
+                            }
                           },
                           "policy": {
                             "type": "object",
@@ -2172,6 +2289,7 @@
                           "createdAt",
                           "estimatedCostUsd",
                           "tokens",
+                          "usageByAgent",
                           "policy",
                           "history"
                         ],
@@ -2435,6 +2553,168 @@
           }
         },
         "summary": "Every metric, with its definition beside its value; null where the runs store is not its source",
+        "tags": [
+          "metrics"
+        ]
+      }
+    },
+    "/metrics/traces": {
+      "get": {
+        "operationId": "MetricsController_traces",
+        "parameters": [
+          {
+            "name": "ticket",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ticketKey": {
+                      "type": "string"
+                    },
+                    "available": {
+                      "type": "boolean"
+                    },
+                    "sessionUrl": {
+                      "type": "string"
+                    },
+                    "comparison": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "agent": {
+                            "type": "string",
+                            "enum": [
+                              "spec_writer",
+                              "reviewer"
+                            ]
+                          },
+                          "stored": {
+                            "type": "object",
+                            "properties": {
+                              "tokens": {
+                                "type": "object",
+                                "properties": {
+                                  "inputTokens": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "outputTokens": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "cacheReadTokens": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "cacheWriteTokens": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "inputTokens",
+                                  "outputTokens",
+                                  "cacheReadTokens",
+                                  "cacheWriteTokens"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "estimatedCostUsd": {
+                                "type": "number",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "tokens",
+                              "estimatedCostUsd"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "traced": {
+                            "type": "object",
+                            "properties": {
+                              "estimatedCostUsd": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "totalTokens": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "estimatedCostUsd",
+                              "totalTokens"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "verdict": {
+                            "type": "string",
+                            "enum": [
+                              "match",
+                              "mismatch",
+                              "not_recorded",
+                              "not_traced"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "agent",
+                          "verdict"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "tolerance": {
+                      "type": "object",
+                      "properties": {
+                        "relative": {
+                          "type": "number"
+                        },
+                        "absoluteUsd": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "relative",
+                        "absoluteUsd"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ticketKey",
+                    "available",
+                    "comparison",
+                    "tolerance"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "Compare one run's stored cost per agent with what LangFuse recorded for its session",
         "tags": [
           "metrics"
         ]
