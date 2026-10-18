@@ -31,7 +31,7 @@ import { SessionService } from './core/session';
         <a routerLink="/" class="brand"><b>ZenthOs</b><span class="eyebrow">lab</span></a>
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav"><mat-icon>view_timeline</mat-icon>{{ 'nav.runs' | translate }}</a>
         <span class="nav soon" [matTooltip]="'nav.soon' | translate"><mat-icon>monitoring</mat-icon>{{ 'nav.metrics' | translate }}</span>
-        <span class="nav soon" [matTooltip]="'nav.soon' | translate"><mat-icon>tune</mat-icon>{{ 'nav.settings' | translate }}</span>
+        <a routerLink="/settings" routerLinkActive="active" class="nav"><mat-icon>tune</mat-icon>{{ 'nav.settings' | translate }}</a>
         <hr />
         <a routerLink="/glossary" routerLinkActive="active" class="nav"><mat-icon>menu_book</mat-icon>{{ 'nav.glossary' | translate }}</a>
       </nav>

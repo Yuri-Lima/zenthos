@@ -98,7 +98,7 @@ type Quick = 'all' | 'attention' | 'inflight';
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="columns"></tr>
         <tr mat-row *matRowDef="let row; columns: columns"></tr>
-        <tr class="mat-row" *matNoDataRow><td class="mat-cell p-4 muted" [attr.colspan]="columns.length">{{ 'runs.empty' | translate }}</td></tr>
+        <tr class="mat-row" *matNoDataRow><td class="mat-cell p-4 muted" [attr.colspan]="columns.length">{{ 'runs.empty' | translate }} <a routerLink="/settings" class="link">{{ 'runs.setupLink' | translate }}</a></td></tr>
       </table>
     </div>
   `,
