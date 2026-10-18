@@ -45,6 +45,7 @@ html {
   }
 }
 
+*, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body { font-family: var(--zen-font); background: var(--zen-bg); color: var(--zen-fg); font-size: 14px; line-height: 1.45; font-feature-settings: 'tnum' 1; }
 a { color: inherit; }

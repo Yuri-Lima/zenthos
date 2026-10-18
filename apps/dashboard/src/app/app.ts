@@ -11,7 +11,7 @@ import { SessionService } from './core/session';
   imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslateModule, MatButtonModule, MatIconModule, MatTooltipModule],
   styles: `
     .shell { display: grid; grid-template-columns: 200px 1fr; min-height: 100%; }
-    .rail { border-right: 1px solid var(--zen-line); background: var(--zen-surface); padding: 12px 10px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; }
+    .rail { border-right: 1px solid var(--zen-line); background: var(--zen-surface); padding: 12px 10px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100dvh; }
     .brand { display: flex; align-items: baseline; gap: 8px; padding: 6px 8px 14px; }
     .brand b { font-size: 15px; letter-spacing: -0.01em; }
     .nav { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--zen-radius); color: var(--zen-fg); text-decoration: none; font-size: 13.5px; }
