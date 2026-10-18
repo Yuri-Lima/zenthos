@@ -20,6 +20,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/github": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Start Sign in with GitHub; redirects to GitHub */
+        get: operations["AuthController_start"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/github/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GitHub returns here; the person becomes a session and goes back to the dashboard */
+        get: operations["AuthController_callback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Who is signed in; 401 otherwise. With ZENTHOS_AUTH=off, the anonymous marker */
+        get: operations["AuthController_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End the session and clear the cookie */
+        post: operations["AuthController_logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/providers": {
         parameters: {
             query?: never;
@@ -63,7 +131,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Connect a GitHub App created by hand: app id, private key, and the webhook secret if one is set */
+        /** Connect a GitHub App created by hand: app id, private key, the webhook secret, and the OAuth client id and secret for Sign in with GitHub; the same app again updates it */
         post: operations["ProvidersController_connectApp"];
         delete?: never;
         options?: never;
@@ -271,6 +339,85 @@ export interface operations {
             };
         };
     };
+    AuthController_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_callback: {
+        parameters: {
+            query: {
+                code: string;
+                state: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        login: string;
+                        id?: number;
+                        /** Format: uri */
+                        avatarUrl?: string;
+                        anonymous?: boolean;
+                    };
+                };
+            };
+        };
+    };
+    AuthController_logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ProvidersController_list: {
         parameters: {
             query?: never;
@@ -362,6 +509,8 @@ export interface operations {
                     appId: string;
                     privateKey: string;
                     webhookSecret?: string;
+                    clientId?: string;
+                    clientSecret?: string;
                 };
             };
         };
@@ -671,6 +820,7 @@ export interface operations {
                         state: "intake" | "spec_drafted" | "spec_approved" | "implemented" | "gates_passed" | "mr_opened" | "reviewed" | "verified" | "done" | "failed" | "needs_human";
                         /** Format: date-time */
                         createdAt: string;
+                        requestedBy?: string;
                         estimatedCostUsd: number;
                         tokens: {
                             inputTokens: number;
@@ -695,6 +845,7 @@ export interface operations {
                             to: "intake" | "spec_drafted" | "spec_approved" | "implemented" | "gates_passed" | "mr_opened" | "reviewed" | "verified" | "done" | "failed" | "needs_human";
                             /** Format: date-time */
                             at: string;
+                            by?: string;
                         }[];
                         spec?: {
                             ticketKey: string;
@@ -767,6 +918,7 @@ export interface operations {
                         state: "intake" | "spec_drafted" | "spec_approved" | "implemented" | "gates_passed" | "mr_opened" | "reviewed" | "verified" | "done" | "failed" | "needs_human";
                         /** Format: date-time */
                         createdAt: string;
+                        requestedBy?: string;
                         estimatedCostUsd: number;
                         tokens: {
                             inputTokens: number;
@@ -791,6 +943,7 @@ export interface operations {
                             to: "intake" | "spec_drafted" | "spec_approved" | "implemented" | "gates_passed" | "mr_opened" | "reviewed" | "verified" | "done" | "failed" | "needs_human";
                             /** Format: date-time */
                             at: string;
+                            by?: string;
                         }[];
                         spec?: {
                             ticketKey: string;

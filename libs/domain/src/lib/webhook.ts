@@ -8,8 +8,8 @@ import type { Installation } from './provider-connection.js';
  * connection's list of repositories current. Everything else is ignored, by name.
  */
 export type WebhookCommand =
-  | { kind: 'start'; ticketKey: string }
-  | { kind: 'decision'; ticketKey: string; decision: 'approved' | 'rejected' }
+  | { kind: 'start'; ticketKey: string; actor?: string }
+  | { kind: 'decision'; ticketKey: string; decision: 'approved' | 'rejected'; actor?: string }
   | { kind: 'installation'; action: 'added' | 'removed'; installation: Installation }
   | { kind: 'repositories'; installationId: number; account: string; added: string[]; removed: string[] }
   | { kind: 'ignore'; reason: string };
@@ -19,6 +19,8 @@ const IssueLabeled = z.object({
   label: z.object({ name: z.string() }),
   issue: z.object({ number: z.number().int() }),
   repository: z.object({ full_name: z.string() }),
+  /** The GitHub user who set the label: the audit trail for a decision made on the ticket. */
+  sender: z.object({ login: z.string() }).optional(),
 });
 
 const InstallationEvent = z.object({
@@ -33,11 +35,12 @@ export function commandFromGitHubEvent(event: string, payload: unknown): Webhook
   if (event === 'issues') {
     const parsed = IssueLabeled.safeParse(payload);
     if (!parsed.success) return { kind: 'ignore', reason: 'issues event that is not a label being added' };
-    const { label, issue, repository } = parsed.data;
+    const { label, issue, repository, sender } = parsed.data;
     const ticketKey = `${repository.full_name}#${issue.number}`;
-    if (label.name === RUN_LABEL) return { kind: 'start', ticketKey };
-    if (label.name === APPROVAL_LABELS.approved) return { kind: 'decision', ticketKey, decision: 'approved' };
-    if (label.name === APPROVAL_LABELS.rejected) return { kind: 'decision', ticketKey, decision: 'rejected' };
+    const actor = sender?.login;
+    if (label.name === RUN_LABEL) return { kind: 'start', ticketKey, actor };
+    if (label.name === APPROVAL_LABELS.approved) return { kind: 'decision', ticketKey, decision: 'approved', actor };
+    if (label.name === APPROVAL_LABELS.rejected) return { kind: 'decision', ticketKey, decision: 'rejected', actor };
     return { kind: 'ignore', reason: `label ${label.name} means nothing to the pipeline` };
   }
   if (event === 'installation' || event === 'installation_repositories') {

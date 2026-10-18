@@ -11,7 +11,7 @@ import type { ApiConfig } from '../config.js';
 import { jsonSchema, parseBody } from '../openapi.js';
 
 const TokenBody = z.object({ name: z.string().min(1), token: z.string().min(1) });
-const AppBody = z.object({ name: z.string().min(1), appId: z.string().min(1), privateKey: z.string().min(1), webhookSecret: z.string().min(1).optional() });
+const AppBody = z.object({ name: z.string().min(1), appId: z.string().min(1), privateKey: z.string().min(1), webhookSecret: z.string().min(1).optional(), clientId: z.string().min(1).optional(), clientSecret: z.string().min(1).optional() });
 const MANIFEST_STATE_TTL_MS = 10 * 60 * 1000;
 
 /**
@@ -48,7 +48,7 @@ export class ProvidersController {
   }
 
   @Post('github/app')
-  @ApiOperation({ summary: 'Connect a GitHub App created by hand: app id, private key, and the webhook secret if one is set' })
+  @ApiOperation({ summary: 'Connect a GitHub App created by hand: app id, private key, the webhook secret, and the OAuth client id and secret for Sign in with GitHub; the same app again updates it' })
   @ApiBody({ schema: jsonSchema(AppBody) })
   @ApiOkResponse({ schema: jsonSchema(PublicConnectionSchema) })
   async connectApp(@Body() body: unknown) {

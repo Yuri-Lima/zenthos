@@ -24,12 +24,14 @@ export type TicketRunInput = {
   /** Overrides for tests; production reads the run's policy. */
   maxImplementRounds?: number;
   maxReviewRounds?: number;
+  /** The person who started the run, when one did (dashboard login, label setter, "cli"). */
+  requestedBy?: string;
 };
 
 type Decision = Exclude<Approval, 'pending'>;
 
-/** A human can decide from the CLI or the API instead of setting a label. */
-export const approvalDecisionSignal = defineSignal<[Decision]>(WORKFLOW_CONTRACT.approvalSignal);
+/** A human can decide from the CLI or the API instead of setting a label; the second argument says who. */
+export const approvalDecisionSignal = defineSignal<[Decision, string?]>(WORKFLOW_CONTRACT.approvalSignal);
 export const runQuery = defineQuery<Run>(WORKFLOW_CONTRACT.runQuery);
 
 /**
@@ -40,10 +42,11 @@ export const runQuery = defineQuery<Run>(WORKFLOW_CONTRACT.runQuery);
 export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
   const policy = { ...DEFAULT_APPROVAL_POLICY, ...input.approval };
   let run = await activities.intake(input.key);
+  if (input.requestedBy) run = { ...run, requestedBy: input.requestedBy };
   await activities.recordRun(run);
-  let decision: Decision | undefined;
-  setHandler(approvalDecisionSignal, (value) => {
-    decision = value;
+  let decision: { value: Decision; by?: string } | undefined;
+  setHandler(approvalDecisionSignal, (value, by) => {
+    decision = { value, by };
   });
   setHandler(runQuery, () => run);
   /** Each decision applies to one draft, so reading it also clears it. */
@@ -53,8 +56,8 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
     return value;
   };
   /** Every transition goes through `run`, so the query handler and the stored projection always see the latest state. */
-  const advance = async (event: RunEvent): Promise<Run> => {
-    run = applyEvent(run, event);
+  const advance = async (event: RunEvent, by?: string): Promise<Run> => {
+    run = applyEvent(run, event, new Date(), by);
     await activities.recordRun(run);
     return run;
   };
@@ -65,12 +68,12 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
     await advance('spec_drafted');
 
     const outcome = await waitForDecision(input.key, policy, () => decision !== undefined, takeDecision);
-    if (outcome === 'approved') {
-      await advance('spec_approved');
+    if (outcome.value === 'approved') {
+      await advance('spec_approved', outcome.by);
       break;
     }
-    if (outcome === 'timeout') return await advance('escalated');
-    await advance('spec_rejected');
+    if (outcome.value === 'timeout') return await advance('escalated');
+    await advance('spec_rejected', outcome.by);
   }
   if (run.state !== 'spec_approved') return await advance('escalated');
 
@@ -134,16 +137,16 @@ async function waitForDecision(
   key: string,
   policy: ApprovalPolicy,
   hasDecision: () => boolean,
-  takeDecision: () => Decision | undefined,
-): Promise<Decision | 'timeout'> {
+  takeDecision: () => { value: Decision; by?: string } | undefined,
+): Promise<{ value: Decision | 'timeout'; by?: string }> {
   const deadline = Date.now() + policy.timeoutHours * 3_600_000;
   while (Date.now() < deadline) {
     const gotSignal = await condition(hasDecision, policy.pollSeconds * 1000);
-    if (gotSignal) return takeDecision() as Decision;
+    if (gotSignal) return takeDecision() as { value: Decision; by?: string };
     const polled = await activities.readApproval(key);
-    if (polled !== 'pending') return polled;
+    if (polled !== 'pending') return { value: polled };
   }
-  return 'timeout';
+  return { value: 'timeout' };
 }
 
 export type { Workspace };

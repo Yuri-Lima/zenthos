@@ -21,11 +21,11 @@ class Profiles implements RepoProfilesPort {
 class Runs implements RunControlPort {
   readonly runs = new Map<string, Run>();
   readonly decisions: { ticketKey: string; decision: 'approved' | 'rejected' }[] = [];
-  start = async (ticketKey: string) => {
-    if (!this.runs.has(ticketKey)) this.runs.set(ticketKey, createRun({ key: ticketKey, title: ticketKey, body: '', url: 'https://example.test', labels: [] }));
+  start = async (ticketKey: string, actor?: string) => {
+    if (!this.runs.has(ticketKey)) this.runs.set(ticketKey, createRun({ key: ticketKey, title: ticketKey, body: '', url: 'https://example.test', labels: [] }, { requestedBy: actor }));
     return { workflowId: `ticket:${ticketKey}` };
   };
-  decide = async (ticketKey: string, decision: 'approved' | 'rejected') => void this.decisions.push({ ticketKey, decision });
+  decide = async (ticketKey: string, decision: 'approved' | 'rejected', actor?: string) => void this.decisions.push({ ticketKey, decision, ...(actor ? { actor } : {}) });
   state = async (ticketKey: string) => this.runs.get(ticketKey);
 }
 
@@ -49,6 +49,10 @@ describe('provider connections', () => {
     expect(hooked.app).toEqual({ slug: 'zenthos-hooked', webhookSecret: 'whs' });
     expect((await connections.findByAppId('9'))?.id).toBe(silent.id);
     expect((await connections.findByAppId('10'))?.id).toBe(hooked.id);
+    const updated = await connectExistingGitHubApp({ connections }, { name: 'zenthos-hooked', appId: '10', privateKey: 'pem2', webhookSecret: 'whs', clientId: 'Iv1.c', clientSecret: 'cs' });
+    expect(updated.id).toBe(hooked.id);
+    expect(updated.app?.clientId).toBe('Iv1.c');
+    expect((await connections.list()).filter((c) => c.credentials.type === 'github-app' && c.credentials.appId === '10')).toHaveLength(1);
   });
 
   it('applies webhook commands: labels drive runs only for known repositories, installation events update the connection', async () => {
@@ -60,8 +64,8 @@ describe('provider connections', () => {
     const connection = await connectGitHubApp({ connections }, manifest);
 
     expect(await applyWebhookCommand(deps, '42', { kind: 'start', ticketKey: 'owner/repo#1' })).toBe('started ticket:owner/repo#1');
-    expect(await applyWebhookCommand(deps, '42', { kind: 'decision', ticketKey: 'owner/repo#1', decision: 'approved' })).toContain('signalled approved');
-    expect(runs.decisions).toEqual([{ ticketKey: 'owner/repo#1', decision: 'approved' }]);
+    expect(await applyWebhookCommand(deps, '42', { kind: 'decision', ticketKey: 'owner/repo#1', decision: 'approved', actor: 'naira' })).toContain('signalled approved');
+    expect(runs.decisions).toEqual([{ ticketKey: 'owner/repo#1', decision: 'approved', actor: 'naira' }]);
     expect(await applyWebhookCommand(deps, '42', { kind: 'start', ticketKey: 'other/repo#1' })).toContain('no repository profile');
     expect(runs.runs.size).toBe(1);
 

@@ -153,7 +153,29 @@ marker commit to a throwaway branch, checks that GitHub attributes that commit t
 pnpm nx run @zenthos/worker:contract -- owner/repo#123
 ```
 
-## Cloud Run (phase 5)
+## Dashboard: Sign in with GitHub
+
+People sign in to the dashboard through the connected GitHub App's user authorization (ADR 007); a
+configured allowlist of GitHub logins decides who may use it (ADR 012). The API needs the App's OAuth
+client id and secret: the manifest flow stores them; for an app created by hand, copy them from the app's
+settings page on GitHub (generate a client secret there) and connect the app again with them:
+
+```bash
+curl -X POST localhost:3200/providers/github/app -H 'content-type: application/json' \
+  -d "{\"name\":\"zenthos-dev\",\"appId\":\"123456\",\"privateKey\":$(jq -Rs . < key.pem),\"clientId\":\"Iv1....\",\"clientSecret\":\"...\"}"
+```
+
+The app's **Callback URL** must be `<ZENTHOS_API_BASE_URL>/auth/github/callback` (the manifest sets it). Then:
+
+```bash
+ZENTHOS_AUTH=github ZENTHOS_ALLOWED_LOGINS=your-login pnpm api
+```
+
+`GET /auth/github` starts the flow, the session lives in an httpOnly cookie whose hash is stored, `GET /auth/me`
+says who is signed in, `POST /auth/logout` ends it. With `ZENTHOS_AUTH=off` (the default, for local dry runs)
+every request is anonymous and the API says so at start; never expose it that way.
+
+## Cloud Run (phase 6)
 
 Same mechanism with the Google issuer (`https://accounts.google.com`), the service's identity token from the
 metadata server, and a rule matching the service account's `email` claim. Set up when the deploy exists.

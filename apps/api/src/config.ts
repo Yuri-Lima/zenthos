@@ -16,6 +16,11 @@ const ConfigSchema = z.object({
   GITHUB_APPS: z.enum(['octokit', 'memory']).default('memory'),
   /** The dashboard's origin; the only one the browser may call the API from. */
   ZENTHOS_DASHBOARD_ORIGIN: z.string().url().default('http://localhost:4200'),
+  /** `github`: Sign in with GitHub through the connected App, allowlist below. `off`: every request is anonymous; local dry runs only. */
+  ZENTHOS_AUTH: z.enum(['github', 'off']).default('off'),
+  /** GitHub logins allowed into the dashboard, comma-separated. Empty admits nobody. */
+  ZENTHOS_ALLOWED_LOGINS: z.string().default('').transform((value) => value.split(',').map((s) => s.trim()).filter(Boolean)),
+  ZENTHOS_SESSION_HOURS: z.coerce.number().int().positive().default(168),
 });
 
 export type ApiConfig = z.infer<typeof ConfigSchema>;
@@ -23,5 +28,6 @@ export type ApiConfig = z.infer<typeof ConfigSchema>;
 export function loadConfig(env: NodeJS.ProcessEnv): ApiConfig {
   const config = ConfigSchema.parse(env);
   if (config.DATABASE_URL && !config.ZENTHOS_SECRETS_KEY) throw new Error('ZENTHOS_SECRETS_KEY is required with DATABASE_URL (openssl rand -hex 32)');
+  if (config.ZENTHOS_AUTH === 'github' && config.ZENTHOS_ALLOWED_LOGINS.length === 0) throw new Error('ZENTHOS_AUTH=github needs ZENTHOS_ALLOWED_LOGINS, or nobody can sign in');
   return config;
 }

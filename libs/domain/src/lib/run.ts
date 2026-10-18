@@ -13,6 +13,8 @@ export const RunHistoryEntrySchema = z.object({
   from: z.enum(RUN_STATES),
   to: z.enum(RUN_STATES),
   at: z.iso.datetime(),
+  /** Who caused it when a person did: a dashboard login, the GitHub login that set a label, or "cli". */
+  by: z.string().optional(),
 });
 
 export type RunHistoryEntry = z.infer<typeof RunHistoryEntrySchema>;
@@ -23,6 +25,8 @@ export const RunSchema = z.object({
   ticket: TicketSchema,
   state: z.enum(RUN_STATES),
   createdAt: z.iso.datetime(),
+  /** Who started the run when a person did; absent for label polling and dry runs. */
+  requestedBy: z.string().optional(),
   /** Sum of the agents' own estimates at list price. A budget signal, not an invoice. */
   estimatedCostUsd: z.number().min(0),
   /** Sum of the token counts the models reported; the figure a bill is actually based on. */
@@ -52,12 +56,13 @@ export function parseRun(input: unknown): Run {
 
 /** Uses Web Crypto so this file stays free of node imports and can be bundled into a Temporal workflow. */
 /** `id` is for callers without `crypto` at hand, such as workflow code that must stay deterministic. */
-export function createRun(ticket: Ticket, options: { policy?: RunPolicy; now?: Date; id?: string } = {}): Run {
+export function createRun(ticket: Ticket, options: { policy?: RunPolicy; now?: Date; id?: string; requestedBy?: string } = {}): Run {
   return {
     id: options.id ?? globalThis.crypto.randomUUID(),
     ticket,
     state: 'intake',
     createdAt: (options.now ?? new Date()).toISOString(),
+    ...(options.requestedBy ? { requestedBy: options.requestedBy } : {}),
     estimatedCostUsd: 0,
     tokens: NO_TOKENS,
     policy: options.policy ?? DEFAULT_POLICY,
@@ -65,9 +70,9 @@ export function createRun(ticket: Ticket, options: { policy?: RunPolicy; now?: D
   };
 }
 
-export function applyEvent(run: Run, event: RunEvent, now: Date = new Date()): Run {
+export function applyEvent(run: Run, event: RunEvent, now: Date = new Date(), by?: string): Run {
   const to = transition(run.state, event);
-  const entry: RunHistoryEntry = { event, from: run.state, to, at: now.toISOString() };
+  const entry: RunHistoryEntry = { event, from: run.state, to, at: now.toISOString(), ...(by ? { by } : {}) };
   return { ...run, state: to, history: [...run.history, entry] };
 }
 

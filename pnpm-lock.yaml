@@ -256,6 +256,9 @@ importers:
       '@octokit/auth-app':
         specifier: ^8.3.1
         version: 8.3.1
+      '@octokit/auth-oauth-user':
+        specifier: ^6.0.4
+        version: 6.0.4
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1

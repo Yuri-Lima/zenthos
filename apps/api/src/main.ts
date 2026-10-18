@@ -13,7 +13,7 @@ app.enableCors({ origin: config.ZENTHOS_DASHBOARD_ORIGIN, credentials: true });
 SwaggerModule.setup('docs', app, () => openApiDocument(app));
 app.enableShutdownHooks();
 await app.listen(config.PORT);
-console.log(`zenthos api: http://localhost:${config.PORT} (OpenAPI at /docs) stores=${config.DATABASE_URL ? 'postgres' : 'memory'} runs=${config.RUN_CONTROL} githubApps=${config.GITHUB_APPS}`);
+console.log(`zenthos api: http://localhost:${config.PORT} (OpenAPI at /docs) stores=${config.DATABASE_URL ? 'postgres' : 'memory'} runs=${config.RUN_CONTROL} githubApps=${config.GITHUB_APPS} auth=${config.ZENTHOS_AUTH}${config.ZENTHOS_AUTH === 'off' ? ' (every request is anonymous; set ZENTHOS_AUTH=github before exposing this)' : ` allowlist=${config.ZENTHOS_ALLOWED_LOGINS.join(',')}`}`);
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, async () => {
     await app.close();

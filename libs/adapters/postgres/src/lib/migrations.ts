@@ -42,6 +42,17 @@ export const MIGRATIONS: { name: string; sql: string }[] = [
       CREATE INDEX runs_state_created_at ON runs (state, created_at DESC);
     `,
   },
+  {
+    name: '003-sessions',
+    sql: `
+      CREATE TABLE sessions (
+        id_hash text PRIMARY KEY,
+        session jsonb NOT NULL,
+        expires_at timestamptz NOT NULL
+      );
+      CREATE INDEX sessions_expires_at ON sessions (expires_at);
+    `,
+  },
 ];
 
 export async function migrate(pool: Pool): Promise<string[]> {

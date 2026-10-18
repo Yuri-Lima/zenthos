@@ -19,17 +19,19 @@ export async function connectGitHubApp({ connections }: { connections: ProviderC
   return connection;
 }
 
-/** An app someone created by hand on GitHub (docs/authentication.md); the webhook works once its secret is given. */
+/**
+ * An app someone created by hand on GitHub (docs/authentication.md). The webhook works once its secret is
+ * given, Sign in with GitHub once its OAuth client id and secret are. Connecting the same app again updates it.
+ */
 export async function connectExistingGitHubApp(
   { connections }: { connections: ProviderConnectionsPort },
-  input: { name: string; appId: string; privateKey: string; webhookSecret?: string },
+  input: { name: string; appId: string; privateKey: string; webhookSecret?: string; clientId?: string; clientSecret?: string },
 ): Promise<ProviderConnection> {
-  const connection = createConnection({
-    provider: 'github',
-    name: input.name,
-    credentials: { type: 'github-app', appId: input.appId, privateKey: input.privateKey },
-    app: input.webhookSecret ? { slug: input.name, webhookSecret: input.webhookSecret } : undefined,
-  });
+  const existing = await connections.findByAppId(input.appId);
+  const app = input.webhookSecret ? { slug: input.name, webhookSecret: input.webhookSecret, clientId: input.clientId, clientSecret: input.clientSecret } : undefined;
+  const connection = existing
+    ? { ...existing, name: input.name, credentials: { type: 'github-app' as const, appId: input.appId, privateKey: input.privateKey }, app: app ?? existing.app }
+    : createConnection({ provider: 'github', name: input.name, credentials: { type: 'github-app', appId: input.appId, privateKey: input.privateKey }, app });
   await connections.save(connection);
   return connection;
 }
@@ -63,10 +65,10 @@ export async function applyWebhookCommand({ connections, profiles, runs }: Webho
       const repo = command.ticketKey.slice(0, command.ticketKey.lastIndexOf('#'));
       if (!(await profiles.get(repo))) return `ignored: no repository profile for ${repo}`;
       if (command.kind === 'start') {
-        const { workflowId } = await runs.start(command.ticketKey);
+        const { workflowId } = await runs.start(command.ticketKey, command.actor);
         return `started ${workflowId}`;
       }
-      await runs.decide(command.ticketKey, command.decision);
+      await runs.decide(command.ticketKey, command.decision, command.actor);
       return `signalled ${command.decision} to ${command.ticketKey}`;
     }
     case 'installation':

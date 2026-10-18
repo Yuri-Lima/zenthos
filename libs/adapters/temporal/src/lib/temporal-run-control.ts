@@ -17,10 +17,10 @@ export class TemporalRunControl implements RunControlPort {
     return new TemporalRunControl(new Client({ connection, namespace }), connection, taskQueue);
   }
 
-  async start(ticketKey: string): Promise<{ workflowId: string }> {
+  async start(ticketKey: string, actor?: string): Promise<{ workflowId: string }> {
     const workflowId = WORKFLOW_CONTRACT.workflowId(ticketKey);
     try {
-      await this.client.workflow.start(WORKFLOW_CONTRACT.workflowType, { taskQueue: this.taskQueue, workflowId, args: [{ key: ticketKey }] });
+      await this.client.workflow.start(WORKFLOW_CONTRACT.workflowType, { taskQueue: this.taskQueue, workflowId, args: [{ key: ticketKey, requestedBy: actor }] });
     } catch (error) {
       // A run already in flight for this ticket is the idempotent answer, not a failure.
       if (!(error instanceof WorkflowExecutionAlreadyStartedError)) throw error;
@@ -28,8 +28,8 @@ export class TemporalRunControl implements RunControlPort {
     return { workflowId };
   }
 
-  async decide(ticketKey: string, decision: 'approved' | 'rejected'): Promise<void> {
-    await this.client.workflow.getHandle(WORKFLOW_CONTRACT.workflowId(ticketKey)).signal(WORKFLOW_CONTRACT.approvalSignal, decision);
+  async decide(ticketKey: string, decision: 'approved' | 'rejected', actor?: string): Promise<void> {
+    await this.client.workflow.getHandle(WORKFLOW_CONTRACT.workflowId(ticketKey)).signal(WORKFLOW_CONTRACT.approvalSignal, decision, actor);
   }
 
   async state(ticketKey: string): Promise<Run | undefined> {

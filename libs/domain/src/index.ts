@@ -15,3 +15,4 @@ export * from './lib/review.js';
 export * from './lib/diff.js';
 export * from './lib/provider-connection.js';
 export * from './lib/webhook.js';
+export * from './lib/session.js';

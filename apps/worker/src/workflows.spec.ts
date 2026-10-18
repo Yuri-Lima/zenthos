@@ -131,7 +131,7 @@ describe('ticketRunWorkflow', () => {
       // Time skipping runs the workflow faster than a separate signal call could land, so the
       // signal rides along with the start; Temporal buffers it until the handler is set.
       const handle = signal
-        ? await env.client.workflow.signalWithStart(ticketRunWorkflow, { ...options, signal: approvalDecisionSignal, signalArgs: [signal] })
+        ? await env.client.workflow.signalWithStart(ticketRunWorkflow, { ...options, signal: approvalDecisionSignal, signalArgs: [signal, 'yuri'] })
         : await env.client.workflow.start(ticketRunWorkflow, options);
       return handle.result();
     });
@@ -155,11 +155,12 @@ describe('ticketRunWorkflow', () => {
     expect(APPROVAL_LABELS.approved).toBeDefined();
   });
 
-  it('approves on a signal without polling', async () => {
+  it('approves on a signal without polling and records who decided', async () => {
     const { activities, calls } = fakeActivities();
     const run = await runWith(activities, 'signal', 'approved');
     expect(run.state).toBe('reviewed');
     expect(calls.readApproval).toBe(0);
+    expect(run.history.find((h) => h.event === 'spec_approved')?.by).toBe('yuri');
   });
 
   it('sends a failed review back to the same workspace once, reuses the pull request, then passes', async () => {

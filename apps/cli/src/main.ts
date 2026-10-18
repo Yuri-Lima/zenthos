@@ -23,11 +23,11 @@ async function main([command, key]: string[]) {
   try {
     switch (command) {
       case 'run':
-        console.log(JSON.stringify(await runs.start(key)));
+        console.log(JSON.stringify(await runs.start(key, 'cli')));
         return;
       case 'approve':
       case 'reject':
-        await runs.decide(key, command === 'approve' ? 'approved' : 'rejected');
+        await runs.decide(key, command === 'approve' ? 'approved' : 'rejected', 'cli');
         console.log(JSON.stringify({ ticketKey: key, signalled: command }));
         return;
       case 'state':

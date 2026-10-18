@@ -11,6 +11,8 @@ export const ERROR_CODES = {
   app_not_installed: 'The GitHub App is not installed on this repository',
   invalid_review: 'The review does not match the Review schema',
   invalid_run: 'The stored run does not match the Run schema',
+  sign_in_unavailable: 'No GitHub App connection carries OAuth credentials, so nobody can sign in yet',
+  not_allowed: 'This GitHub login is not on the allowlist',
   invalid_connection: 'The provider connection does not match its schema',
   invalid_profile: 'The repository profile is inconsistent',
   connection_not_found: 'No provider connection with that id',

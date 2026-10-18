@@ -1,5 +1,5 @@
-import { InMemoryGitHubApps, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryRunControl, InMemoryRuns } from '@zenthos/adapter-in-memory';
-import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort, RunsPort } from '@zenthos/ports';
+import { InMemoryGitHubApps, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryRunControl, InMemoryRuns, InMemorySessions } from '@zenthos/adapter-in-memory';
+import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort, RunsPort, SessionsPort } from '@zenthos/ports';
 
 /** The ports the controllers use; one object, one injection token. Built by composition.ts. */
 export type ApiPorts = {
@@ -9,6 +9,7 @@ export type ApiPorts = {
   /** The stored projection of runs; what the list and detail endpoints serve (ADR 011). */
   runStore: RunsPort;
   githubApps: GitHubAppsPort;
+  sessions: SessionsPort;
   close(): Promise<void>;
 };
 
@@ -21,5 +22,6 @@ export const inMemoryPorts = (): ApiPorts => ({
   runs: new InMemoryRunControl(),
   runStore: new InMemoryRuns(),
   githubApps: new InMemoryGitHubApps(),
+  sessions: new InMemorySessions(),
   close: async () => undefined,
 });

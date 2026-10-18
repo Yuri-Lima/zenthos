@@ -1,11 +1,11 @@
 import { commandFromGitHubEvent } from './webhook.js';
 
-const labeled = (name: string) => ({ action: 'labeled', label: { name }, issue: { number: 300 }, repository: { full_name: 'owner/repo' } });
+const labeled = (name: string) => ({ action: 'labeled', label: { name }, issue: { number: 300 }, repository: { full_name: 'owner/repo' }, sender: { login: 'naira' } });
 
 describe('commandFromGitHubEvent', () => {
   it('turns the pipeline labels into start and decision commands and ignores the rest', () => {
-    expect(commandFromGitHubEvent('issues', labeled('zenthos:run'))).toEqual({ kind: 'start', ticketKey: 'owner/repo#300' });
-    expect(commandFromGitHubEvent('issues', labeled('zenthos:spec-approved'))).toEqual({ kind: 'decision', ticketKey: 'owner/repo#300', decision: 'approved' });
+    expect(commandFromGitHubEvent('issues', labeled('zenthos:run'))).toEqual({ kind: 'start', ticketKey: 'owner/repo#300', actor: 'naira' });
+    expect(commandFromGitHubEvent('issues', labeled('zenthos:spec-approved'))).toEqual({ kind: 'decision', ticketKey: 'owner/repo#300', decision: 'approved', actor: 'naira' });
     expect(commandFromGitHubEvent('issues', labeled('zenthos:spec-rejected'))).toMatchObject({ decision: 'rejected' });
     expect(commandFromGitHubEvent('issues', labeled('bug'))).toMatchObject({ kind: 'ignore' });
     expect(commandFromGitHubEvent('issues', { action: 'opened' })).toMatchObject({ kind: 'ignore' });

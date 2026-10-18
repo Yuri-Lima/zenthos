@@ -9,6 +9,8 @@ export function githubAppManifest({ name, baseUrl, connectionId }: { name: strin
     url: baseUrl,
     public: false,
     redirect_url: `${baseUrl}/providers/github/manifest/callback`,
+    /** Where GitHub sends a person back after Sign in with GitHub (ADR 007). */
+    callback_urls: [`${baseUrl}/auth/github/callback`],
     setup_url: `${baseUrl}/providers/github/install/callback?connection=${connectionId}`,
     setup_on_update: true,
     hook_attributes: { url: `${baseUrl}/webhooks/github`, active: true },

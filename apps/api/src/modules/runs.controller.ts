@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Inject, NotFoundException, Post, Query } from '@nestjs/common';
+import { CurrentLogin } from '../auth/session.guard.js';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { RUN_STATES, RunSchema } from '@zenthos/domain';
 import { z } from 'zod';
@@ -35,17 +36,17 @@ export class RunsController {
   @ApiOperation({ summary: 'Start a run for a ticket (idempotent per ticket)' })
   @ApiBody({ schema: jsonSchema(StartBody) })
   @ApiOkResponse({ schema: jsonSchema(z.object({ workflowId: z.string() })) })
-  start(@Body() body: unknown) {
-    return this.ports.runs.start(parseBody(StartBody, body).ticketKey);
+  start(@Body() body: unknown, @CurrentLogin() login?: string) {
+    return this.ports.runs.start(parseBody(StartBody, body).ticketKey, login);
   }
 
   @Post('decision')
   @ApiOperation({ summary: 'Approve or reject the current spec draft' })
   @ApiBody({ schema: jsonSchema(DecisionBody) })
   @ApiOkResponse({ schema: jsonSchema(DecisionBody) })
-  async decide(@Body() body: unknown) {
+  async decide(@Body() body: unknown, @CurrentLogin() login?: string) {
     const { ticketKey, decision } = parseBody(DecisionBody, body);
-    await this.ports.runs.decide(ticketKey, decision);
+    await this.ports.runs.decide(ticketKey, decision, login);
     return { ticketKey, decision };
   }
 }
