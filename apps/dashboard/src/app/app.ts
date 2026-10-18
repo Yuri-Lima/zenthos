@@ -18,7 +18,6 @@ import { SessionService } from './core/session';
     .nav:hover { background: var(--zen-surface-2); }
     .nav.active { background: var(--zen-accent-soft); color: var(--zen-accent); font-weight: 500; }
     .nav mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    .nav.soon { color: var(--zen-muted); cursor: default; }
     .rail hr { border: 0; border-top: 1px solid var(--zen-line); margin: 8px 4px; }
     .topbar { display: flex; align-items: center; gap: 10px; padding: 8px 20px; border-bottom: 1px solid var(--zen-line); background: var(--zen-surface); position: sticky; top: 0; z-index: 2; min-height: 48px; }
     .user { display: flex; align-items: center; gap: 8px; font-size: 13px; }
@@ -30,7 +29,7 @@ import { SessionService } from './core/session';
       <nav class="rail" aria-label="Sections">
         <a routerLink="/" class="brand"><b>ZenthOs</b><span class="eyebrow">lab</span></a>
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav"><mat-icon>view_timeline</mat-icon>{{ 'nav.runs' | translate }}</a>
-        <span class="nav soon" [matTooltip]="'nav.soon' | translate"><mat-icon>monitoring</mat-icon>{{ 'nav.metrics' | translate }}</span>
+        <a routerLink="/metrics" routerLinkActive="active" class="nav"><mat-icon>monitoring</mat-icon>{{ 'nav.metrics' | translate }}</a>
         <a routerLink="/settings" routerLinkActive="active" class="nav"><mat-icon>tune</mat-icon>{{ 'nav.settings' | translate }}</a>
         <hr />
         <a routerLink="/glossary" routerLinkActive="active" class="nav"><mat-icon>menu_book</mat-icon>{{ 'nav.glossary' | translate }}</a>

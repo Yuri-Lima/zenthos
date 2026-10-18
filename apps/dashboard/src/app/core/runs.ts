@@ -6,6 +6,7 @@ type RunsResponse = paths['/runs']['get']['responses'][200]['content']['applicat
 /** The run as the API documents it; one type, derived from the OpenAPI document, never hand-written. */
 export type Run = Exclude<RunsResponse, readonly unknown[]>;
 export type MetricValue = paths['/metrics']['get']['responses'][200]['content']['application/json'][number];
+export type TraceCheck = paths['/metrics/traces']['get']['responses'][200]['content']['application/json'];
 
 /** Runs, through the generated client. Pages poll these; the API is the source. */
 @Injectable({ providedIn: 'root' })
@@ -33,5 +34,11 @@ export class RunsService {
   async metrics(): Promise<MetricValue[]> {
     const { data } = await this.api.GET('/metrics');
     return data ?? [];
+  }
+
+  /** The LangFuse check for one run (ADR 015): asked on demand, it costs two LangFuse calls. */
+  async traceCheck(ticketKey: string): Promise<TraceCheck | undefined> {
+    const { data } = await this.api.GET('/metrics/traces', { params: { query: { ticket: ticketKey } } });
+    return data;
   }
 }
