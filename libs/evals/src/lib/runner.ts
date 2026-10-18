@@ -26,7 +26,7 @@ export async function runSpecSuite(
   const results = await mapLimited(select(dataset, options), options.concurrency, async (item): Promise<SpecItemResult> => {
     try {
       const ticket = await deps.issueTracker.getTicket(item.ticketKey);
-      const spec = parseSpec(await deps.specWriter.draftSpec({ ticket, repoContext: deps.repoContext }));
+      const spec = parseSpec((await deps.specWriter.draftSpec({ ticket, repoContext: deps.repoContext })).spec);
       return { ticketKey: item.ticketKey, spec, touched_area_recall: touchedAreaRecall(spec, item.files), criteria_per_spec: spec.acceptanceCriteria.length };
     } catch (error) {
       return { ticketKey: item.ticketKey, error: describe(error) };
@@ -57,9 +57,9 @@ export async function runReviewSuite(
   const results = await mapLimited(select(dataset, options), options.concurrency, async (item): Promise<ReviewItemResult> => {
     try {
       // An item from a stored run brings the spec its change was written against; history items get one drafted now.
-      const spec = item.spec ?? parseSpec(await deps.specWriter.draftSpec({ ticket: await deps.issueTracker.getTicket(item.ticketKey), repoContext: deps.repoContext }));
+      const spec = item.spec ?? parseSpec((await deps.specWriter.draftSpec({ ticket: await deps.issueTracker.getTicket(item.ticketKey), repoContext: deps.repoContext })).spec);
       const diff = await deps.scm.readPullRequestDiff(profile, item.pullRequest);
-      const review = await deps.reviewer.review({ spec, diff, gates: [], profile });
+      const { review } = await deps.reviewer.review({ spec, diff, gates: [], profile });
       const gate = checkReviewThreshold(review, profile.policy);
       return { ticketKey: item.ticketKey, review, review_score: reviewScore(review), review_agreement: reviewAgreement(gate.passed, item.verdict) };
     } catch (error) {

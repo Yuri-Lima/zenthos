@@ -40,6 +40,13 @@ export type TokenUsage = {
 
 export const NO_TOKENS: TokenUsage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
 
+/** What one agent call cost: the tokens the model reported and the estimate at list price (not a bill). */
+export type Usage = { tokens: TokenUsage; estimatedCostUsd: number };
+
+export const NO_USAGE: Usage = { tokens: NO_TOKENS, estimatedCostUsd: 0 };
+
+export const addUsage = (a: Usage, b: Usage): Usage => ({ tokens: addTokens(a.tokens, b.tokens), estimatedCostUsd: a.estimatedCostUsd + b.estimatedCostUsd });
+
 export const addTokens = (a: TokenUsage, b: TokenUsage): TokenUsage => ({
   inputTokens: a.inputTokens + b.inputTokens,
   outputTokens: a.outputTokens + b.outputTokens,

@@ -10,7 +10,9 @@ import {
   type RubricKey,
   type RubricScore,
 } from '@zenthos/domain';
-import type { ReviewerPort, ReviewInput } from '@zenthos/ports';
+import type { ReviewerPort, ReviewInput, ReviewOutput } from '@zenthos/ports';
+import type { CostEstimator } from '../pricing.js';
+import { UsageCollector, withCollector } from '../usage.js';
 import {
   findingsPrompt,
   REVIEWER_SYSTEM_PROMPT,
@@ -27,6 +29,8 @@ export type ReviewerModels = {
 export type LangGraphReviewerOptions = {
   models: ReviewerModels;
   callbacks?: (input: ReviewInput) => Callbacks;
+  /** Turns the tokens the five calls used into an estimate; absent means the cost is reported as zero. */
+  estimateCost?: CostEstimator;
 };
 
 const State = Annotation.Root({
@@ -81,36 +85,26 @@ export function buildReviewerGraph(models: ReviewerModels) {
 export class LangGraphReviewer implements ReviewerPort {
   private readonly graph;
   private readonly callbacks: (input: ReviewInput) => Callbacks;
+  private readonly estimateCost: CostEstimator;
 
-  constructor({ models, callbacks }: LangGraphReviewerOptions) {
+  constructor({ models, callbacks, estimateCost }: LangGraphReviewerOptions) {
     this.graph = buildReviewerGraph(models);
     this.callbacks = callbacks ?? (() => []);
+    this.estimateCost = estimateCost ?? (() => 0);
   }
 
-  async review(input: ReviewInput): Promise<Review> {
+  async review(input: ReviewInput): Promise<ReviewOutput> {
+    const usage = new UsageCollector();
     const result = await this.graph.invoke(
       { input, scores: {}, findings: undefined },
-      {
-        callbacks: this.callbacks(input),
-        runName: REVIEWER_VERSION,
-        tags: [REVIEWER_VERSION],
-      },
+      { callbacks: withCollector(this.callbacks(input), usage), runName: REVIEWER_VERSION, tags: [REVIEWER_VERSION] },
     );
-    const findings = (result.findings ?? {}) as Partial<
-      Pick<Review, 'findings' | 'summary'>
-    >;
+    const findings = (result.findings ?? {}) as Partial<Pick<Review, 'findings' | 'summary'>>;
     try {
-      return parseReview({
-        scores: result.scores,
-        findings: findings.findings ?? [],
-        summary: findings.summary,
-      });
+      const review = parseReview({ scores: result.scores, findings: findings.findings ?? [], summary: findings.summary });
+      return { review, tokens: usage.tokens, estimatedCostUsd: this.estimateCost(usage.tokens) };
     } catch (error) {
-      if (error instanceof DomainError)
-        throw new DomainError('invalid_review', {
-          ...error.context,
-          scores: result.scores,
-        });
+      if (error instanceof DomainError) throw new DomainError('invalid_review', { ...error.context, scores: result.scores });
       throw error;
     }
   }

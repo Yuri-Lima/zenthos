@@ -1,4 +1,4 @@
-import type { Diff, GateResult, RepoProfile, Review, Spec } from '@zenthos/domain';
+import type { Diff, GateResult, RepoProfile, Review, Spec, Usage } from '@zenthos/domain';
 
 export type ReviewInput = {
   spec: Spec;
@@ -7,7 +7,9 @@ export type ReviewInput = {
   profile: RepoProfile;
 };
 
-/** Scores a change against the rubric and lists findings. Implemented by an agent or a test fake. */
+export type ReviewOutput = { review: Review } & Usage;
+
+/** Scores a change against the rubric and lists findings, reporting what it cost. Implemented by an agent or a test fake. */
 export interface ReviewerPort {
-  review(input: ReviewInput): Promise<Review>;
+  review(input: ReviewInput): Promise<ReviewOutput>;
 }

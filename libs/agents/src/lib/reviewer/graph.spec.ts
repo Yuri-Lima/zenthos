@@ -29,7 +29,7 @@ describe('LangGraphReviewer', () => {
 
   it('scores each rubric line once, in parallel, and merges them with the findings', async () => {
     const { models, prompts } = fakeModels();
-    const review = await new LangGraphReviewer({ models }).review(input);
+    const { review } = await new LangGraphReviewer({ models }).review(input);
     expect(prompts).toHaveLength(4);
     expect(prompts.some((p) => p.includes('correctness'))).toBe(true);
     expect(prompts.some((p) => p.includes('engineering rules'))).toBe(true);

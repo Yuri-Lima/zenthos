@@ -32,13 +32,14 @@ function fakeTracker(labels: string[]) {
   return { port, comments };
 }
 
-const specWriter: SpecWriterPort = { draftSpec: async () => spec };
+const specWriter: SpecWriterPort = { draftSpec: async () => ({ spec, tokens: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 }, estimatedCostUsd: 0.01 }) };
 
 describe('draftSpec', () => {
   it('posts the spec as a comment that names the approval labels', async () => {
     const tracker = fakeTracker([]);
     const result = await draftSpec({ specWriter, issueTracker: tracker.port }, createRun(ticket), '');
-    expect(result).toEqual(spec);
+    expect(result.spec).toEqual(spec);
+    expect(result.estimatedCostUsd).toBe(0.01);
     expect(tracker.comments).toHaveLength(1);
     expect(tracker.comments[0]).toContain('AC-1');
     expect(tracker.comments[0]).toContain(APPROVAL_LABELS.approved);

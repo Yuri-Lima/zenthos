@@ -1,5 +1,5 @@
 import type { GateResult } from './gate.js';
-import { NO_TOKENS, type PullRequest, type TokenUsage } from './implementation.js';
+import { addUsage, NO_TOKENS, type PullRequest, type TokenUsage, type Usage } from './implementation.js';
 import type { Review } from './review.js';
 import { DEFAULT_POLICY, type RunPolicy } from './policies.js';
 import type { Spec } from './specification.js';
@@ -58,3 +58,6 @@ export function applyEvent(run: Run, event: RunEvent, now: Date = new Date()): R
   const entry: RunHistoryEntry = { event, from: run.state, to, at: now.toISOString() };
   return { ...run, state: to, history: [...run.history, entry] };
 }
+
+/** The run's totals after one more agent call: the spec writer, the coding agent and the reviewer all add here. */
+export const withUsage = (run: Run, usage: Usage): Run => ({ ...run, ...addUsage({ tokens: run.tokens, estimatedCostUsd: run.estimatedCostUsd }, usage) });

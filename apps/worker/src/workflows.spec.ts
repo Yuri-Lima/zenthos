@@ -63,6 +63,8 @@ function fakeActivities(options: { approvals?: Approval[]; failDraftsBeforeSucce
       return {
         review: failed ? { ...goodReview, findings: [{ file: 'src/a.ts', severity: 'blocker' as const, message: 'Drops rows' }] } : goodReview,
         gate: failed ? fail('review_threshold', '1 blocker finding(s): src/a.ts: Drops rows') : pass('review_threshold'),
+        estimatedCostUsd: 0.2,
+        tokens: { inputTokens: 2000, outputTokens: 300, cacheReadTokens: 0, cacheWriteTokens: 0 },
       };
     },
     reviewFeedback: async (review) => review.findings.map((f) => `${f.severity} ${f.file}: ${f.message}`).join('\n'),
@@ -84,7 +86,7 @@ function fakeActivities(options: { approvals?: Approval[]; failDraftsBeforeSucce
     draftSpec: async (run: Run) => {
       calls.draftSpec++;
       if (draftFailures-- > 0) throw new Error('model timed out');
-      return {
+      const spec = {
         ticketKey: run.ticket.key,
         problem: 'Users cannot export the list',
         inScope: ['CSV export'],
@@ -93,6 +95,7 @@ function fakeActivities(options: { approvals?: Approval[]; failDraftsBeforeSucce
         touchedAreas: ['src/routes/list'],
         risks: [],
       };
+      return { spec, estimatedCostUsd: 0.1, tokens: { inputTokens: 300, outputTokens: 100, cacheReadTokens: 0, cacheWriteTokens: 0 } };
     },
     readApproval: async () => {
       calls.readApproval++;
@@ -141,8 +144,9 @@ describe('ticketRunWorkflow', () => {
     expect(run.spec?.acceptanceCriteria[0].id).toBe('AC-1');
     expect(run.pullRequest).toEqual({ url: 'https://github.com/owner/repo/pull/9', number: 9 });
     expect(run.review?.summary).toContain('matches the spec');
-    expect(run.estimatedCostUsd).toBe(0.5);
-    expect(run.tokens.inputTokens).toBe(1000);
+    // one draft (0.1), one implementation (0.5), one review (0.2)
+    expect(run.estimatedCostUsd).toBeCloseTo(0.8, 6);
+    expect(run.tokens.inputTokens).toBe(3300);
     expect(run.history.map((h) => h.event)).toEqual(['spec_drafted', 'spec_approved', 'implemented', 'gates_passed', 'mr_opened', 'review_passed']);
     expect(calls.readApproval).toBe(2);
     expect(calls.review).toBe(1);
@@ -211,8 +215,8 @@ describe('ticketRunWorkflow', () => {
     const run = await runWith(activities, 'gates-retry');
     expect(run.state).toBe('reviewed');
     expect(calls.implement).toBe(2);
-    expect(run.estimatedCostUsd).toBe(1);
-    expect(run.tokens.outputTokens).toBe(400);
+    expect(run.estimatedCostUsd).toBeCloseTo(1.3, 6);
+    expect(run.tokens.outputTokens).toBe(800);
   });
 
   it('redrafts once after a rejection, then escalates', async () => {

@@ -3,7 +3,9 @@ import type { Callbacks } from '@langchain/core/callbacks/manager';
 import type { Runnable } from '@langchain/core/runnables';
 import { Annotation, END, START, StateGraph } from '@langchain/langgraph';
 import { DomainError, parseSpec, type Spec } from '@zenthos/domain';
-import type { SpecWriterInput, SpecWriterPort } from '@zenthos/ports';
+import type { SpecDraft, SpecWriterInput, SpecWriterPort } from '@zenthos/ports';
+import type { CostEstimator } from '../pricing.js';
+import { UsageCollector, withCollector } from '../usage.js';
 import {
   SPEC_WRITER_SYSTEM_PROMPT,
   SPEC_WRITER_VERSION,
@@ -19,6 +21,8 @@ export type LangGraphSpecWriterOptions = {
   callbacks?: (input: SpecWriterInput) => Callbacks;
   /** Drafts before giving up. Each retry feeds the schema errors back to the model. */
   maxAttempts?: number;
+  /** Turns the tokens a call used into an estimate; absent means the cost is reported as zero. */
+  estimateCost?: CostEstimator;
 };
 
 const State = Annotation.Root({
@@ -92,37 +96,23 @@ export function buildSpecWriterGraph(
 export class LangGraphSpecWriter implements SpecWriterPort {
   private readonly graph;
   private readonly callbacks: (input: SpecWriterInput) => Callbacks;
+  private readonly estimateCost: CostEstimator;
 
-  constructor({
-    model,
-    callbacks,
-    maxAttempts = 3,
-  }: LangGraphSpecWriterOptions) {
+  constructor({ model, callbacks, maxAttempts = 3, estimateCost }: LangGraphSpecWriterOptions) {
     this.graph = buildSpecWriterGraph(model, maxAttempts);
     this.callbacks = callbacks ?? (() => []);
+    this.estimateCost = estimateCost ?? (() => 0);
   }
 
-  async draftSpec(input: SpecWriterInput): Promise<Spec> {
+  async draftSpec(input: SpecWriterInput): Promise<SpecDraft> {
+    const usage = new UsageCollector();
     const result = await this.graph.invoke(
-      {
-        input,
-        attempt: 0,
-        draft: undefined,
-        issues: undefined,
-        spec: undefined,
-      },
-      {
-        callbacks: this.callbacks(input),
-        runName: SPEC_WRITER_VERSION,
-        tags: [SPEC_WRITER_VERSION],
-      },
+      { input, attempt: 0, draft: undefined, issues: undefined, spec: undefined },
+      { callbacks: withCollector(this.callbacks(input), usage), runName: SPEC_WRITER_VERSION, tags: [SPEC_WRITER_VERSION] },
     );
     if (!result.spec) {
-      throw new DomainError('invalid_spec', {
-        attempts: result.attempt,
-        issues: result.issues,
-      });
+      throw new DomainError('invalid_spec', { attempts: result.attempt, issues: result.issues });
     }
-    return result.spec;
+    return { spec: result.spec, tokens: usage.tokens, estimatedCostUsd: this.estimateCost(usage.tokens) };
   }
 }

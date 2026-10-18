@@ -1,4 +1,4 @@
-import { repoProfile, type Review, type Spec, type Ticket } from '@zenthos/domain';
+import { NO_USAGE, repoProfile, type Review, type Spec, type Ticket } from '@zenthos/domain';
 import type { IssueTrackerPort, ReviewerPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
 import { parseDataset, type GoldenDataset } from './dataset.js';
 import { runReviewSuite, runSpecSuite } from './runner.js';
@@ -21,7 +21,7 @@ const issueTracker: IssueTrackerPort = { getTicket: async (key) => ticketFor(key
 const specWriter: SpecWriterPort = {
   draftSpec: async ({ ticket }) => {
     if (ticket.key.endsWith('#2')) throw new Error('model timed out');
-    return specFor(ticket.key);
+    return { spec: specFor(ticket.key), ...NO_USAGE };
   },
 };
 const scm: ScmPort = { openPullRequest: async () => ({ url: 'x', number: 1 }), findPullRequest: async () => undefined, readPullRequestDiff: async () => ({ files: ['src/a.ts'], changedLines: 3, patch: '+a' }), postReview: async () => undefined, pullRequestState: async () => 'open' };
@@ -42,8 +42,8 @@ describe('runSpecSuite', () => {
 describe('runReviewSuite', () => {
   it('uses the spec an item carries instead of drafting one', async () => {
     let drafted = 0;
-    const counting: SpecWriterPort = { draftSpec: async (input) => (drafted++, specFor(input.ticket.key)) };
-    const reviewer: ReviewerPort = { review: async () => goodReview };
+    const counting: SpecWriterPort = { draftSpec: async (input) => (drafted++, { spec: specFor(input.ticket.key), ...NO_USAGE }) };
+    const reviewer: ReviewerPort = { review: async () => ({ review: goodReview, ...NO_USAGE }) };
     const withSpec = { ...dataset, items: [{ ...dataset.items[0], spec: specFor('owner/repo#1'), verdict: 'rejected' as const }] };
     const { results } = await runReviewSuite({ issueTracker, specWriter: counting, scm, reviewer, repoContext: '' }, withSpec, profile);
     expect(drafted).toBe(0);
@@ -53,7 +53,7 @@ describe('runReviewSuite', () => {
   it('scores agreement with the human merge', async () => {
     let calls = 0;
     const reviewer: ReviewerPort = {
-      review: async () => (calls++ === 0 ? goodReview : { ...goodReview, findings: [{ file: 'src/a.ts', severity: 'blocker', message: 'Breaks the build' }] }),
+      review: async () => ({ review: calls++ === 0 ? goodReview : { ...goodReview, findings: [{ file: 'src/a.ts', severity: 'blocker', message: 'Breaks the build' }] }, ...NO_USAGE }),
     };
     const { summary, results } = await runReviewSuite({ issueTracker, specWriter, scm, reviewer, repoContext: '' }, dataset, profile, { concurrency: 1 });
     expect(results.map((r) => r.review_agreement)).toEqual([1, undefined, 0]);

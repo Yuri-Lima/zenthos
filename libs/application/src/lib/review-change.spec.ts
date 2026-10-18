@@ -28,7 +28,7 @@ function deps(result: Review) {
     },
     pullRequestState: async () => 'open',
   };
-  const reviewer: ReviewerPort = { review: async () => result };
+  const reviewer: ReviewerPort = { review: async () => ({ review: result, tokens: { inputTokens: 100, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 0 }, estimatedCostUsd: 0.02 }) };
   return { reviewer, scm, posted };
 }
 
@@ -36,8 +36,9 @@ describe('reviewChange', () => {
   it('posts the rubric and passes the gate for a good review', async () => {
     const d = deps(review);
     const run = { ...createRun(ticket, { policy: profile.policy }), spec, pullRequest };
-    const { gate } = await reviewChange(d, run, profile);
+    const { gate, estimatedCostUsd } = await reviewChange(d, run, profile);
     expect(gate).toEqual({ gate: 'review_threshold', passed: true });
+    expect(estimatedCostUsd).toBe(0.02);
     expect(d.posted[0]).toContain('passes the gate');
     expect(d.posted[0]).toContain('- correctness: **5/5**');
     expect(d.posted[0]).toContain('**minor** `src/export.ts:3`');

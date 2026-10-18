@@ -6,8 +6,9 @@ export type SpecWriterFixture = { port: SpecWriterPort; ticket: Ticket };
 
 export const specWriterContract: Record<string, (fixture: SpecWriterFixture) => Promise<void>> = {
   'draftSpec returns a spec that passes the schema and names the ticket': async ({ port, ticket }) => {
-    const spec = await port.draftSpec({ ticket, repoContext: '' });
+    const { spec, tokens, estimatedCostUsd } = await port.draftSpec({ ticket, repoContext: '' });
     assert.deepEqual(parseSpec(spec), spec);
     assert.equal(spec.ticketKey, ticket.key);
+    assert.ok(estimatedCostUsd >= 0 && tokens.inputTokens >= 0 && tokens.outputTokens >= 0);
   },
 };

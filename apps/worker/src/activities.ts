@@ -16,8 +16,8 @@ import {
   type ImplementationResult,
   type ReviewResult,
 } from '@zenthos/application';
-import type { Approval, GateResult, PullRequest, Review, Run, Spec, Workspace } from '@zenthos/domain';
-import type { CodingAgentPort, IssueTrackerPort, RepoProfilesPort, ReviewerPort, RunsPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
+import type { Approval, GateResult, PullRequest, Review, Run, Workspace } from '@zenthos/domain';
+import type { CodingAgentPort, IssueTrackerPort, RepoProfilesPort, ReviewerPort, RunsPort, SandboxPort, ScmPort, SpecDraft, SpecWriterPort } from '@zenthos/ports';
 
 export type ActivityDeps = {
   issueTracker: IssueTrackerPort;
@@ -55,7 +55,7 @@ export function createActivities(deps: ActivityDeps) {
   const profile = (run: Run) => profileForTicket(deps.profiles, run.ticket.key);
   return {
     intake: async (key: string): Promise<Run> => intakeTicket(deps, key, await profileForTicket(deps.profiles, key)),
-    draftSpec: (run: Run): Promise<Spec> => draftSpec(deps, run, deps.repoContext),
+    draftSpec: (run: Run): Promise<SpecDraft> => draftSpec(deps, run, deps.repoContext),
     readApproval: (key: string): Promise<Approval> => readApproval(deps, key),
     prepare: async (run: Run): Promise<Workspace> => prepareWorkspace(deps, run, await profile(run)),
     baseline: (run: Run, workspace: Workspace): Promise<string[]> => withHeartbeat(async () => baselineGates(deps, workspace, await profile(run))),

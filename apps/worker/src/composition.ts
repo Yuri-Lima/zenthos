@@ -11,7 +11,7 @@ import { migrate, PostgresProviderConnections, PostgresRepoProfiles, PostgresRun
 import { credentialsForRepo } from '@zenthos/application';
 import pg from 'pg';
 import { noTracing, startLangfuseTracing } from '@zenthos/adapter-langfuse';
-import { createAnthropicReviewerModels, createAnthropicSpecModel, LangGraphReviewer, LangGraphSpecWriter, REVIEWER_VERSION, SPEC_WRITER_VERSION, verifyAnthropicAccess } from '@zenthos/agents';
+import { costEstimator, createAnthropicReviewerModels, createAnthropicSpecModel, LangGraphReviewer, LangGraphSpecWriter, REVIEWER_VERSION, SPEC_WRITER_VERSION, verifyAnthropicAccess } from '@zenthos/agents';
 import type { CodingAgentPort, IssueTrackerPort, ProviderConnectionsPort, RepoProfilesPort, ReviewerPort, RunsPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
 import { githubCredentials, loadConfig, type WorkerConfig } from './config.js';
 import { REPO_PROFILES } from './repos.js';
@@ -75,6 +75,7 @@ export async function specWriter(config: WorkerConfig, trace: ReturnType<typeof 
   return new LangGraphSpecWriter({
     model: createAnthropicSpecModel(modelConfig),
     callbacks: ({ ticket }) => trace.callbacks({ sessionId: ticket.key, version: SPEC_WRITER_VERSION }),
+    estimateCost: costEstimator(modelConfig.model),
   });
 }
 
@@ -101,6 +102,7 @@ export async function reviewer(config: WorkerConfig, trace: ReturnType<typeof tr
   return new LangGraphReviewer({
     models: createAnthropicReviewerModels(modelConfig),
     callbacks: ({ spec }) => trace.callbacks({ sessionId: spec.ticketKey, version: REVIEWER_VERSION }),
+    estimateCost: costEstimator(modelConfig.model),
   });
 }
 

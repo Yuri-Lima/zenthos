@@ -35,7 +35,8 @@ describe('LangGraphSpecWriter', () => {
 
   it('feeds schema errors back and accepts the corrected draft', async () => {
     const { model, calls } = modelReturning({ problem: 'too short' }, validDraft);
-    const spec = await new LangGraphSpecWriter({ model }).draftSpec({ ticket, repoContext: '' });
+    const { spec, estimatedCostUsd } = await new LangGraphSpecWriter({ model }).draftSpec({ ticket, repoContext: '' });
+    expect(estimatedCostUsd).toBe(0);
     expect(spec.ticketKey).toBe(ticket.key);
     expect(calls).toHaveLength(2);
     expect(calls[1]).toContain('previous draft was rejected');

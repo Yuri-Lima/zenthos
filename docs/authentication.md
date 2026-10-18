@@ -13,8 +13,9 @@ before the first ticket.
 
 A leftover `ANTHROPIC_API_KEY`, even an empty one, shadows both other paths. Unset it rather than blanking it.
 
-**What the cost numbers mean.** The run's `estimatedCostUsd` is the sum of the agents' own estimates at
-list price; the Agent SDK documents its `total_cost_usd` as "estimates, not billing". Under a subscription
+**What the cost numbers mean.** The run's `estimatedCostUsd` is the sum of every agent call's estimate at
+list price: the coding agent's own figure (the Agent SDK documents its `total_cost_usd` as "estimates, not
+billing") plus the spec writer's and the reviewer's tokens priced from the table in `libs/agents/src/lib/pricing.ts`. Under a subscription
 nothing is charged for the coding agent; under an API key or federation the invoice is the Console's usage
 page, not this field. The run also keeps the token counts the models reported, which is what a bill is
 based on. LangFuse prices the spec-writer calls itself from its built-in model table.

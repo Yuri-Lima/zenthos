@@ -1,9 +1,9 @@
-import { checkReviewThreshold, DomainError, REVIEW_RUBRIC, RUBRIC_KEYS, reviewScore, type GateResult, type RepoProfile, type Review, type Run } from '@zenthos/domain';
+import { checkReviewThreshold, DomainError, REVIEW_RUBRIC, RUBRIC_KEYS, reviewScore, type GateResult, type RepoProfile, type Review, type Run, type Usage } from '@zenthos/domain';
 import type { ReviewerPort, ScmPort } from '@zenthos/ports';
 
 export type ReviewChangeDeps = { reviewer: ReviewerPort; scm: ScmPort };
 
-export type ReviewResult = { review: Review; gate: GateResult };
+export type ReviewResult = { review: Review; gate: GateResult } & Usage;
 
 /**
  * Use case 7: the reviewer scores the pull request's diff against the rubric, the policy decides
@@ -13,10 +13,10 @@ export type ReviewResult = { review: Review; gate: GateResult };
 export async function reviewChange({ reviewer, scm }: ReviewChangeDeps, run: Run, profile: RepoProfile): Promise<ReviewResult> {
   if (!run.spec || !run.pullRequest) throw new DomainError('invalid_review', { reason: 'run has no spec or no pull request to review' });
   const diff = await scm.readPullRequestDiff(profile, run.pullRequest);
-  const review = await reviewer.review({ spec: run.spec, diff, gates: run.gates ?? [], profile });
+  const { review, tokens, estimatedCostUsd } = await reviewer.review({ spec: run.spec, diff, gates: run.gates ?? [], profile });
   const gate = checkReviewThreshold(review, run.policy);
   await scm.postReview({ profile, pullRequest: run.pullRequest, body: renderReviewComment(review, gate) });
-  return { review, gate };
+  return { review, gate, tokens, estimatedCostUsd };
 }
 
 /** Evidence runs to paragraphs, so each rubric line is a collapsible section rather than a table cell. */

@@ -1,5 +1,5 @@
 import { condition, defineQuery, defineSignal, proxyActivities, setHandler } from '@temporalio/workflow';
-import { addTokens, applyEvent, canRetryAfter, DEFAULT_APPROVAL_POLICY, WORKFLOW_CONTRACT, type Approval, type ApprovalPolicy, type Run, type RunEvent, type Workspace } from '@zenthos/domain';
+import { applyEvent, canRetryAfter, DEFAULT_APPROVAL_POLICY, withUsage, WORKFLOW_CONTRACT, type Approval, type ApprovalPolicy, type Run, type RunEvent, type Workspace } from '@zenthos/domain';
 import type { Activities } from './activities.js';
 
 const activities = proxyActivities<Activities>({
@@ -60,7 +60,8 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
   };
 
   for (let round = 1; round <= policy.maxDraftRounds; round++) {
-    run = { ...run, spec: await activities.draftSpec(run) };
+    const draft = await activities.draftSpec(run);
+    run = { ...withUsage(run, draft), spec: draft.spec };
     await advance('spec_drafted');
 
     const outcome = await waitForDecision(input.key, policy, () => decision !== undefined, takeDecision);
@@ -84,7 +85,7 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
   const implementUntilGatesPass = async (feedback: string | undefined): Promise<'passed' | 'escalated'> => {
     for (let round = 1; round <= implementRounds; round++) {
       const { implementation, diff } = await longActivities.implement(run, workspace, feedback);
-      run = { ...run, estimatedCostUsd: run.estimatedCostUsd + implementation.estimatedCostUsd, tokens: addTokens(run.tokens, implementation.tokens) };
+      run = withUsage(run, implementation);
       await advance('implemented');
 
       const gates = await longActivities.runGates(run, workspace, diff, baselineFailures);
@@ -111,8 +112,8 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
     run = { ...run, pullRequest: await activities.openPullRequest(run, workspace, run.gates ?? []) };
     await advance('mr_opened');
 
-    const { review, gate } = await longActivities.review(run);
-    run = { ...run, review, gates: [...(run.gates ?? []), gate] };
+    const { review, gate, ...reviewUsage } = await longActivities.review(run);
+    run = { ...withUsage(run, reviewUsage), review, gates: [...(run.gates ?? []), gate] };
     if (gate.passed) {
       await activities.cleanup(workspace);
       return await advance('review_passed');
