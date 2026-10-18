@@ -43,6 +43,12 @@
         "options": {
           "cwd": "{workspaceRoot}"
         }
+      },
+      "rotate-key": {
+        "command": "tsx --conditions=@zenthos/source apps/worker/src/scripts/rotate-key.ts",
+        "options": {
+          "cwd": "{workspaceRoot}"
+        }
       }
     }
   },

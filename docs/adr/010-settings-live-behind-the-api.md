@@ -39,7 +39,8 @@ in the worker's environment and in `apps/worker/src/repos.ts`.
 ## Consequences
 
 - One long-lived secret remains: the deployment key. On a laptop it sits in `.env`; on Cloud Run it comes
-  from Secret Manager. Rotating it means re-sealing every row, a small script when it is needed.
+  from Secret Manager. `pnpm nx run @zenthos/worker:rotate-key` re-seals every row under a new key in one
+  transaction; then the API and the worker restart with the new value.
 - Manifest state is kept in the API process for ten minutes; a restart mid-flow means starting over, which
   is acceptable for a flow a person runs once.
 - GitHub must reach the API for the webhook and the callbacks; on a laptop that is a tunnel, and the
