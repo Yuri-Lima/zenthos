@@ -1,18 +1,21 @@
+import { z } from 'zod';
 import { fail, pass, type GateResult } from './gate.js';
 
 /** Limits enforced per run by deterministic code, never by a prompt. */
-export type RunPolicy = {
-  costCeilingUsd: number;
-  diffBudgetLines: number;
+export const RunPolicySchema = z.object({
+  costCeilingUsd: z.number().positive(),
+  diffBudgetLines: z.number().int().positive(),
   /** Any changed path starting with one of these needs a human approval. */
-  forbiddenPathPrefixes: string[];
+  forbiddenPathPrefixes: z.array(z.string()),
   /** Implementation attempts before the run escalates; each retry sees the failed gates. */
-  maxImplementRounds: number;
+  maxImplementRounds: z.number().int().min(1),
   /** Mean rubric score (1 to 5) a review must reach; any blocker finding fails regardless. */
-  reviewThreshold: number;
+  reviewThreshold: z.number().min(1).max(5),
   /** Re-implementations allowed after a failed review before the run escalates. */
-  maxReviewRounds: number;
-};
+  maxReviewRounds: z.number().int().min(0),
+});
+
+export type RunPolicy = z.infer<typeof RunPolicySchema>;
 
 /**
  * Files that define the gates themselves. An agent that edits these to make a check pass has gamed

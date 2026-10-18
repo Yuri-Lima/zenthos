@@ -1,3 +1,4 @@
+import { z } from 'zod';
 /** Every quality gate the pipeline can run, in the order they usually run. */
 export const GATES = [
   'spec_schema',
@@ -13,12 +14,14 @@ export const GATES = [
 
 export type Gate = (typeof GATES)[number];
 
-export type GateResult = {
-  gate: Gate;
-  passed: boolean;
+export const GateResultSchema = z.object({
+  gate: z.enum(GATES),
+  passed: z.boolean(),
   /** Why it failed, or why a passing result deserves a note (a command skipped because it fails on the base branch). */
-  detail?: string;
-};
+  detail: z.string().optional(),
+});
+
+export type GateResult = z.infer<typeof GateResultSchema>;
 
 /**
  * Whether another implementation round can fix a failure of this gate. A breached cost ceiling or a

@@ -54,17 +54,19 @@ export function parseConnection(input: unknown): ProviderConnection {
   return result.data;
 }
 
-export type PublicConnection = {
-  id: string;
-  provider: Provider;
-  name: string;
-  kind: GitHubCredentials['type'];
-  appSlug?: string;
-  installations: Installation[];
-  createdAt: string;
-};
-
 /** The view the API serves: no credentials, no app secrets. */
+export const PublicConnectionSchema = z.object({
+  id: z.uuid(),
+  provider: z.enum(PROVIDERS),
+  name: z.string(),
+  kind: z.enum(['github-app', 'github-token']),
+  appSlug: z.string().optional(),
+  installations: z.array(InstallationSchema),
+  createdAt: z.iso.datetime(),
+});
+
+export type PublicConnection = z.infer<typeof PublicConnectionSchema>;
+
 export function redactConnection({ id, provider, name, credentials, app, installations, createdAt }: ProviderConnection): PublicConnection {
   return { id, provider, name, kind: credentials.type, appSlug: app?.slug, installations, createdAt };
 }

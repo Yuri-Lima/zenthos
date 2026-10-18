@@ -1,12 +1,13 @@
 import 'reflect-metadata';
 import { signPayload as sign } from '@zenthos/adapter-github';
-import { InMemoryGitHubApps, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryRunControl, InMemoryRuns } from '@zenthos/adapter-in-memory';
+import { InMemoryRepoProfiles } from '@zenthos/adapter-in-memory';
 import { connectGitHubApp } from '@zenthos/application';
 import { repoProfile } from '@zenthos/domain';
+import { inMemoryPorts } from '../ports.js';
 import { WebhooksService } from './webhooks.service.js';
 
 describe('WebhooksService', () => {
-  const ports = { connections: new InMemoryProviderConnections(), profiles: new InMemoryRepoProfiles([repoProfile({ repo: 'owner/repo', cloneUrl: 'x', baseBranch: 'main', allowedCommands: [], gateCommands: [] })]), runs: new InMemoryRunControl(), runStore: new InMemoryRuns(), githubApps: new InMemoryGitHubApps(), close: async () => undefined };
+  const ports = { ...inMemoryPorts(), profiles: new InMemoryRepoProfiles([repoProfile({ repo: 'owner/repo', cloneUrl: 'x', baseBranch: 'main', allowedCommands: [], gateCommands: [] })]) };
   const service = new WebhooksService(ports);
   const body = JSON.stringify({ action: 'labeled', label: { name: 'zenthos:run' }, issue: { number: 7 }, repository: { full_name: 'owner/repo' } });
 

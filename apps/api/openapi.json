@@ -1,0 +1,2341 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "HealthController_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/providers": {
+      "get": {
+        "operationId": "ProvidersController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "provider": {
+                        "type": "string",
+                        "enum": [
+                          "github"
+                        ]
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "github-app",
+                          "github-token"
+                        ]
+                      },
+                      "appSlug": {
+                        "type": "string"
+                      },
+                      "installations": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "installationId": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "account": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "repositories": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            }
+                          },
+                          "required": [
+                            "installationId",
+                            "account",
+                            "repositories"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "provider",
+                      "name",
+                      "kind",
+                      "installations",
+                      "createdAt"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List provider connections, secrets redacted",
+        "tags": [
+          "providers"
+        ]
+      }
+    },
+    "/providers/github/token": {
+      "post": {
+        "operationId": "ProvidersController_connectToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "token": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "name",
+                  "token"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "provider": {
+                      "type": "string",
+                      "enum": [
+                        "github"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "github-app",
+                        "github-token"
+                      ]
+                    },
+                    "appSlug": {
+                      "type": "string"
+                    },
+                    "installations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "installationId": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "account": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "repositories": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          }
+                        },
+                        "required": [
+                          "installationId",
+                          "account",
+                          "repositories"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "provider",
+                    "name",
+                    "kind",
+                    "installations",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "Connect GitHub with a personal token (interim for one account)",
+        "tags": [
+          "providers"
+        ]
+      }
+    },
+    "/providers/github/app": {
+      "post": {
+        "operationId": "ProvidersController_connectApp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "appId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "privateKey": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "webhookSecret": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "name",
+                  "appId",
+                  "privateKey"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "provider": {
+                      "type": "string",
+                      "enum": [
+                        "github"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "github-app",
+                        "github-token"
+                      ]
+                    },
+                    "appSlug": {
+                      "type": "string"
+                    },
+                    "installations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "installationId": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "account": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "repositories": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          }
+                        },
+                        "required": [
+                          "installationId",
+                          "account",
+                          "repositories"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "provider",
+                    "name",
+                    "kind",
+                    "installations",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "Connect a GitHub App created by hand: app id, private key, and the webhook secret if one is set",
+        "tags": [
+          "providers"
+        ]
+      }
+    },
+    "/providers/github/manifest": {
+      "get": {
+        "operationId": "ProvidersController_startManifest",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Start creating a GitHub App from the manifest; redirects to GitHub",
+        "tags": [
+          "providers"
+        ]
+      }
+    },
+    "/providers/github/manifest/callback": {
+      "get": {
+        "operationId": "ProvidersController_finishManifest",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "GitHub returns here with the manifest code; the app becomes a connection",
+        "tags": [
+          "providers"
+        ]
+      }
+    },
+    "/providers/github/install/callback": {
+      "get": {
+        "operationId": "ProvidersController_finishInstall",
+        "parameters": [
+          {
+            "name": "connection",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "installation_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "provider": {
+                      "type": "string",
+                      "enum": [
+                        "github"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "github-app",
+                        "github-token"
+                      ]
+                    },
+                    "appSlug": {
+                      "type": "string"
+                    },
+                    "installations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "installationId": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "account": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "repositories": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          }
+                        },
+                        "required": [
+                          "installationId",
+                          "account",
+                          "repositories"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "provider",
+                    "name",
+                    "kind",
+                    "installations",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "GitHub returns here after an install; the installation is read and recorded",
+        "tags": [
+          "providers"
+        ]
+      }
+    },
+    "/providers/{id}": {
+      "delete": {
+        "operationId": "ProvidersController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Remove a connection; profiles that used it keep working only through the environment",
+        "tags": [
+          "providers"
+        ]
+      }
+    },
+    "/repos": {
+      "get": {
+        "operationId": "ReposController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "repo": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "cloneUrl": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "baseBranch": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "allowedCommands": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "gateCommands": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "policy": {
+                        "type": "object",
+                        "properties": {
+                          "costCeilingUsd": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "diffBudgetLines": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "forbiddenPathPrefixes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "maxImplementRounds": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
+                          "reviewThreshold": {
+                            "type": "number",
+                            "minimum": 1,
+                            "maximum": 5
+                          },
+                          "maxReviewRounds": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "costCeilingUsd",
+                          "diffBudgetLines",
+                          "forbiddenPathPrefixes",
+                          "maxImplementRounds",
+                          "reviewThreshold",
+                          "maxReviewRounds"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "connectionId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    },
+                    "required": [
+                      "repo",
+                      "cloneUrl",
+                      "baseBranch",
+                      "allowedCommands",
+                      "gateCommands",
+                      "policy"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List repository profiles",
+        "tags": [
+          "repos"
+        ]
+      }
+    },
+    "/repos/{owner}/{name}": {
+      "get": {
+        "operationId": "ReposController_get",
+        "parameters": [
+          {
+            "name": "owner",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "repo": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "cloneUrl": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "baseBranch": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "allowedCommands": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "gateCommands": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "policy": {
+                      "type": "object",
+                      "properties": {
+                        "costCeilingUsd": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "diffBudgetLines": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "forbiddenPathPrefixes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "maxImplementRounds": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        "reviewThreshold": {
+                          "type": "number",
+                          "minimum": 1,
+                          "maximum": 5
+                        },
+                        "maxReviewRounds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "costCeilingUsd",
+                        "diffBudgetLines",
+                        "forbiddenPathPrefixes",
+                        "maxImplementRounds",
+                        "reviewThreshold",
+                        "maxReviewRounds"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "connectionId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "required": [
+                    "repo",
+                    "cloneUrl",
+                    "baseBranch",
+                    "allowedCommands",
+                    "gateCommands",
+                    "policy"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "repos"
+        ]
+      },
+      "put": {
+        "operationId": "ReposController_put",
+        "parameters": [
+          {
+            "name": "owner",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cloneUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "baseBranch": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "allowedCommands": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "gateCommands": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "policy": {
+                    "type": "object",
+                    "properties": {
+                      "costCeilingUsd": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "diffBudgetLines": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "forbiddenPathPrefixes": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "maxImplementRounds": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "reviewThreshold": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 5
+                      },
+                      "maxReviewRounds": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "connectionId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "cloneUrl",
+                  "baseBranch",
+                  "allowedCommands",
+                  "gateCommands"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "repo": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "cloneUrl": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "baseBranch": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "allowedCommands": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "gateCommands": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "policy": {
+                      "type": "object",
+                      "properties": {
+                        "costCeilingUsd": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "diffBudgetLines": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "forbiddenPathPrefixes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "maxImplementRounds": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        "reviewThreshold": {
+                          "type": "number",
+                          "minimum": 1,
+                          "maximum": 5
+                        },
+                        "maxReviewRounds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "costCeilingUsd",
+                        "diffBudgetLines",
+                        "forbiddenPathPrefixes",
+                        "maxImplementRounds",
+                        "reviewThreshold",
+                        "maxReviewRounds"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "connectionId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "required": [
+                    "repo",
+                    "cloneUrl",
+                    "baseBranch",
+                    "allowedCommands",
+                    "gateCommands",
+                    "policy"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create or replace a repository profile; gate commands must be allowed commands",
+        "tags": [
+          "repos"
+        ]
+      },
+      "delete": {
+        "operationId": "ReposController_remove",
+        "parameters": [
+          {
+            "name": "owner",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "repos"
+        ]
+      }
+    },
+    "/runs": {
+      "get": {
+        "operationId": "RunsController_list",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 50
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "intake",
+                "spec_drafted",
+                "spec_approved",
+                "implemented",
+                "gates_passed",
+                "mr_opened",
+                "reviewed",
+                "verified",
+                "done",
+                "failed",
+                "needs_human"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "ticket",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "owner/repo#123"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "ticket": {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "title": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "body": {
+                              "type": "string"
+                            },
+                            "url": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "labels": {
+                              "default": [],
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "title",
+                            "body",
+                            "url",
+                            "labels"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "intake",
+                            "spec_drafted",
+                            "spec_approved",
+                            "implemented",
+                            "gates_passed",
+                            "mr_opened",
+                            "reviewed",
+                            "verified",
+                            "done",
+                            "failed",
+                            "needs_human"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        },
+                        "estimatedCostUsd": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "tokens": {
+                          "type": "object",
+                          "properties": {
+                            "inputTokens": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "outputTokens": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "cacheReadTokens": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "cacheWriteTokens": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "inputTokens",
+                            "outputTokens",
+                            "cacheReadTokens",
+                            "cacheWriteTokens"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "policy": {
+                          "type": "object",
+                          "properties": {
+                            "costCeilingUsd": {
+                              "type": "number",
+                              "exclusiveMinimum": 0
+                            },
+                            "diffBudgetLines": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "forbiddenPathPrefixes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "maxImplementRounds": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991
+                            },
+                            "reviewThreshold": {
+                              "type": "number",
+                              "minimum": 1,
+                              "maximum": 5
+                            },
+                            "maxReviewRounds": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "costCeilingUsd",
+                            "diffBudgetLines",
+                            "forbiddenPathPrefixes",
+                            "maxImplementRounds",
+                            "reviewThreshold",
+                            "maxReviewRounds"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "history": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "event": {
+                                "type": "string",
+                                "enum": [
+                                  "spec_drafted",
+                                  "spec_approved",
+                                  "spec_rejected",
+                                  "implemented",
+                                  "gates_passed",
+                                  "gates_failed",
+                                  "review_passed",
+                                  "review_failed",
+                                  "mr_opened",
+                                  "verified",
+                                  "verification_failed",
+                                  "merged",
+                                  "escalated",
+                                  "human_resumed",
+                                  "human_abandoned",
+                                  "failed"
+                                ]
+                              },
+                              "from": {
+                                "type": "string",
+                                "enum": [
+                                  "intake",
+                                  "spec_drafted",
+                                  "spec_approved",
+                                  "implemented",
+                                  "gates_passed",
+                                  "mr_opened",
+                                  "reviewed",
+                                  "verified",
+                                  "done",
+                                  "failed",
+                                  "needs_human"
+                                ]
+                              },
+                              "to": {
+                                "type": "string",
+                                "enum": [
+                                  "intake",
+                                  "spec_drafted",
+                                  "spec_approved",
+                                  "implemented",
+                                  "gates_passed",
+                                  "mr_opened",
+                                  "reviewed",
+                                  "verified",
+                                  "done",
+                                  "failed",
+                                  "needs_human"
+                                ]
+                              },
+                              "at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                              }
+                            },
+                            "required": [
+                              "event",
+                              "from",
+                              "to",
+                              "at"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "spec": {
+                          "type": "object",
+                          "properties": {
+                            "ticketKey": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "problem": {
+                              "type": "string",
+                              "minLength": 10
+                            },
+                            "inScope": {
+                              "minItems": 1,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "outOfScope": {
+                              "default": [],
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "acceptanceCriteria": {
+                              "minItems": 1,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "pattern": "^AC-\\d+$"
+                                  },
+                                  "statement": {
+                                    "type": "string",
+                                    "minLength": 10
+                                  },
+                                  "testHint": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "statement",
+                                  "testHint"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "touchedAreas": {
+                              "minItems": 1,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "risks": {
+                              "default": [],
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            }
+                          },
+                          "required": [
+                            "ticketKey",
+                            "problem",
+                            "inScope",
+                            "outOfScope",
+                            "acceptanceCriteria",
+                            "touchedAreas",
+                            "risks"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "gates": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "gate": {
+                                "type": "string",
+                                "enum": [
+                                  "spec_schema",
+                                  "approval",
+                                  "sandbox_allowlist",
+                                  "secret_scan",
+                                  "forbidden_paths",
+                                  "diff_budget",
+                                  "cost_ceiling",
+                                  "ci",
+                                  "review_threshold"
+                                ]
+                              },
+                              "passed": {
+                                "type": "boolean"
+                              },
+                              "detail": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "gate",
+                              "passed"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "pullRequest": {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "number": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "url",
+                            "number"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "review": {
+                          "type": "object",
+                          "properties": {
+                            "scores": {
+                              "type": "object",
+                              "properties": {
+                                "correctness": {
+                                  "type": "object",
+                                  "properties": {
+                                    "score": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 5
+                                    },
+                                    "evidence": {
+                                      "type": "string",
+                                      "minLength": 10
+                                    }
+                                  },
+                                  "required": [
+                                    "score",
+                                    "evidence"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "spec_coverage": {
+                                  "type": "object",
+                                  "properties": {
+                                    "score": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 5
+                                    },
+                                    "evidence": {
+                                      "type": "string",
+                                      "minLength": 10
+                                    }
+                                  },
+                                  "required": [
+                                    "score",
+                                    "evidence"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "readability": {
+                                  "type": "object",
+                                  "properties": {
+                                    "score": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 5
+                                    },
+                                    "evidence": {
+                                      "type": "string",
+                                      "minLength": 10
+                                    }
+                                  },
+                                  "required": [
+                                    "score",
+                                    "evidence"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "engineering_rules": {
+                                  "type": "object",
+                                  "properties": {
+                                    "score": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 5
+                                    },
+                                    "evidence": {
+                                      "type": "string",
+                                      "minLength": 10
+                                    }
+                                  },
+                                  "required": [
+                                    "score",
+                                    "evidence"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "correctness",
+                                "spec_coverage",
+                                "readability",
+                                "engineering_rules"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "findings": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "file": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "line": {
+                                    "type": "integer",
+                                    "exclusiveMinimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "severity": {
+                                    "type": "string",
+                                    "enum": [
+                                      "blocker",
+                                      "major",
+                                      "minor"
+                                    ]
+                                  },
+                                  "message": {
+                                    "type": "string",
+                                    "minLength": 5
+                                  }
+                                },
+                                "required": [
+                                  "file",
+                                  "severity",
+                                  "message"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "summary": {
+                              "type": "string",
+                              "minLength": 10
+                            }
+                          },
+                          "required": [
+                            "scores",
+                            "findings",
+                            "summary"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "branch": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "ticket",
+                        "state",
+                        "createdAt",
+                        "estimatedCostUsd",
+                        "tokens",
+                        "policy",
+                        "history"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "ticket": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "title": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "body": {
+                                "type": "string"
+                              },
+                              "url": {
+                                "type": "string",
+                                "format": "uri"
+                              },
+                              "labels": {
+                                "default": [],
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "title",
+                              "body",
+                              "url",
+                              "labels"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "intake",
+                              "spec_drafted",
+                              "spec_approved",
+                              "implemented",
+                              "gates_passed",
+                              "mr_opened",
+                              "reviewed",
+                              "verified",
+                              "done",
+                              "failed",
+                              "needs_human"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          },
+                          "estimatedCostUsd": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "tokens": {
+                            "type": "object",
+                            "properties": {
+                              "inputTokens": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "outputTokens": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "cacheReadTokens": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "cacheWriteTokens": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "inputTokens",
+                              "outputTokens",
+                              "cacheReadTokens",
+                              "cacheWriteTokens"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "policy": {
+                            "type": "object",
+                            "properties": {
+                              "costCeilingUsd": {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                              },
+                              "diffBudgetLines": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "forbiddenPathPrefixes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "maxImplementRounds": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              "reviewThreshold": {
+                                "type": "number",
+                                "minimum": 1,
+                                "maximum": 5
+                              },
+                              "maxReviewRounds": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "costCeilingUsd",
+                              "diffBudgetLines",
+                              "forbiddenPathPrefixes",
+                              "maxImplementRounds",
+                              "reviewThreshold",
+                              "maxReviewRounds"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "history": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "event": {
+                                  "type": "string",
+                                  "enum": [
+                                    "spec_drafted",
+                                    "spec_approved",
+                                    "spec_rejected",
+                                    "implemented",
+                                    "gates_passed",
+                                    "gates_failed",
+                                    "review_passed",
+                                    "review_failed",
+                                    "mr_opened",
+                                    "verified",
+                                    "verification_failed",
+                                    "merged",
+                                    "escalated",
+                                    "human_resumed",
+                                    "human_abandoned",
+                                    "failed"
+                                  ]
+                                },
+                                "from": {
+                                  "type": "string",
+                                  "enum": [
+                                    "intake",
+                                    "spec_drafted",
+                                    "spec_approved",
+                                    "implemented",
+                                    "gates_passed",
+                                    "mr_opened",
+                                    "reviewed",
+                                    "verified",
+                                    "done",
+                                    "failed",
+                                    "needs_human"
+                                  ]
+                                },
+                                "to": {
+                                  "type": "string",
+                                  "enum": [
+                                    "intake",
+                                    "spec_drafted",
+                                    "spec_approved",
+                                    "implemented",
+                                    "gates_passed",
+                                    "mr_opened",
+                                    "reviewed",
+                                    "verified",
+                                    "done",
+                                    "failed",
+                                    "needs_human"
+                                  ]
+                                },
+                                "at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                                }
+                              },
+                              "required": [
+                                "event",
+                                "from",
+                                "to",
+                                "at"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "spec": {
+                            "type": "object",
+                            "properties": {
+                              "ticketKey": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "problem": {
+                                "type": "string",
+                                "minLength": 10
+                              },
+                              "inScope": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              },
+                              "outOfScope": {
+                                "default": [],
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              },
+                              "acceptanceCriteria": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "pattern": "^AC-\\d+$"
+                                    },
+                                    "statement": {
+                                      "type": "string",
+                                      "minLength": 10
+                                    },
+                                    "testHint": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "statement",
+                                    "testHint"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "touchedAreas": {
+                                "minItems": 1,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              },
+                              "risks": {
+                                "default": [],
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              }
+                            },
+                            "required": [
+                              "ticketKey",
+                              "problem",
+                              "inScope",
+                              "outOfScope",
+                              "acceptanceCriteria",
+                              "touchedAreas",
+                              "risks"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "gates": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "gate": {
+                                  "type": "string",
+                                  "enum": [
+                                    "spec_schema",
+                                    "approval",
+                                    "sandbox_allowlist",
+                                    "secret_scan",
+                                    "forbidden_paths",
+                                    "diff_budget",
+                                    "cost_ceiling",
+                                    "ci",
+                                    "review_threshold"
+                                  ]
+                                },
+                                "passed": {
+                                  "type": "boolean"
+                                },
+                                "detail": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "gate",
+                                "passed"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "pullRequest": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": "string",
+                                "format": "uri"
+                              },
+                              "number": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "url",
+                              "number"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "review": {
+                            "type": "object",
+                            "properties": {
+                              "scores": {
+                                "type": "object",
+                                "properties": {
+                                  "correctness": {
+                                    "type": "object",
+                                    "properties": {
+                                      "score": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 5
+                                      },
+                                      "evidence": {
+                                        "type": "string",
+                                        "minLength": 10
+                                      }
+                                    },
+                                    "required": [
+                                      "score",
+                                      "evidence"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "spec_coverage": {
+                                    "type": "object",
+                                    "properties": {
+                                      "score": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 5
+                                      },
+                                      "evidence": {
+                                        "type": "string",
+                                        "minLength": 10
+                                      }
+                                    },
+                                    "required": [
+                                      "score",
+                                      "evidence"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "readability": {
+                                    "type": "object",
+                                    "properties": {
+                                      "score": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 5
+                                      },
+                                      "evidence": {
+                                        "type": "string",
+                                        "minLength": 10
+                                      }
+                                    },
+                                    "required": [
+                                      "score",
+                                      "evidence"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "engineering_rules": {
+                                    "type": "object",
+                                    "properties": {
+                                      "score": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 5
+                                      },
+                                      "evidence": {
+                                        "type": "string",
+                                        "minLength": 10
+                                      }
+                                    },
+                                    "required": [
+                                      "score",
+                                      "evidence"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "correctness",
+                                  "spec_coverage",
+                                  "readability",
+                                  "engineering_rules"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "findings": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "file": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "line": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "severity": {
+                                      "type": "string",
+                                      "enum": [
+                                        "blocker",
+                                        "major",
+                                        "minor"
+                                      ]
+                                    },
+                                    "message": {
+                                      "type": "string",
+                                      "minLength": 5
+                                    }
+                                  },
+                                  "required": [
+                                    "file",
+                                    "severity",
+                                    "message"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "summary": {
+                                "type": "string",
+                                "minLength": 10
+                              }
+                            },
+                            "required": [
+                              "scores",
+                              "findings",
+                              "summary"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "branch": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "ticket",
+                          "state",
+                          "createdAt",
+                          "estimatedCostUsd",
+                          "tokens",
+                          "policy",
+                          "history"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "summary": "The newest run for a ticket, or the newest runs overall, newest first",
+        "tags": [
+          "runs"
+        ]
+      },
+      "post": {
+        "operationId": "RunsController_start",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ticketKey": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "ticketKey"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "workflowId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "workflowId"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "Start a run for a ticket (idempotent per ticket)",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/runs/decision": {
+      "post": {
+        "operationId": "RunsController_decide",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ticketKey": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "approved",
+                      "rejected"
+                    ]
+                  }
+                },
+                "required": [
+                  "ticketKey",
+                  "decision"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ticketKey": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "decision": {
+                      "type": "string",
+                      "enum": [
+                        "approved",
+                        "rejected"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ticketKey",
+                    "decision"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "Approve or reject the current spec draft",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/webhooks/github": {
+      "post": {
+        "operationId": "WebhooksController_github",
+        "parameters": [
+          {
+            "name": "x-github-event",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-github-delivery",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-hub-signature-256",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-github-hook-installation-target-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": ""
+          }
+        },
+        "summary": "GitHub App webhook: labels start and decide runs, installation events update the connection",
+        "tags": [
+          "webhooks"
+        ]
+      }
+    },
+    "/metrics": {
+      "get": {
+        "operationId": "MetricsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "metric": {
+                        "type": "string",
+                        "enum": [
+                          "spec_approval_rate",
+                          "clean_merge_rate",
+                          "ticket_to_pr_minutes",
+                          "cost_per_ticket_usd",
+                          "tokens_per_ticket",
+                          "gate_failures",
+                          "reviewer_agreement",
+                          "regression_score",
+                          "human_minutes_per_ticket"
+                        ]
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "unit": {
+                        "type": "string"
+                      },
+                      "source": {
+                        "type": "string",
+                        "enum": [
+                          "runs",
+                          "scm",
+                          "evals",
+                          "approvals"
+                        ]
+                      },
+                      "value": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "breakdown": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "number"
+                        }
+                      },
+                      "runs": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "metric",
+                      "description",
+                      "unit",
+                      "source",
+                      "value",
+                      "runs"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Every metric, with its definition beside its value; null where the runs store is not its source",
+        "tags": [
+          "metrics"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "ZenthOs API",
+    "description": "",
+    "version": "0.1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {}
+  }
+}

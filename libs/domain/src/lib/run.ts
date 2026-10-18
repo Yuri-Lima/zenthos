@@ -1,42 +1,54 @@
-import type { GateResult } from './gate.js';
-import { addUsage, NO_TOKENS, type PullRequest, type TokenUsage, type Usage } from './implementation.js';
-import type { Review } from './review.js';
-import { DEFAULT_POLICY, type RunPolicy } from './policies.js';
-import type { Spec } from './specification.js';
-import type { Ticket } from './ticket.js';
-import { transition, type RunEvent, type RunState } from './run-state.js';
+import { z } from 'zod';
+import { DomainError } from './errors.js';
+import { GateResultSchema } from './gate.js';
+import { addUsage, NO_TOKENS, PullRequestSchema, TokenUsageSchema, type Usage } from './implementation.js';
+import { ReviewSchema } from './review.js';
+import { DEFAULT_POLICY, RunPolicySchema, type RunPolicy } from './policies.js';
+import { SpecSchema } from './specification.js';
+import { TicketSchema, type Ticket } from './ticket.js';
+import { RUN_EVENTS, RUN_STATES, transition, type RunEvent } from './run-state.js';
 
-export type RunHistoryEntry = {
-  event: RunEvent;
-  from: RunState;
-  to: RunState;
-  at: string;
-};
+export const RunHistoryEntrySchema = z.object({
+  event: z.enum(RUN_EVENTS),
+  from: z.enum(RUN_STATES),
+  to: z.enum(RUN_STATES),
+  at: z.iso.datetime(),
+});
 
-/** One run per ticket. Immutable: every change returns a new Run. */
-export type Run = {
-  id: string;
-  ticket: Ticket;
-  state: RunState;
-  createdAt: string;
+export type RunHistoryEntry = z.infer<typeof RunHistoryEntrySchema>;
+
+/** One run per ticket. Immutable: every change returns a new Run. The schema is the one definition the store, the API and the client share. */
+export const RunSchema = z.object({
+  id: z.uuid(),
+  ticket: TicketSchema,
+  state: z.enum(RUN_STATES),
+  createdAt: z.iso.datetime(),
   /** Sum of the agents' own estimates at list price. A budget signal, not an invoice. */
-  estimatedCostUsd: number;
+  estimatedCostUsd: z.number().min(0),
   /** Sum of the token counts the models reported; the figure a bill is actually based on. */
-  tokens: TokenUsage;
+  tokens: TokenUsageSchema,
   /** The repository profile's policy, snapshotted at intake so every gate and the workflow read one value. */
-  policy: RunPolicy;
-  history: RunHistoryEntry[];
+  policy: RunPolicySchema,
+  history: z.array(RunHistoryEntrySchema),
   /** Set once the spec writer has produced a draft. */
-  spec?: Spec;
+  spec: SpecSchema.optional(),
   /** Results of the last gate run. */
-  gates?: GateResult[];
+  gates: z.array(GateResultSchema).optional(),
   /** Set once the merge request is open; reused by later rounds on the same branch. */
-  pullRequest?: PullRequest;
+  pullRequest: PullRequestSchema.optional(),
   /** The last review the reviewer agent posted on the pull request. */
-  review?: Review;
+  review: ReviewSchema.optional(),
   /** The branch the implementation was pushed to, set even when the run escalates, so work is never lost. */
-  branch?: string;
-};
+  branch: z.string().optional(),
+});
+
+export type Run = z.infer<typeof RunSchema>;
+
+export function parseRun(input: unknown): Run {
+  const result = RunSchema.safeParse(input);
+  if (!result.success) throw new DomainError('invalid_run', { issues: result.error.issues });
+  return result.data;
+}
 
 /** Uses Web Crypto so this file stays free of node imports and can be bundled into a Temporal workflow. */
 /** `id` is for callers without `crypto` at hand, such as workflow code that must stay deterministic. */

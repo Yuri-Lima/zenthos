@@ -36,6 +36,7 @@ export default [
             { sourceTag: 'scope:adapter', onlyDependOnLibsWithTags: ['scope:domain', 'scope:ports'] },
             { sourceTag: 'scope:agents', onlyDependOnLibsWithTags: ['scope:domain', 'scope:ports'] },
             { sourceTag: 'scope:evals', onlyDependOnLibsWithTags: ['scope:domain', 'scope:ports', 'scope:agents'] },
+            { sourceTag: 'scope:client', onlyDependOnLibsWithTags: [] },
             { sourceTag: 'scope:app', onlyDependOnLibsWithTags: ['*'] },
           ],
         },

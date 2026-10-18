@@ -1,25 +1,28 @@
+import { z } from 'zod';
 import { DomainError } from './errors.js';
-import { DEFAULT_POLICY, TOOLING_PATH_PREFIXES, type RunPolicy } from './policies.js';
+import { DEFAULT_POLICY, RunPolicySchema, TOOLING_PATH_PREFIXES, type RunPolicy } from './policies.js';
 
 /**
  * Everything the pipeline needs to know about one target repository. One profile per repo, kept in
  * the repository-profiles store (ADR 006; the dry run seeds it from apps/worker/src/repos.ts); the
  * sandbox and the coding agent both enforce `allowedCommands` through `isCommandAllowed`.
  */
-export type RepoProfile = {
+export const RepoProfileSchema = z.object({
   /** Ticket keys start with this, e.g. "owner/name" for GitHub. */
-  repo: string;
-  cloneUrl: string;
+  repo: z.string().min(1),
+  cloneUrl: z.string().min(1),
   /** Branch runs start from and merge requests target. */
-  baseBranch: string;
+  baseBranch: z.string().min(1),
   /** Exact command lines the agent and the gates may run in the sandbox. Nothing else runs. */
-  allowedCommands: string[];
+  allowedCommands: z.array(z.string().min(1)),
   /** Subset of allowedCommands that must exit 0 before a merge request opens. */
-  gateCommands: string[];
-  policy: RunPolicy;
+  gateCommands: z.array(z.string().min(1)),
+  policy: RunPolicySchema,
   /** The provider connection whose credentials act on this repository; absent for in-memory dry runs. */
-  connectionId?: string;
-};
+  connectionId: z.uuid().optional(),
+});
+
+export type RepoProfile = z.infer<typeof RepoProfileSchema>;
 
 export function repoProfile(profile: Omit<RepoProfile, 'policy'> & { policy?: Partial<RunPolicy> }): RepoProfile {
   const gateNotAllowed = profile.gateCommands.filter((command) => !profile.allowedCommands.includes(command));

@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { RepoProfile } from './repo-profile.js';
 
 /** An isolated checkout of the target repository on a branch of its own. */
@@ -31,12 +32,14 @@ export type Diff = {
 };
 
 /** Token counts as the model reports them. Cached tokens are counted separately because they are priced separately. */
-export type TokenUsage = {
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  cacheWriteTokens: number;
-};
+export const TokenUsageSchema = z.object({
+  inputTokens: z.number().int().min(0),
+  outputTokens: z.number().int().min(0),
+  cacheReadTokens: z.number().int().min(0),
+  cacheWriteTokens: z.number().int().min(0),
+});
+
+export type TokenUsage = z.infer<typeof TokenUsageSchema>;
 
 export const NO_TOKENS: TokenUsage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
 
@@ -65,10 +68,9 @@ export type Implementation = {
   tokens: TokenUsage;
 };
 
-export type PullRequest = {
-  url: string;
-  number: number;
-};
+export const PullRequestSchema = z.object({ url: z.url(), number: z.number().int().positive() });
+
+export type PullRequest = z.infer<typeof PullRequestSchema>;
 
 /** What the humans did with a pull request; `merged` and `closed` are the verdicts the evals learn from. */
 export type PullRequestState = 'open' | 'merged' | 'closed';

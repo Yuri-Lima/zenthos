@@ -33,3 +33,5 @@ jobs:
           key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - name: OpenAPI document and generated client are current
+        run: pnpm nx run @zenthos/api-client:generate && git diff --exit-code -- apps/api/openapi.json libs/api-client/src/lib/schema.d.ts

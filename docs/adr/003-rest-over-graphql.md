@@ -20,3 +20,6 @@ TypeScript client for the dashboard and CLI is generated from it, never hand-wri
 - Response shapes reuse the zod schemas from `libs/domain` through `nestjs-zod` or equivalent, so the API never
   defines a parallel type.
 - If a second consumer with very different read patterns appears, revisit.
+- Done in phase 4 (2026-10-18): `apps/api/openapi.json` is written from the controllers by `@zenthos/api:openapi`,
+  `libs/api-client` is generated from it, and CI fails when either is stale. Response shapes come from the
+  zod schemas in `libs/domain` (`RunSchema`, `RepoProfileSchema`, `PublicConnectionSchema`, `MetricValueSchema`).

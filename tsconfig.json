@@ -47,6 +47,9 @@
     },
     {
       "path": "./libs/adapters/temporal"
+    },
+    {
+      "path": "./libs/api-client"
     }
   ],
   "compilerOptions": {}

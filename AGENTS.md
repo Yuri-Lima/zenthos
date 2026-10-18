@@ -45,7 +45,8 @@ These win over any pattern below when the two conflict. The goal is a codebase a
 | `libs/evals` | Golden dataset schema, metrics, regression check and the port-based suite runner (ADR 009) | domain, ports |
 | `libs/adapters/postgres` | Provider connections (secrets sealed at rest) and repository profiles in Postgres; the schema as ordered statements (ADR 010) | domain, ports |
 | `libs/adapters/temporal` | `RunControlPort` over the Temporal client and the workflow bundler config, shared by the API, the CLI and the worker | domain, ports |
-| `apps/api` | NestJS REST API: provider connections, the GitHub manifest and install flows, repository profiles, runs from the stored projection, the GitHub webhook; OpenAPI at `/docs` (ADR 010, ADR 011) | everything |
+| `apps/api` | NestJS REST API: provider connections, the GitHub manifest and install flows, repository profiles, runs from the stored projection, metrics computed from it, the GitHub webhook; OpenAPI at `/docs` and committed as `openapi.json` (ADR 010, ADR 011) | everything |
+| `libs/api-client` | The typed client the dashboard uses: `schema.d.ts` generated from `apps/api/openapi.json` with openapi-typescript, `createApiClient` over openapi-fetch; never hand-edited (ADR 003) | nothing |
 | `apps/worker` | Temporal worker: `workflows.ts` (one workflow per ticket), `activities.ts` (thin, call use cases), `config.ts` (zod-validated env), `composition.ts` (the adapters, chosen once), `repos.ts` (the dry-run repository profiles), `scripts/` (contract check, manual review, evals) | anything |
 | `apps/cli` | `zenthos run|approve|reject|state <ticket-key>` against the running worker | anything |
 | `docs/adr` | Architecture decision records | |
@@ -101,6 +102,7 @@ pnpm cli approve owner/repo#123
 pnpm cli state owner/repo#123
 pnpm api               # REST API on :3200, OpenAPI at /docs (RUN_CONTROL=temporal to drive real runs)
 pnpm studio            # LangGraph Studio dev server on :2024 for the spec_writer and reviewer graphs (langgraph.json)
+pnpm nx run @zenthos/api-client:generate   # apps/api/openapi.json from the controllers, then the typed client (ADR 003); CI fails on a diff
 pnpm nx run @zenthos/worker:contract -- owner/repo#123   # live GitHub check: comment, commit attribution, cleanup
 pnpm nx run @zenthos/worker:review -- owner/repo#123 spec.json   # re-review the open pull request of a run (ADR 008)
 pnpm nx run @zenthos/worker:eval-dataset -- owner/repo            # golden dataset from merged pull requests (ADR 009)

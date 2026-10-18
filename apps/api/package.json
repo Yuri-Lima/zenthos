@@ -25,6 +25,12 @@
         "options": {
           "cwd": "{workspaceRoot}"
         }
+      },
+      "openapi": {
+        "command": "SWC_NODE_PROJECT=apps/api/tsconfig.lib.json node --import @swc-node/register/esm-register --conditions=@zenthos/source apps/api/src/scripts/openapi.ts",
+        "options": {
+          "cwd": "{workspaceRoot}"
+        }
       }
     }
   },

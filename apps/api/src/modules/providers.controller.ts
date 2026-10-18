@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import { Controller, Get, Inject, NotFoundException, Post, Query, Res, Body, Delete, Param, HttpCode } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { githubAppManifest, manifestFormUrl } from '@zenthos/adapter-github';
 import { connectExistingGitHubApp, connectGitHubApp, connectGitHubToken, recordInstallation } from '@zenthos/application';
-import { installUrl, redactConnection } from '@zenthos/domain';
+import { installUrl, PublicConnectionSchema, redactConnection } from '@zenthos/domain';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { API_PORTS, type ApiPorts } from '../ports.js';
@@ -33,6 +33,7 @@ export class ProvidersController {
 
   @Get()
   @ApiOperation({ summary: 'List provider connections, secrets redacted' })
+  @ApiOkResponse({ schema: jsonSchema(z.array(PublicConnectionSchema)) })
   async list() {
     return (await this.ports.connections.list()).map(redactConnection);
   }
@@ -40,6 +41,7 @@ export class ProvidersController {
   @Post('github/token')
   @ApiOperation({ summary: 'Connect GitHub with a personal token (interim for one account)' })
   @ApiBody({ schema: jsonSchema(TokenBody) })
+  @ApiOkResponse({ schema: jsonSchema(PublicConnectionSchema) })
   async connectToken(@Body() body: unknown) {
     const { name, token } = parseBody(TokenBody, body);
     return redactConnection(await connectGitHubToken(this.ports, name, token));
@@ -48,6 +50,7 @@ export class ProvidersController {
   @Post('github/app')
   @ApiOperation({ summary: 'Connect a GitHub App created by hand: app id, private key, and the webhook secret if one is set' })
   @ApiBody({ schema: jsonSchema(AppBody) })
+  @ApiOkResponse({ schema: jsonSchema(PublicConnectionSchema) })
   async connectApp(@Body() body: unknown) {
     return redactConnection(await connectExistingGitHubApp(this.ports, parseBody(AppBody, body)));
   }
@@ -80,6 +83,7 @@ export class ProvidersController {
 
   @Get('github/install/callback')
   @ApiOperation({ summary: 'GitHub returns here after an install; the installation is read and recorded' })
+  @ApiOkResponse({ schema: jsonSchema(PublicConnectionSchema) })
   async finishInstall(@Query('connection') connectionId: string, @Query('installation_id') installationId: string) {
     const connection = await this.ports.connections.get(connectionId);
     if (!connection || connection.credentials.type !== 'github-app') throw new NotFoundException('no GitHub App connection with that id');

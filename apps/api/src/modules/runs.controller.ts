@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Inject, NotFoundException, Post, Query } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { RUN_STATES } from '@zenthos/domain';
+import { ApiBody, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { RUN_STATES, RunSchema } from '@zenthos/domain';
 import { z } from 'zod';
 import { API_PORTS, type ApiPorts } from '../ports.js';
 import { jsonSchema, parseBody } from '../openapi.js';
@@ -21,6 +21,7 @@ export class RunsController {
   @ApiQuery({ name: 'ticket', required: false, example: 'owner/repo#123' })
   @ApiQuery({ name: 'state', required: false, enum: RUN_STATES })
   @ApiQuery({ name: 'limit', required: false, example: 50 })
+  @ApiOkResponse({ schema: { oneOf: [jsonSchema(RunSchema), jsonSchema(z.array(RunSchema))] } })
   async list(@Query('ticket') ticketKey: string | undefined, @Query() query: Record<string, string>) {
     if (ticketKey) {
       const run = await this.ports.runStore.latest(ticketKey);
@@ -33,6 +34,7 @@ export class RunsController {
   @Post()
   @ApiOperation({ summary: 'Start a run for a ticket (idempotent per ticket)' })
   @ApiBody({ schema: jsonSchema(StartBody) })
+  @ApiOkResponse({ schema: jsonSchema(z.object({ workflowId: z.string() })) })
   start(@Body() body: unknown) {
     return this.ports.runs.start(parseBody(StartBody, body).ticketKey);
   }
@@ -40,6 +42,7 @@ export class RunsController {
   @Post('decision')
   @ApiOperation({ summary: 'Approve or reject the current spec draft' })
   @ApiBody({ schema: jsonSchema(DecisionBody) })
+  @ApiOkResponse({ schema: jsonSchema(DecisionBody) })
   async decide(@Body() body: unknown) {
     const { ticketKey, decision } = parseBody(DecisionBody, body);
     await this.ports.runs.decide(ticketKey, decision);

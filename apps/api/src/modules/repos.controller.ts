@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Inject, NotFoundException, Param, Put } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { repoProfile } from '@zenthos/domain';
+import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { repoProfile, RepoProfileSchema } from '@zenthos/domain';
 import { z } from 'zod';
 import { API_PORTS, type ApiPorts } from '../ports.js';
 import { jsonSchema, parseBody } from '../openapi.js';
@@ -23,11 +23,13 @@ export class ReposController {
 
   @Get()
   @ApiOperation({ summary: 'List repository profiles' })
+  @ApiOkResponse({ schema: jsonSchema(z.array(RepoProfileSchema)) })
   list() {
     return this.ports.profiles.list();
   }
 
   @Get(':owner/:name')
+  @ApiOkResponse({ schema: jsonSchema(RepoProfileSchema) })
   async get(@Param('owner') owner: string, @Param('name') name: string) {
     const profile = await this.ports.profiles.get(`${owner}/${name}`);
     if (!profile) throw new NotFoundException(`no profile for ${owner}/${name}`);
@@ -37,6 +39,7 @@ export class ReposController {
   @Put(':owner/:name')
   @ApiOperation({ summary: 'Create or replace a repository profile; gate commands must be allowed commands' })
   @ApiBody({ schema: jsonSchema(ProfileBody) })
+  @ApiOkResponse({ schema: jsonSchema(RepoProfileSchema) })
   async put(@Param('owner') owner: string, @Param('name') name: string, @Body() body: unknown) {
     const { connectionId, ...input } = parseBody(ProfileBody, body);
     const profile = { ...repoProfile({ repo: `${owner}/${name}`, ...input }), ...(connectionId ? { connectionId } : {}) };

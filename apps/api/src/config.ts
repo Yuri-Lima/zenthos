@@ -14,6 +14,8 @@ const ConfigSchema = z.object({
   TEMPORAL_NAMESPACE: z.string().default('default'),
   TEMPORAL_TASK_QUEUE: z.string().default('zenthos'),
   GITHUB_APPS: z.enum(['octokit', 'memory']).default('memory'),
+  /** The dashboard's origin; the only one the browser may call the API from. */
+  ZENTHOS_DASHBOARD_ORIGIN: z.string().url().default('http://localhost:4200'),
 });
 
 export type ApiConfig = z.infer<typeof ConfigSchema>;

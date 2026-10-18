@@ -10,6 +10,7 @@ export const ERROR_CODES = {
   no_credentials: 'No provider connection covers this repository and no fallback credentials are configured',
   app_not_installed: 'The GitHub App is not installed on this repository',
   invalid_review: 'The review does not match the Review schema',
+  invalid_run: 'The stored run does not match the Run schema',
   invalid_connection: 'The provider connection does not match its schema',
   invalid_profile: 'The repository profile is inconsistent',
   connection_not_found: 'No provider connection with that id',
