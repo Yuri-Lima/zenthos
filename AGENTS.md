@@ -29,7 +29,10 @@ These win over any pattern below when the two conflict. The goal is a codebase a
    (unsubscribed streams, unclosed clients, listeners, unbounded maps and caches, references held across retries).
 8. **Document decisions, not code.** One ADR per non-obvious choice in `docs/adr`. Comments explain why.
 9. **Measure before optimizing.** A performance claim comes with a number from a trace or benchmark.
-10. **Safety defaults.** No destructive git in any sandbox. Migrations and production paths need a human approval
+10. **Adopt before building** (ADR 016). Before writing a feature, name the closest free built-in in LangChain,
+    LangGraph or LangFuse and its price. A free, self-hostable one is adopted; we build only what is paid elsewhere
+    or does not exist for a ticket pipeline.
+11. **Safety defaults.** No destructive git in any sandbox. Migrations and production paths need a human approval
     signal. Cost ceilings are enforced per run. No stored API keys: model access comes from an OAuth profile on a
     laptop and from workload identity federation in CI and the cloud (`docs/authentication.md`).
 
@@ -42,7 +45,7 @@ These win over any pattern below when the two conflict. The goal is a codebase a
 | `libs/application` | One file per use case | domain, ports |
 | `libs/adapters/*` | One library per concrete adapter: `in-memory` (tests and dry runs), `github` (issues and pull requests), `langfuse` (tracing callbacks, and reading a run's usage back for the check, ADR 015), `git-sandbox` (a clone per run with the command allowlist), `claude-code` (headless Claude Code with the same allowlist) | domain, ports |
 | `libs/agents` | LangGraph graphs that implement agent ports. Spec writer: draft, validate against the schema, retry with the errors | domain, ports, LangChain |
-| `libs/evals` | Golden dataset schema, metrics, regression check and the port-based suite runner (ADR 009) | domain, ports |
+| `libs/evals` | Golden dataset schema, metrics, regression check and the port-based suite runner (ADR 009); moving onto LangFuse Datasets and Experiments (ADR 016) | domain, ports |
 | `libs/adapters/postgres` | Provider connections (secrets sealed at rest) and repository profiles in Postgres; the schema as ordered statements (ADR 010) | domain, ports |
 | `libs/adapters/temporal` | `RunControlPort` over the Temporal client and the workflow bundler config, shared by the API, the CLI and the worker | domain, ports |
 | `apps/api` | NestJS REST API: provider connections with a credential check before storing and on demand, the GitHub manifest and install flows, repository profiles, runs from the stored projection, metrics computed from it, the GitHub webhook; OpenAPI at `/docs` and committed as `openapi.json` (ADR 010, ADR 011) | everything |

@@ -40,3 +40,11 @@ write-up and, later, a knowledge graph that agents can read.
 - The glossary is code, reviewed like code; there is no editing it from the UI in this phase. If people
   other than developers need to edit it, it moves behind a port like the other settings (ADR 010), with the
   domain keeping the core terms.
+
+## Amendment, 2026-10-19: no graph database for the glossary (ADR 016)
+
+- The glossary stays a domain module; about 90 terms and 130 relations need no server. The JSON-LD export
+  remains the next step and loads into any graph store later.
+- Neo4j is parked for Phoenix. Its likely use is a code graph for the spec writer (files, imports, tests, and
+  which merged pull requests touched which files), adopted only if graph retrieval beats plain repository context
+  on the spec suite. Community Edition, free and single-instance, would be the edition.
