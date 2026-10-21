@@ -11,6 +11,7 @@ const run = (key: string, usageByAgent: object) => ({ id: key, ticket: { key, ti
 const metrics = [
   { metric: 'gate_failures', description: 'Failed gate results', unit: 'count', source: 'runs', value: 3, runs: 2, breakdown: { ci: 2, secret_scan: 1 } },
   { metric: 'clean_merge_rate', description: 'PRs merged clean', unit: 'ratio', source: 'scm', value: null, runs: 0 },
+  { metric: 'regression_score', description: 'Latest eval scores', unit: 'ratio', source: 'evals', value: 0.4, runs: 2, breakdown: { 'spec-writer/v1 touched_area_recall': 0.4, 'reviewer/v1 review_score': 3.25 } },
 ];
 const check = { ticketKey: 'o/r#1', available: true, sessionUrl: 'http://lf.test/s', tolerance: { relative: 0.05, absoluteUsd: 0.01 }, comparison: [{ agent: 'spec_writer', stored: usage(0.56), traced: { estimatedCostUsd: 0.5596, totalTokens: 79220 }, verdict: 'match' }, { agent: 'reviewer', stored: usage(0.9), traced: { estimatedCostUsd: 0.7155, totalTokens: 119938 }, verdict: 'mismatch' }] };
 
@@ -37,7 +38,10 @@ describe('MetricsPage', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelectorAll('article.metric')).toHaveLength(2);
+    expect(host.querySelectorAll('article.metric')).toHaveLength(3);
+    expect(host.textContent).toContain('40%');
+    expect(host.textContent).toContain('reviewer/v1 review_score');
+    expect(host.textContent).toContain('3.25');
     expect(host.textContent).toContain('metrics.elsewhere.scm');
     expect(fixture.componentInstance.barWidth(metrics[0] as never, 'ci')).toBe(100);
     expect(host.textContent).toContain('$5.04');

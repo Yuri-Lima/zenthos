@@ -317,7 +317,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Every metric, with its definition beside its value; null where the runs store is not its source */
+        /** Every metric, with its definition beside its value: from the stored runs, the eval metrics from the latest eval runs in LangFuse; null where neither is the source */
         get: operations["MetricsController_list"];
         put?: never;
         post?: never;

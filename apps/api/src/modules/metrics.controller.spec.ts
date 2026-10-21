@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import type { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { InMemoryTraceUsage } from '@zenthos/adapter-in-memory';
+import { InMemoryEvalResults, InMemoryTraceUsage } from '@zenthos/adapter-in-memory';
 import { createRun, NO_TOKENS, withUsage } from '@zenthos/domain';
 import { createAppModule } from '../app.module.js';
 import { loadConfig } from '../config.js';
@@ -11,7 +11,10 @@ const ticket = { key: 'o/r#300', title: 't', body: '', url: 'https://example.tes
 const usage = (estimatedCostUsd: number) => ({ tokens: { ...NO_TOKENS, inputTokens: 10 }, estimatedCostUsd });
 
 describe('GET /metrics/traces', () => {
-  const ports = { ...inMemoryPorts(), traces: new InMemoryTraceUsage({ 'o/r#300': { spec_writer: { estimatedCostUsd: 0.5596, totalTokens: 79220 }, reviewer: { estimatedCostUsd: 0.7155, totalTokens: 119938 } } }) };
+  const ports = {
+    ...inMemoryPorts(),
+    evals: new InMemoryEvalResults([{ suite: 'review', dataset: 'o-r-runs', promptVersion: 'reviewer/v1', runName: 'r1', createdAt: '2026-10-21T09:00:00.000Z', scores: { review_agreement: 1, review_score: 3.25 } }]),
+    traces: new InMemoryTraceUsage({ 'o/r#300': { spec_writer: { estimatedCostUsd: 0.5596, totalTokens: 79220 }, reviewer: { estimatedCostUsd: 0.7155, totalTokens: 119938 } } }) };
   let app: INestApplication;
   let base: string;
 
@@ -33,6 +36,12 @@ describe('GET /metrics/traces', () => {
     const body = (await res.json()) as { comparison: { agent: string; verdict: string }[] };
     expect(body).toMatchObject({ ticketKey: 'o/r#300', available: true, sessionUrl: 'memory://traces/o%2Fr%23300', tolerance: { relative: 0.05, absoluteUsd: 0.01 } });
     expect(body.comparison.map((c) => [c.agent, c.verdict])).toEqual([['spec_writer', 'match'], ['reviewer', 'mismatch']]);
+  });
+
+  it('serves the eval metrics from the latest eval runs beside the ones from stored runs', async () => {
+    const metrics = (await (await fetch(`${base}/metrics`)).json()) as { metric: string; value: number | null }[];
+    expect(metrics.find((m) => m.metric === 'reviewer_agreement')?.value).toBe(1);
+    expect(metrics.find((m) => m.metric === 'regression_score')?.value).toBeNull();
   });
 
   it('answers 404 for a run it does not know', async () => {

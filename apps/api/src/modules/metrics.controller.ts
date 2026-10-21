@@ -1,6 +1,6 @@
-import { Controller, Get, Inject, NotFoundException, Query } from '@nestjs/common';
+import { Controller, Get, Inject, Logger, NotFoundException, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { compareWithTraces, computeMetrics, MetricValueSchema, TRACE_MATCH_TOLERANCE, TraceComparisonSchema } from '@zenthos/domain';
+import { compareWithTraces, computeMetrics, MetricValueSchema, TRACE_MATCH_TOLERANCE, TraceComparisonSchema, type EvalRunResult } from '@zenthos/domain';
 import { z } from 'zod';
 import { jsonSchema } from '../openapi.js';
 import { API_PORTS, type ApiPorts } from '../ports.js';
@@ -22,13 +22,26 @@ const TraceCheck = z.object({
 @ApiTags('metrics')
 @Controller('metrics')
 export class MetricsController {
+  private readonly logger = new Logger(MetricsController.name);
+
   constructor(@Inject(API_PORTS) private readonly ports: ApiPorts) {}
 
   @Get()
-  @ApiOperation({ summary: 'Every metric, with its definition beside its value; null where the runs store is not its source' })
+  @ApiOperation({ summary: 'Every metric, with its definition beside its value: from the stored runs, the eval metrics from the latest eval runs in LangFuse; null where neither is the source' })
   @ApiOkResponse({ schema: jsonSchema(z.array(MetricValueSchema)) })
   async list() {
-    return computeMetrics(await this.ports.runStore.list({ limit: METRICS_WINDOW }));
+    const [runs, evalRuns] = await Promise.all([this.ports.runStore.list({ limit: METRICS_WINDOW }), this.evalRuns()]);
+    return computeMetrics(runs, evalRuns);
+  }
+
+  /** LangFuse being down costs the two eval metrics, never the page. */
+  private async evalRuns(): Promise<EvalRunResult[]> {
+    try {
+      return (await this.ports.evals?.scoredRuns()) ?? [];
+    } catch (error) {
+      this.logger.warn(`eval results unavailable: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    }
   }
 
   /** The phase gate "the numbers match LangFuse" for one run, per traced agent (ADR 015). Asked on demand: one run, two LangFuse calls. */

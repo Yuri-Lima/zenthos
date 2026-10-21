@@ -2552,7 +2552,7 @@
             }
           }
         },
-        "summary": "Every metric, with its definition beside its value; null where the runs store is not its source",
+        "summary": "Every metric, with its definition beside its value: from the stored runs, the eval metrics from the latest eval runs in LangFuse; null where neither is the source",
         "tags": [
           "metrics"
         ]

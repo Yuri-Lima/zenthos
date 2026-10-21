@@ -122,6 +122,11 @@ export function formatMetric(value: number | null, unit: string): string {
               @case ('spec_approval_rate') {
                 <p class="note">{{ 'metrics.approvals' | translate: { approved: m.breakdown?.['approved'] ?? 0, drafted: m.breakdown?.['drafted'] ?? 0 } }}</p>
               }
+              @case ('regression_score') {
+                <dl class="kv">
+                  @for (entry of breakdownOf(m); track entry[0]) {<dt>{{ entry[0] }}</dt><dd>{{ entry[1] | number: '1.0-2' }}</dd>}
+                </dl>
+              }
               @case ('cost_per_ticket_usd') {
                 <p class="note">{{ 'metrics.totalSpend' | translate: { total: usd(m.breakdown?.['total'] ?? 0) } }}</p>
               }
@@ -255,6 +260,11 @@ export class MetricsPage {
 
   definitionOf(metric: MetricValue) {
     return this.glossary.term(`metric_${metric.metric}`) ? this.glossary.tip(`metric_${metric.metric}`) : metric.description;
+  }
+
+  /** Latest eval scores as `<prompt version> <metric>` rows, in the order the API sends them. */
+  breakdownOf(metric: MetricValue): [string, number][] {
+    return Object.entries(metric.breakdown ?? {});
   }
 
   barWidth(metric: MetricValue, gate: string) {
