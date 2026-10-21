@@ -44,3 +44,22 @@ ecosystem already gives away.
 - Open SWE is the closest product; the write-up names it and states the differences (spec approval before code,
   deterministic gates, a free self-hosted stack, an eval gate, any provider).
 - A new feature starts with the same check: name the closest built-in and its price before writing code.
+
+## Amendment, 2026-10-21: what slice 6 found while adopting LangFuse experiments
+
+- **The baseline file stays.** LangFuse's experiment action does not compare runs; its documented CI pattern is a
+  reviewed baseline file in the repository that the experiment script checks, raising `RegressionError`. So
+  `libs/evals/baseline.json` is the bar, LangFuse runs and stores the experiments. What went: our runner and its
+  concurrency code, the local dataset files, the local result files.
+- **CI uses `langfuse/experiment-action`** (pinned to v1.0.12): it runs `apps/worker/src/experiments/*-suite.ts`,
+  fails the job on `RegressionError`, and comments the scores and the LangFuse comparison link on the pull request.
+  The same scripts run locally through `worker:eval`, so CI and a laptop take one path.
+- **The action resolves every `@langfuse/*` and `@opentelemetry/*` import from the repository root.** pnpm hoists
+  both scopes (`publicHoistPattern`); each exists in one version today, and a second major would need a look.
+- **LangFuse v4 in events-only mode has no dataset-run endpoints** (list, delete). Run-level scores carry the
+  experiment run as their subject and the metadata the experiment stamps (suite, prompt version, dataset), so the
+  metrics page reads the latest results from the v3 scores endpoint alone.
+- **CI needs a LangFuse that GitHub's runners can reach.** A laptop instance is not; LangFuse Cloud or an exposed
+  self-hosted instance is a decision outside the code.
+- **Prompt publishing guards the version rule:** different text under an existing label fails the publish, so a
+  prompt cannot change without a new version.

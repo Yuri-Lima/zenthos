@@ -1,48 +1,47 @@
 /**
- * The regression evals, composed from the same adapters as the worker.
+ * The regression evals on LangFuse Datasets and Experiments (ADR 016), composed from the worker's adapters.
  *
- *   pnpm nx run @zenthos/worker:eval-dataset -- owner/repo               merged history, with gh → libs/evals/data/<owner>-<repo>.json
- *   pnpm nx run @zenthos/worker:eval-dataset -- owner/repo --from runs   the pipeline's own stored runs → <owner>-<repo>-runs.json
+ *   pnpm nx run @zenthos/worker:eval-dataset -- owner/repo               merged history, read with gh → LangFuse dataset owner-repo
+ *   pnpm nx run @zenthos/worker:eval-dataset -- owner/repo --from runs   the pipeline's judged runs → owner-repo-runs
  *   pnpm nx run @zenthos/worker:eval -- spec   owner/repo [--limit 10] [--record]
  *   pnpm nx run @zenthos/worker:eval -- review owner/repo [--dataset runs] [--limit 5] [--record]
  *
- * A run prints its summary, compares it with libs/evals/baseline.json under `<prompt version>@<dataset>` and
- * exits 1 on a regression. `--record` writes the summary as the new baseline for that key: a deliberate
- * commit, reviewed like code. Item results go to libs/evals/results/ (ignored by git).
+ * A run goes through the same experiment scripts the LangFuse action runs in CI (apps/worker/src/experiments),
+ * prints LangFuse's summary and the dataset-run link, and exits 1 on a regression against libs/evals/baseline.json.
+ * `--record` writes the run's summary as the new baseline for its key: a deliberate commit, reviewed like code.
  */
 import { execFile } from 'node:child_process';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
-import { REVIEWER_VERSION, SPEC_WRITER_VERSION } from '@zenthos/agents';
+import { LangfuseClient, RunnerContext } from '@langfuse/client';
+import { startLangfuseTracing } from '@zenthos/adapter-langfuse';
 import { profileForTicket } from '@zenthos/application';
-import { buildRunsDataset, findRegressions, parseDataset, runReviewSuite, runSpecSuite, type Baseline, type GoldenDataset } from '@zenthos/evals';
-import { github, issueTracker, loadWorkerConfig, reviewer, scm, specWriter, stores, tracing } from '../composition.js';
-
-const DATA_DIR = 'libs/evals/data';
-const BASELINE_FILE = 'libs/evals/baseline.json';
-const RESULTS_DIR = 'libs/evals/results';
+import { buildRunsDataset, datasetNameFor, parseDataset, toDatasetItem, type GoldenDataset } from '@zenthos/evals';
+import { github, loadWorkerConfig, scm, stores } from '../composition.js';
+import type { WorkerConfig } from '../config.js';
+import { BASELINE_FILE, describeRegressions, readBaseline } from '../experiments/harness.js';
+import { runReviewSuite } from '../experiments/review-suite.js';
+import { runSpecSuite } from '../experiments/spec-suite.js';
 
 const [command, ...rest] = process.argv.slice(2);
-const limitIndex = rest.indexOf('--limit');
-const limit = limitIndex >= 0 ? Number(rest[limitIndex + 1]) : undefined;
-if (limit !== undefined && !(Number.isInteger(limit) && limit >= 1)) {
-  console.error(`--limit must be a whole number of items, at least 1; got ${rest[limitIndex + 1]}`);
-  process.exit(1);
-}
+const option = (name: string) => (rest.includes(name) ? rest[rest.indexOf(name) + 1] : undefined);
 const record = rest.includes('--record');
-const fromRuns = rest.includes('--from') ? rest[rest.indexOf('--from') + 1] === 'runs' : rest.includes('--dataset') && rest[rest.indexOf('--dataset') + 1] === 'runs';
-const valueIndexes = new Set([limitIndex, rest.indexOf('--from'), rest.indexOf('--dataset')].filter((i) => i >= 0).map((i) => i + 1));
+const fromRuns = option('--from') === 'runs' || option('--dataset') === 'runs';
+const valueIndexes = new Set(['--limit', '--from', '--dataset'].map((flag) => rest.indexOf(flag)).filter((i) => i >= 0).map((i) => i + 1));
 const positional = rest.filter((arg, index) => !arg.startsWith('--') && !valueIndexes.has(index));
 
-const datasetName = (repo: string) => `${repo.replace('/', '-')}${fromRuns ? '-runs' : ''}`;
-const datasetFile = (repo: string) => `${DATA_DIR}/${datasetName(repo)}.json`;
+/** The LangFuse keys and URL the evals need; the same three the worker traces with. */
+function langfuseConfig(config: WorkerConfig) {
+  if (!config.LANGFUSE_PUBLIC_KEY || !config.LANGFUSE_SECRET_KEY) throw new Error('the evals live in LangFuse: set LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY (see .env.example)');
+  return { publicKey: config.LANGFUSE_PUBLIC_KEY, secretKey: config.LANGFUSE_SECRET_KEY, baseUrl: config.LANGFUSE_BASE_URL };
+}
 
 /**
  * Merged pull requests that close exactly one issue, read through the gh CLI the developer is signed into.
  * A pull request claims an issue with a `Closes #N` line or a `(#N)` in its title; release pull requests
  * that bundle several are skipped, and the first pull request merged for an issue is the one kept.
  */
-async function buildDataset(repo: string): Promise<GoldenDataset> {
+async function buildHistoryDataset(repo: string): Promise<GoldenDataset> {
   const { stdout } = await promisify(execFile)('gh', ['pr', 'list', '--repo', repo, '--state', 'merged', '--limit', '200', '--json', 'number,url,title,body,files'], { maxBuffer: 64 * 1024 * 1024 });
   const pulls = JSON.parse(stdout) as { number: number; url: string; title: string; body: string; files: { path: string }[] }[];
   const byIssue = new Map<number, GoldenDataset['items'][number]>();
@@ -56,59 +55,63 @@ async function buildDataset(repo: string): Promise<GoldenDataset> {
   return parseDataset({ repo, builtAt: new Date().toISOString(), items });
 }
 
-async function readBaseline(): Promise<Baseline> {
-  return JSON.parse(await readFile(BASELINE_FILE, 'utf8').catch(() => '{}')) as Baseline;
-}
-
-async function run(suite: string, repo: string) {
-  const dataset = parseDataset(JSON.parse(await readFile(datasetFile(repo), 'utf8')));
-  if (suite === 'spec' && dataset.source === 'runs') throw new Error('the spec suite measures drafted specs against history; use the history dataset');
-  const config = loadWorkerConfig();
-  const trace = tracing(config);
+/** Stored runs whose pull request a human merged or closed, through the worker's own stores and SCM. */
+async function buildRunsDatasetFor(config: WorkerConfig, repo: string): Promise<GoldenDataset | undefined> {
   const store = await stores(config);
-  const clients = github(config, store);
-  const repoContext = config.REPO_CONTEXT_FILE ? await readFile(config.REPO_CONTEXT_FILE, 'utf8') : '';
-  const profile = await profileForTicket(store.profiles, dataset.items[0].ticketKey);
-  const deps = { issueTracker: issueTracker(config, clients), specWriter: await specWriter(config, trace, 'eval'), scm: scm(config, clients), reviewer: await reviewer(config, trace, 'eval'), repoContext };
   try {
-    const version = `${suite === 'spec' ? SPEC_WRITER_VERSION : REVIEWER_VERSION}@${datasetName(repo)}`;
-    const result = suite === 'spec' ? await runSpecSuite(deps, dataset, { limit }) : await runReviewSuite(deps, dataset, profile, { limit });
-    await mkdir(RESULTS_DIR, { recursive: true });
-    const resultsFile = `${RESULTS_DIR}/${suite}-${version.replace(/[/@]/g, '-')}-${Date.now()}.json`;
-    await writeFile(resultsFile, JSON.stringify(result, null, 2));
-
-    const baseline = await readBaseline();
-    const regressions = findRegressions(result.summary, baseline[version]);
-    console.log(JSON.stringify({ version, summary: result.summary, baseline: baseline[version] ?? null, regressions, resultsFile }, null, 2));
-    if (record) {
-      await writeFile(BASELINE_FILE, `${JSON.stringify({ ...baseline, [version]: result.summary }, null, 2)}\n`);
-      console.log(`baseline recorded for ${version} in ${BASELINE_FILE}`);
-    }
-    if (regressions.length) process.exitCode = 1;
+    const profile = await profileForTicket(store.profiles, `${repo}#0`);
+    const { dataset, skipped } = await buildRunsDataset({ runs: store.runs, scm: scm(config, github(config, store)) }, profile);
+    for (const { ticketKey, reason } of skipped) console.log(`skipped ${ticketKey}: ${reason}`);
+    return dataset;
   } finally {
-    await trace.shutdown();
+    await store.close();
   }
 }
 
-/** Stored runs whose pull request a human merged or closed, through the worker's own stores and SCM. */
-async function buildDatasetFromRuns(repo: string): Promise<GoldenDataset | undefined> {
-  const config = loadWorkerConfig();
-  const store = await stores(config);
-  const profile = await profileForTicket(store.profiles, `${repo}#0`);
-  const { dataset, skipped } = await buildRunsDataset({ runs: store.runs, scm: scm(config, github(config, store)) }, profile);
-  for (const { ticketKey, reason } of skipped) console.log(`skipped ${ticketKey}: ${reason}`);
-  return dataset;
+/** Creates the dataset when missing and upserts every item by its stable id; items no longer built are left as they are. */
+async function upsertDataset(client: LangfuseClient, dataset: GoldenDataset): Promise<string> {
+  const name = datasetNameFor(dataset.repo, dataset.source);
+  await client.api.datasets.create({ name, description: `${dataset.source === 'runs' ? 'Judged pipeline runs' : 'Merged history'} of ${dataset.repo}`, metadata: { repo: dataset.repo, source: dataset.source } });
+  for (const item of dataset.items) await client.api.datasetItems.create(toDatasetItem(name, item));
+  return name;
+}
+
+async function run(suite: 'spec' | 'review', repo: string) {
+  const keys = langfuseConfig(loadWorkerConfig());
+  const client = new LangfuseClient(keys);
+  const trace = startLangfuseTracing(keys);
+  const limit = option('--limit');
+  if (limit) process.env['EVAL_LIMIT'] = limit;
+  try {
+    const dataset = await client.dataset.get(datasetNameFor(repo, fromRuns ? 'runs' : 'history'));
+    const context = new RunnerContext({ client, data: dataset.items, metadata: { trigger: 'cli' } });
+    const outcome = suite === 'spec' ? await runSpecSuite(context) : await runReviewSuite(context);
+    console.log(await outcome.result.format());
+    // --record sets the bar even below the old one: lowering it is a deliberate commit, reviewed like code.
+    if (record) {
+      await writeFile(BASELINE_FILE, `${JSON.stringify({ ...(await readBaseline()), [outcome.key]: outcome.summary }, null, 2)}\n`);
+      console.log(`baseline recorded for ${outcome.key} in ${BASELINE_FILE}`);
+    } else if (outcome.regressions.length) {
+      console.error(describeRegressions(outcome));
+      process.exitCode = 1;
+    }
+  } finally {
+    await trace.shutdown();
+    await client.shutdown();
+  }
 }
 
 const [repoArg] = positional;
 if (command === 'dataset' && repoArg) {
-  const dataset = fromRuns ? await buildDatasetFromRuns(repoArg) : await buildDataset(repoArg);
+  const config = loadWorkerConfig();
+  const dataset = fromRuns ? await buildRunsDatasetFor(config, repoArg) : await buildHistoryDataset(repoArg);
   if (!dataset) {
     console.log('no stored run has a pull request a human has merged or closed yet; nothing written');
   } else {
-    await mkdir(DATA_DIR, { recursive: true });
-    await writeFile(datasetFile(repoArg), `${JSON.stringify(dataset, null, 2)}\n`);
-    console.log(`${dataset.items.length} items written to ${datasetFile(repoArg)}`);
+    const client = new LangfuseClient(langfuseConfig(config));
+    const name = await upsertDataset(client, dataset);
+    await client.shutdown();
+    console.log(`${dataset.items.length} items upserted into the LangFuse dataset ${name}`);
   }
 } else if (command === 'run' && (positional[0] === 'spec' || positional[0] === 'review') && positional[1]) {
   await run(positional[0], positional[1]);

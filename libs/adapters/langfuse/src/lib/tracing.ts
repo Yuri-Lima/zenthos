@@ -30,6 +30,16 @@ export function startLangfuseTracing(config: LangfuseConfig): Tracing {
   };
 }
 
+/**
+ * LangChain callbacks only, for code that runs under an OpenTelemetry provider someone else registered: the
+ * LangFuse experiment action in CI, or the eval command after `startLangfuseTracing`. Registering a second
+ * provider would split the spans.
+ */
+export const langfuseCallbacks: Tracing = {
+  callbacks: (context) => [new CallbackHandler(context)],
+  shutdown: async () => undefined,
+};
+
 /** No-op tracing for tests and runs without LangFuse keys. */
 export const noTracing: Tracing = {
   callbacks: () => [],

@@ -38,22 +38,23 @@ const DRY_RUN_TICKET = {
   labels: [],
 };
 
-export type Stores = { profiles: RepoProfilesPort; connections: ProviderConnectionsPort; runs: RunsPort };
+/** `close` ends the Postgres pool; one-off scripts call it so the process does not wait on idle connections. */
+export type Stores = { profiles: RepoProfilesPort; connections: ProviderConnectionsPort; runs: RunsPort; close(): Promise<void> };
 
 /** Profiles and connections come from Postgres when the API manages them, otherwise from the code list for dry runs. */
 export async function stores(config: WorkerConfig): Promise<Stores> {
-  if (!config.DATABASE_URL) return { profiles: new InMemoryRepoProfiles(REPO_PROFILES), connections: new InMemoryProviderConnections(), runs: new InMemoryRuns() };
+  if (!config.DATABASE_URL) return { profiles: new InMemoryRepoProfiles(REPO_PROFILES), connections: new InMemoryProviderConnections(), runs: new InMemoryRuns(), close: async () => undefined };
   if (!config.ZENTHOS_SECRETS_KEY) throw new Error('ZENTHOS_SECRETS_KEY is required with DATABASE_URL (openssl rand -hex 32)');
   const pool = new pg.Pool({ connectionString: config.DATABASE_URL });
   await migrate(pool);
-  return { profiles: new PostgresRepoProfiles(pool), connections: new PostgresProviderConnections(pool, new SecretBox(config.ZENTHOS_SECRETS_KEY)), runs: new PostgresRuns(pool) };
+  return { profiles: new PostgresRepoProfiles(pool), connections: new PostgresProviderConnections(pool, new SecretBox(config.ZENTHOS_SECRETS_KEY)), runs: new PostgresRuns(pool), close: () => pool.end() };
 }
 
 /**
  * GitHub, with credentials decided per repository: the connection the profile names, else what the
  * environment provides (ADR 006). Undefined only when neither can ever apply.
  */
-export function github(config: WorkerConfig, { profiles, connections }: Stores): GitHubClients | undefined {
+export function github(config: WorkerConfig, { profiles, connections }: Pick<Stores, 'profiles' | 'connections'>): GitHubClients | undefined {
   const fallback = githubCredentials(config);
   if (!fallback && !config.DATABASE_URL) return undefined;
   return new ResolvingGitHubClients((ref) => credentialsForRepo({ profiles, connections }, `${ref.owner}/${ref.repo}`, fallback), createGitHubClients);

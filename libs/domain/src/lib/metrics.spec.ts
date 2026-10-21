@@ -36,6 +36,19 @@ describe('computeMetrics', () => {
     expect(Object.keys(metrics)).toEqual(Object.keys(METRICS));
   });
 
+  it('fills reviewer agreement and the regression score from the latest eval run of each suite', () => {
+    const run = (suite: 'spec' | 'review', createdAt: string, promptVersion: string, scores: Record<string, number>) => ({ suite, dataset: 'o-r', promptVersion, runName: `${suite} ${createdAt}`, createdAt, scores });
+    const metrics = Object.fromEntries(
+      computeMetrics([], [
+        run('spec', '2026-10-18T10:00:00.000Z', 'spec-writer/v1', { touched_area_recall: 0.4, criteria_per_spec: 4.6 }),
+        run('spec', '2026-10-21T10:00:00.000Z', 'spec-writer/v2', { touched_area_recall: 0.7, criteria_per_spec: 5 }),
+        run('review', '2026-10-20T10:00:00.000Z', 'reviewer/v1', { review_agreement: 0.5, review_score: 3.1 }),
+      ]).map((m) => [m.metric, m]),
+    );
+    expect(metrics['reviewer_agreement']).toMatchObject({ value: 0.5, runs: 1 });
+    expect(metrics['regression_score']).toMatchObject({ value: 0.7, runs: 2, breakdown: { 'spec-writer/v2 touched_area_recall': 0.7, 'spec-writer/v2 criteria_per_spec': 5, 'reviewer/v1 review_agreement': 0.5, 'reviewer/v1 review_score': 3.1 } });
+  });
+
   it('is empty-safe', () => {
     for (const m of computeMetrics([])) expect(m.value === null || m.value === 0).toBe(true);
   });

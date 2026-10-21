@@ -1,6 +1,11 @@
-# Regression evals for the agents. Runs when a prompt, a graph or the evals change, and on demand.
-# Model access is Workload Identity Federation (docs/authentication.md), so the repository holds no key.
-# The dataset holds only references; the GitHub App reads the issues and diffs at run time.
+# Regression evals for the agents as LangFuse experiments (ADR 016). On a pull request that touches a prompt, a
+# graph or the evals, the LangFuse experiment action runs the spec suite on the history dataset, fails the job on a
+# RegressionError against libs/evals/baseline.json, and comments the scores and the LangFuse comparison link on the
+# pull request. On main, the agents' prompts are published to LangFuse.
+#
+# Model access is Workload Identity Federation (docs/authentication.md), so the repository holds no model key.
+# Datasets hold only references; the GitHub App reads the issues and diffs at run time.
+# LANGFUSE_BASE_URL must be reachable from GitHub's runners: LangFuse Cloud or an exposed self-hosted instance.
 name: Evals
 
 on:
@@ -8,23 +13,38 @@ on:
     paths:
       - 'libs/agents/**'
       - 'libs/evals/**'
-      - 'apps/worker/src/scripts/evals.ts'
+      - 'apps/worker/src/experiments/**'
       - '.github/workflows/evals.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'libs/agents/**'
   workflow_dispatch:
     inputs:
       suite:
         description: spec or review
         default: spec
+      dataset:
+        description: LangFuse dataset (the -runs one holds the pipeline's judged runs)
+        default: nairaromero-mara-sandra-connect
       limit:
-        description: items from the top of the dataset
+        description: items from the top of the dataset, in issue order
         default: '10'
 
 permissions:
   id-token: write
   contents: read
+  pull-requests: write
+  actions: read
+
+env:
+  LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+  LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+  LANGFUSE_BASE_URL: ${{ vars.LANGFUSE_BASE_URL }}
 
 jobs:
-  evals:
+  experiment:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     env:
       ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
@@ -38,10 +58,39 @@ jobs:
       REVIEWER: anthropic
       GITHUB_APP_ID: ${{ vars.ZENTHOS_GITHUB_APP_ID }}
       GITHUB_APP_PRIVATE_KEY: ${{ secrets.ZENTHOS_GITHUB_APP_PRIVATE_KEY }}
-      LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
-      LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
-      LANGFUSE_BASE_URL: ${{ vars.LANGFUSE_BASE_URL }}
-      EVAL_REPO: nairaromero/mara-sandra-connect
+      # The action runs the script with tsx; workspace packages resolve to their TypeScript sources.
+      NODE_OPTIONS: --conditions=@zenthos/source
+      EVAL_LIMIT: ${{ inputs.limit || '5' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # Installs @langfuse/* and @opentelemetry/* at the root (pnpm-workspace.yaml hoists them), where the action looks.
+      - run: pnpm install --frozen-lockfile
+      - name: Fetch GitHub OIDC token for Anthropic
+        run: |
+          curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" \
+            | jq -r .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+      - uses: langfuse/experiment-action@v1.0.12
+        with:
+          langfuse_public_key: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          langfuse_secret_key: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          langfuse_base_url: ${{ vars.LANGFUSE_BASE_URL }}
+          experiment_path: apps/worker/src/experiments/${{ inputs.suite || 'spec' }}-suite.ts
+          dataset_name: ${{ inputs.dataset || 'nairaromero-mara-sandra-connect' }}
+          should_skip_sdk_installation: true
+          github_token: ${{ github.token }}
+
+  publish-prompts:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,19 +102,4 @@ jobs:
           path: ~/.local/share/pnpm/store
           key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
-      - name: Fetch GitHub OIDC token for Anthropic
-        run: |
-          curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" \
-            | jq -r .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
-      - name: Spec suite
-        if: github.event_name == 'pull_request' || inputs.suite == 'spec'
-        run: pnpm nx run @zenthos/worker:eval -- spec "$EVAL_REPO" --limit "${{ inputs.limit || '5' }}"
-      - name: Review suite
-        if: github.event_name == 'workflow_dispatch' && inputs.suite == 'review'
-        run: pnpm nx run @zenthos/worker:eval -- review "$EVAL_REPO" --limit "${{ inputs.limit }}"
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: eval-results
-          path: libs/evals/results/
+      - run: pnpm nx run @zenthos/worker:prompts-publish

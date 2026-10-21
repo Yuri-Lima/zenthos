@@ -10,6 +10,13 @@ allowBuilds:
   esbuild: true
   unrs-resolver: false
   protobufjs: true
-  '@scarf/scarf': set this to true or false
+  '@scarf/scarf': false  # install-time usage analytics from swagger-ui-dist; never run
   lmdb: false
   msgpackr-extract: false
+
+# The LangFuse experiment action (ADR 016) resolves every @langfuse/* and @opentelemetry/* import from the
+# repository root, including the ones our dependencies make. Each of these packages exists in one version here,
+# so hoisting them to the root is safe; a second major of either scope would need a look first.
+publicHoistPattern:
+  - '@langfuse/*'
+  - '@opentelemetry/*'

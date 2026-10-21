@@ -10,3 +10,4 @@ export * from './lib/in-memory-github-apps.js';
 export * from './lib/in-memory-runs.js';
 export * from './lib/in-memory-sessions.js';
 export * from './lib/in-memory-trace-usage.js';
+export * from './lib/in-memory-eval-results.js';

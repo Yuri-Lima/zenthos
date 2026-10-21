@@ -47,3 +47,5 @@ way a failing test blocks a code change, without a human re-reading thirty specs
   purpose.
 - Model variance makes a single run noisy; the tolerance absorbs the usual spread, and a borderline failure
   is rerun before the baseline is questioned.
+
+_Superseded in part by ADR 016 (21 Oct 2026): datasets and runs live in LangFuse and CI runs the LangFuse experiment action; the regression gate and the reviewed baseline file stay._

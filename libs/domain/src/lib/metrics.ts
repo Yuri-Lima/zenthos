@@ -11,11 +11,37 @@ export const METRICS = {
   tokens_per_ticket: { title: 'Tokens per ticket', description: 'Mean input plus output tokens the models reported per run', unit: 'count', source: 'runs' },
   gate_failures: { title: 'Gate failures', description: 'Failed gate results, counted per gate', unit: 'count', source: 'runs' },
   reviewer_agreement: { title: 'Reviewer agreement', description: 'Reviewer verdict matches the human verdict on the labelled set', unit: 'ratio', source: 'evals' },
-  regression_score: { title: 'Regression score', description: 'Eval score per prompt version and stage', unit: 'score', source: 'evals' },
+  regression_score: { title: 'Regression score', description: "The spec suite's touched-area recall on its latest eval run; every stage's latest scores beside it", unit: 'ratio', source: 'evals' },
   human_minutes_per_ticket: { title: 'Human minutes per ticket', description: 'Minutes humans spent on approvals and reviews for a run', unit: 'minutes', source: 'approvals' },
 } as const;
 
 export type Metric = keyof typeof METRICS;
+
+/**
+ * What the eval suites score, item by item, and average per run (ADR 009, ADR 016). Higher is better for each;
+ * the regression check compares only these. The evals score them, the metrics page reads them back.
+ */
+export const EVAL_METRICS = {
+  touched_area_recall: { suite: 'spec', description: 'Share of the files the merged change touched that fall under an area the spec named' },
+  criteria_per_spec: { suite: 'spec', description: 'Acceptance criteria per spec; too few means the spec is vague' },
+  review_agreement: { suite: 'review', description: 'Share of changes where the reviewer gate agrees with the human verdict' },
+  review_score: { suite: 'review', description: 'Mean rubric score the reviewer gave' },
+} as const;
+export type EvalMetric = keyof typeof EVAL_METRICS;
+export const EVAL_SUITES = ['spec', 'review'] as const;
+export type EvalSuite = (typeof EVAL_SUITES)[number];
+
+/** The latest scored run of one suite on one dataset, as the eval store holds it: run-level means per metric. */
+export const EvalRunResultSchema = z.object({
+  suite: z.enum(EVAL_SUITES),
+  dataset: z.string(),
+  promptVersion: z.string(),
+  runName: z.string(),
+  createdAt: z.iso.datetime(),
+  url: z.string().optional(),
+  scores: z.partialRecord(z.enum(Object.keys(EVAL_METRICS) as [EvalMetric, ...EvalMetric[]]), z.number()),
+});
+export type EvalRunResult = z.infer<typeof EvalRunResultSchema>;
 
 /** A metric as the API serves it: its definition beside its value, `null` when its source is not the runs store. */
 export const MetricValueSchema = z.object({
@@ -42,10 +68,10 @@ const median = (values: number[]) => {
 const minutesBetween = (from: string, to: string) => (Date.parse(to) - Date.parse(from)) / 60_000;
 
 /**
- * Every metric the runs store can answer, from the stored runs alone; the others come back with a null
- * value and their source named, so the dashboard shows the definition and says where the number lives.
+ * Every metric the runs store can answer, from the stored runs; the two eval metrics from the latest eval runs
+ * when given; the rest come back with a null value and their source named, so the dashboard says where they live.
  */
-export function computeMetrics(runs: Run[]): MetricValue[] {
+export function computeMetrics(runs: Run[], evalRuns: EvalRunResult[] = []): MetricValue[] {
   const entry = (metric: Metric, value: number | null, count: number, breakdown?: Record<string, number>): MetricValue => {
     const { description, unit, source } = METRICS[metric];
     return { metric, description, unit, source, value, runs: count, ...(breakdown ? { breakdown } : {}) };
@@ -75,8 +101,29 @@ export function computeMetrics(runs: Run[]): MetricValue[] {
       cacheWrite: tokens.reduce((s, t) => s + t.cacheWriteTokens, 0),
     }),
     entry('gate_failures', Object.values(gateFailures).reduce((a, b) => a + b, 0), runs.length, gateFailures),
-    entry('reviewer_agreement', null, 0),
-    entry('regression_score', null, 0),
+    ...evalEntries(evalRuns),
     entry('human_minutes_per_ticket', null, 0),
+  ];
+}
+
+/**
+ * The eval metrics from the latest run of each suite: reviewer agreement is the review suite's agreement; the
+ * regression score is the spec suite's touched-area recall, with every latest run-level score as the breakdown
+ * (`<prompt version> <metric>`), so a prompt change shows beside the number it moved. `runs` counts eval runs.
+ */
+function evalEntries(evalRuns: EvalRunResult[]): MetricValue[] {
+  const latest = (suite: EvalSuite) => [...evalRuns].filter((r) => r.suite === suite).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  const review = latest('review');
+  const spec = latest('spec');
+  const breakdown = Object.fromEntries(
+    [spec, review].flatMap((run) => (run ? Object.entries(run.scores).map(([metric, value]) => [`${run.promptVersion} ${metric}`, value]) : [])),
+  );
+  const of = (metric: Metric) => {
+    const { description, unit, source } = METRICS[metric];
+    return { metric, description, unit, source };
+  };
+  return [
+    { ...of('reviewer_agreement'), value: review?.scores.review_agreement ?? null, runs: review ? 1 : 0 },
+    { ...of('regression_score'), value: spec?.scores.touched_area_recall ?? null, runs: [spec, review].filter(Boolean).length, ...(Object.keys(breakdown).length ? { breakdown } : {}) },
   ];
 }

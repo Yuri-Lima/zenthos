@@ -12,7 +12,7 @@ async function main() {
   const repoContext = config.REPO_CONTEXT_FILE ? await readFile(config.REPO_CONTEXT_FILE, 'utf8') : '';
 
   const { profiles, connections, runs } = await stores(config);
-  const clients = github(config, { profiles, connections, runs });
+  const clients = github(config, { profiles, connections });
   console.log(
     `zenthos worker: issueTracker=${config.ISSUE_TRACKER} specWriter=${config.SPEC_WRITER} sandbox=${config.SANDBOX} codingAgent=${config.CODING_AGENT} scm=${config.SCM} reviewer=${config.REVIEWER} stores=${config.DATABASE_URL ? 'postgres' : 'memory'} githubFallback=${githubCredentials(config)?.type ?? 'none'} taskQueue=${config.TEMPORAL_TASK_QUEUE}`,
   );

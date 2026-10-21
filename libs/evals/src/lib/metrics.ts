@@ -1,15 +1,5 @@
 import type { Spec } from '@zenthos/domain';
 
-/** Metrics where a higher value is better; the regression check compares only these. */
-export const METRIC_DEFINITIONS = {
-  touched_area_recall: 'Share of the files the merged change touched that fall under an area the spec named',
-  criteria_per_spec: 'Acceptance criteria per spec; too few means the spec is vague',
-  review_agreement: 'Share of changes where the reviewer gate agrees with the human verdict',
-  review_score: 'Mean rubric score the reviewer gave',
-} as const;
-
-export type Metric = keyof typeof METRIC_DEFINITIONS;
-
 const normalise = (path: string) => path.trim().toLowerCase().replace(/^\.?\//, '');
 
 /**

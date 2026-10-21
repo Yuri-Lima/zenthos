@@ -23,3 +23,5 @@ export * from './lib/sessions.port.js';
 export * from './lib/sessions.contract.js';
 export * from './lib/trace-usage.port.js';
 export * from './lib/trace-usage.contract.js';
+export * from './lib/eval-results.port.js';
+export * from './lib/eval-results.contract.js';

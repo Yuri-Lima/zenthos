@@ -45,7 +45,7 @@ These win over any pattern below when the two conflict. The goal is a codebase a
 | `libs/application` | One file per use case | domain, ports |
 | `libs/adapters/*` | One library per concrete adapter: `in-memory` (tests and dry runs), `github` (issues and pull requests), `langfuse` (tracing callbacks, and reading a run's usage back for the check, ADR 015), `git-sandbox` (a clone per run with the command allowlist), `claude-code` (headless Claude Code with the same allowlist) | domain, ports |
 | `libs/agents` | LangGraph graphs that implement agent ports. Spec writer: draft, validate against the schema, retry with the errors | domain, ports, LangChain |
-| `libs/evals` | Golden dataset schema, metrics, regression check and the port-based suite runner (ADR 009); moving onto LangFuse Datasets and Experiments (ADR 016) | domain, ports |
+| `libs/evals` | Golden item schema and its LangFuse dataset-item shape, the scorers, the spec and review suites as experiment definitions (task, item and run evaluators) and the baseline check; no vendor import, LangFuse runs them (ADR 009, ADR 016) | domain, ports |
 | `libs/adapters/postgres` | Provider connections (secrets sealed at rest) and repository profiles in Postgres; the schema as ordered statements (ADR 010) | domain, ports |
 | `libs/adapters/temporal` | `RunControlPort` over the Temporal client and the workflow bundler config, shared by the API, the CLI and the worker | domain, ports |
 | `apps/api` | NestJS REST API: provider connections with a credential check before storing and on demand, the GitHub manifest and install flows, repository profiles, runs from the stored projection, metrics computed from it, the GitHub webhook; OpenAPI at `/docs` and committed as `openapi.json` (ADR 010, ADR 011) | everything |
@@ -84,6 +84,10 @@ bans vendor SDKs inside domain, ports and application. Every project carries a `
 - Usage is recorded per agent (ADR 015): every `withUsage` names the agent; only the workflow traces under the bare
   ticket key, evals and manual commands pass their purpose to `specWriter`/`reviewer` so their calls trace beside the
   run's session (`traceSessionId`), never inside it.
+- Evals (ADR 016): datasets and experiment runs live in LangFuse; `libs/evals/baseline.json` is the reviewed bar they
+  must hold. The experiment scripts in `apps/worker/src/experiments` export `experiment(context)` for the LangFuse
+  experiment action and are what the local `eval` command runs too: one path. They attach LangChain callbacks only
+  (`langfuseCallbacks`), never a second OpenTelemetry provider. A file there is never named `spec.ts` (Jest runs it).
 - Glossary (ADR 014): every term is defined once in `libs/domain/src/lib/glossary.ts`; definitions of states,
   events, gates, metrics and rubric lines are keyed by the domain constants, so a new one fails to compile until
   it is defined; `GET /glossary` serves it; the dashboard wraps labels in `zen-term` for inline help and lists
@@ -121,11 +125,12 @@ pnpm dashboard         # Angular dashboard on :4200 (Angular Material + Tailwind
 pnpm nx run @zenthos/api-client:generate   # apps/api/openapi.json from the controllers, then the typed client (ADR 003); CI fails on a diff
 pnpm nx run @zenthos/worker:contract -- owner/repo#123   # live GitHub check: comment, commit attribution, cleanup
 pnpm nx run @zenthos/worker:review -- owner/repo#123 spec.json   # re-review the open pull request of a run (ADR 008)
-pnpm nx run @zenthos/worker:eval-dataset -- owner/repo            # golden dataset from merged pull requests (ADR 009)
-pnpm nx run @zenthos/worker:eval -- spec owner/repo --limit 5     # spec suite against libs/evals/baseline.json; --record sets it
+pnpm nx run @zenthos/worker:eval-dataset -- owner/repo            # merged history → LangFuse dataset owner-repo, upserted (ADR 016)
+pnpm nx run @zenthos/worker:eval -- spec owner/repo --limit 5     # spec suite as a LangFuse experiment, gated by libs/evals/baseline.json; --record sets it
 pnpm nx run @zenthos/worker:eval -- review owner/repo --limit 3   # review suite (costs both agents per item)
-pnpm nx run @zenthos/worker:eval-dataset -- owner/repo --from runs    # the pipeline's own judged runs, specs included (ADR 011)
+pnpm nx run @zenthos/worker:eval-dataset -- owner/repo --from runs    # the pipeline's own judged runs → owner-repo-runs, specs included (ADR 011)
 pnpm nx run @zenthos/worker:eval -- review owner/repo --dataset runs  # the fair review measurement; baselines keyed per dataset
+pnpm nx run @zenthos/worker:prompts-publish                        # agents' system prompts → LangFuse, label = version; CI runs it on main
 ZENTHOS_SECRETS_KEY_NEXT=... pnpm nx run @zenthos/worker:rotate-key   # re-seal stored connections under a new deployment key
 pnpm nx g @nx/js:lib libs/adapters/<name> --importPath=@zenthos/adapter-<name> --tags=scope:adapter --bundler=tsc --linter=eslint --unitTestRunner=jest --minimal
 ```
