@@ -1,0 +1,67 @@
+# The edge: Traefik terminates HTTPS (Let's Encrypt, TLS challenge) and routes by host name to containers that opt
+# in with labels on the `edge` network. It reads the Docker API through a read-only socket proxy, never the socket.
+# Only Traefik publishes ports on the host; every other container stays on internal networks.
+name: edge
+
+services:
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy:v0.5.0
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      EVENTS: 1
+      PING: 1
+      VERSION: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [socket]
+
+  traefik:
+    image: traefik:v3.7
+    restart: unless-stopped
+    depends_on: [socket-proxy]
+    command:
+      - --providers.docker.endpoint=tcp://socket-proxy:2375
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=edge
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http3=true
+      - --certificatesresolvers.le.acme.tlschallenge=true
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --ping=true
+      - --accesslog=true
+      - --log.level=INFO
+      - --global.sendanonymoususage=false
+      - --global.checknewversion=false
+    ports:
+      - 80:80
+      - 443:443
+      - 443:443/udp
+    volumes:
+      - letsencrypt:/letsencrypt
+    networks: [edge, socket]
+    healthcheck:
+      test: ['CMD', 'traefik', 'healthcheck', '--ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      traefik.enable: 'true'
+      # Shared by every router: `traefik.http.routers.<name>.middlewares=secure-headers@docker`.
+      traefik.http.middlewares.secure-headers.headers.stsSeconds: '31536000'
+      traefik.http.middlewares.secure-headers.headers.stsIncludeSubdomains: 'true'
+      traefik.http.middlewares.secure-headers.headers.contentTypeNosniff: 'true'
+      traefik.http.middlewares.secure-headers.headers.referrerPolicy: strict-origin-when-cross-origin
+
+networks:
+  edge:
+    name: edge
+  socket:
+    internal: true
+
+volumes:
+  letsencrypt:

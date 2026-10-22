@@ -1,0 +1,83 @@
+#cloud-config
+# ZenthOs platform host on Hetzner Cloud, Ubuntu 26.04: Docker from Ubuntu's archive, a host firewall, SSH by key
+# only through a `deploy` user, swap, fail2ban and automatic security updates. It prepares the machine; the services
+# (LangFuse, Caddy, later the API and Temporal) are deployed with Docker Compose afterwards.
+#
+# No secrets here: user data stays readable on the server (cloud-init's instance data) and in the Hetzner console.
+
+timezone: Etc/UTC
+package_update: true
+package_upgrade: true
+
+# Created before the packages, so `deploy` can join it; docker.io's install keeps the existing group.
+groups:
+  - docker
+
+users:
+  - default
+  - name: deploy
+    groups: [sudo, docker]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: true
+
+packages:
+  - ca-certificates
+  - curl
+  - git
+  - jq
+  - htop
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+  - docker.io
+  - docker-compose-v2
+  - docker-buildx
+
+# ClickHouse and the LangFuse worker spike on memory; swap keeps a small server from killing them.
+swap:
+  filename: /swapfile
+  size: 4G
+  maxsize: 4G
+
+write_files:
+  # Written before Docker is installed, so the daemon starts with it: bounded logs, containers survive daemon restarts.
+  - path: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": { "max-size": "20m", "max-file": "5" },
+        "live-restore": true
+      }
+  - path: /etc/sysctl.d/90-zenthos.conf
+    content: |
+      vm.swappiness=10
+  - path: /etc/apt/apt.conf.d/52zenthos-unattended
+    content: |
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";
+      Unattended-Upgrade::Automatic-Reboot "false";
+
+runcmd:
+  - sysctl --system
+  # The SSH keys picked in the Hetzner console land on root. Give the same keys to `deploy`, and close root and
+  # password login only when there are keys, so a server created without a key is never locked out.
+  - |
+    if [ -s /root/.ssh/authorized_keys ]; then
+      install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
+      install -m 600 -o deploy -g deploy /root/.ssh/authorized_keys /home/deploy/.ssh/authorized_keys
+      printf 'PermitRootLogin no\nPasswordAuthentication no\nKbdInteractiveAuthentication no\n' > /etc/ssh/sshd_config.d/10-zenthos.conf
+      sshd -t && systemctl restart ssh
+    fi
+  # Host firewall: SSH, HTTP and HTTPS (and HTTP/3) only. Docker-published ports bypass ufw, so containers publish
+  # on 127.0.0.1 and only the reverse proxy listens on 80 and 443; the Hetzner Cloud Firewall is the outer wall.
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow OpenSSH
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw allow 443/udp
+  - ufw --force enable
+  - systemctl enable --now docker fail2ban unattended-upgrades
+  - install -d -m 755 -o deploy -g deploy /srv/zenthos
+
+final_message: "ZenthOs host ready after $UPTIME seconds; log in as deploy"
