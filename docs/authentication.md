@@ -87,14 +87,16 @@ jobs:
       ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
       ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
       ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
-      ANTHROPIC_IDENTITY_TOKEN_FILE: ${{ runner.temp }}/anthropic-jwt
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      # `runner.temp` is not available in job-level env; the step exports the path for the steps after it.
       - name: Fetch GitHub OIDC token
         run: |
+          token_file="$RUNNER_TEMP/anthropic-jwt"
           curl -sS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" \
-            | jq -r .value > "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+            | jq -r .value > "$token_file"
+          echo "ANTHROPIC_IDENTITY_TOKEN_FILE=$token_file" >> "$GITHUB_ENV"
       - run: SPEC_WRITER=anthropic pnpm nx run @zenthos/worker:eval -- spec owner/repo --limit 10   # CI runs the same experiment through langfuse/experiment-action (.github/workflows/evals.yml)
 ```
 
