@@ -65,7 +65,7 @@ export function checkSecrets(patch: string): GateResult {
     : fail('secret_scan', `diff contains what looks like: ${hits.join(', ')}`);
 }
 
-/** Judged on the estimate at list price, so the ceiling holds the same way under a subscription and under an API key. */
+/** Judged on the estimate at list price, so the ceiling holds the same way whichever organisation credential pays. */
 export function checkCostCeiling(estimatedCostUsd: number, policy: RunPolicy): GateResult {
   return estimatedCostUsd <= policy.costCeilingUsd
     ? pass('cost_ceiling')

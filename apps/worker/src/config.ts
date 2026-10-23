@@ -1,4 +1,6 @@
 import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import path from 'node:path';
 import { WORKFLOW_CONTRACT, type GitHubCredentials } from '@zenthos/domain';
 import { z } from 'zod';
 
@@ -30,8 +32,10 @@ export const WorkerConfigSchema = z.object({
   SANDBOX: z.enum(['git', 'memory']).default('memory'),
   /** Where git sandboxes live; one subdirectory per run, removed on cleanup. */
   SANDBOX_ROOT: z.string().optional(),
-  /** `claude-code` runs Claude Code headless in the sandbox; `memory` writes a markdown note. */
+  /** `claude-code` runs Claude Code headless in the sandbox on organisation credentials only (ADR 018); `memory` writes a markdown note. */
   CODING_AGENT: z.enum(['claude-code', 'memory']).default('memory'),
+  /** ZenthOs's own Claude Code config directory: a Console sign-in on a laptop, empty where federation supplies the credential. */
+  CODING_AGENT_CONFIG_DIR: z.string().default(path.join(homedir(), '.zenthos', 'claude-code')),
   ZENTHOS_CODING_MODEL: z.string().optional(),
   /** `github` opens pull requests with GITHUB_TOKEN; `memory` records them. */
   SCM: z.enum(['github', 'memory']).default('memory'),

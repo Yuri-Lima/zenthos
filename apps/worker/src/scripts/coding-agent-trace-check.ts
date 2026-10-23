@@ -2,16 +2,15 @@
  * Proves the coding agent's trace end to end (ADR 015): `pnpm nx run @zenthos/worker:coding-agent-trace-check`.
  * Runs Claude Code on a tiny task in a scratch git repository (one new file, no shell commands allowed), traced into
  * the LangFuse the worker is configured for, then reads the run back through the cost check and prints the verdict
- * for the coding agent with the session link. Costs a few cents through Claude Code's own login.
+ * for the coding agent with the session link. Costs a few cents on the organisation credential (ADR 018).
  */
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { ClaudeCodeAgent } from '@zenthos/adapter-claude-code';
-import { LangfuseAgentTracing, LangfuseTraceUsage, startLangfuseTracing } from '@zenthos/adapter-langfuse';
+import { LangfuseTraceUsage, startLangfuseTracing } from '@zenthos/adapter-langfuse';
 import { compareWithTraces, repoProfile } from '@zenthos/domain';
-import { loadWorkerConfig } from '../composition.js';
+import { codingAgent, loadWorkerConfig } from '../composition.js';
 
 const config = loadWorkerConfig();
 if (!config.LANGFUSE_PUBLIC_KEY || !config.LANGFUSE_SECRET_KEY) throw new Error('set LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY: the check reads the run back from LangFuse');
@@ -28,7 +27,8 @@ git('commit', '-qm', 'init');
 const ticketKey = `zenthos/trace-check#${Date.now() % 100_000}`;
 const trace = startLangfuseTracing(langfuse);
 try {
-  const implementation = await new ClaudeCodeAgent({ model: config.ZENTHOS_CODING_MODEL, maxTurns: 6, tracing: new LangfuseAgentTracing(langfuse) }).implement({
+  const agent = await codingAgent({ ...config, CODING_AGENT: 'claude-code' }, { maxTurns: 6 });
+  const implementation = await agent.implement({
     workspace: { id: 'trace-check', path: repo, repo: 'zenthos/trace-check', baseBranch: 'main', branch: 'zenthos/trace-check' },
     spec: { ticketKey, problem: 'The repository has no greeting file', inScope: ['Add hello.txt'], outOfScope: [], acceptanceCriteria: [{ id: 'AC-1', statement: 'hello.txt exists and contains the line: hi', testHint: 'read the file' }], touchedAreas: ['hello.txt'], risks: [] },
     profile: repoProfile({ repo: 'zenthos/trace-check', cloneUrl: repo, baseBranch: 'main', allowedCommands: [], gateCommands: [] }),

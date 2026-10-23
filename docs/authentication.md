@@ -7,17 +7,16 @@ before the first ticket.
 
 | Where the worker runs | Credential | Why |
 | --- | --- | --- |
-| Your laptop | `ant auth login` profile for the spec writer; Claude Code's own claude.ai login for the coding agent | Interactive OAuth; nothing to copy into `.env`. A laptop has no OIDC issuer to federate from. Claude Code on a subscription is allowed for your own development only: Anthropic does not permit offering claude.ai login or its rate limits inside a product built on the Agent SDK |
+| Your laptop | `ant auth login` profile for the spec writer and the reviewer; a Claude Console sign-in in ZenthOs's own Claude Code config directory for the coding agent | Interactive OAuth; nothing to copy into `.env`. A laptop has no OIDC issuer to federate from. Never a claude.ai subscription, not even for your own development (ADR 018) |
 | GitHub Actions (evals in phase 3) | Workload Identity Federation, GitHub issuer | The job's OIDC token is exchanged for a short-lived token; no secret in the repo |
-| Cloud Run (phase 5), or any deployment someone else uses | Workload Identity Federation, Google issuer, for both the spec writer and the coding agent | The service's identity token from the metadata server. The coding agent must not run on anyone's claude.ai subscription there; it gets the deployment's credentials, and its cost lands on the organization's Console usage |
+| Cloud Run (phase 5), or any deployment someone else uses | Workload Identity Federation, Google issuer, for every agent | The service's identity token from the metadata server. Claude Code's config directory stays empty there, so federation is the only credential it can find |
 
 A leftover `ANTHROPIC_API_KEY`, even an empty one, shadows both other paths. Unset it rather than blanking it.
 
 **What the cost numbers mean.** The run's `estimatedCostUsd` is the sum of every agent call's estimate at
 list price: the coding agent's own figure (the Agent SDK documents its `total_cost_usd` as "estimates, not
-billing") plus the spec writer's and the reviewer's tokens priced from the table in `libs/agents/src/lib/pricing.ts`. Under a subscription
-nothing is charged for the coding agent; under an API key or federation the invoice is the Console's usage
-page, not this field. The run also keeps the token counts the models reported, which is what a bill is
+billing") plus the spec writer's and the reviewer's tokens priced from the table in `libs/agents/src/lib/pricing.ts`. The
+invoice is the Console organisation's usage page, not this field. The run also keeps the token counts the models reported, which is what a bill is
 based on. LangFuse prices the spec-writer calls itself from its built-in model table.
 
 ## Laptop: `ant auth login`
@@ -32,6 +31,30 @@ ant auth status         # must say the profile won, not an API key
 Then `SPEC_WRITER=anthropic pnpm worker` works with no key in `.env`. The profile token is bound to one
 workspace; to target a specific one, run `ant auth login --profile zenthos --workspace-id wrkspc_...` and set
 `ANTHROPIC_PROFILE=zenthos`.
+
+## Laptop: the coding agent's Console sign-in
+
+Claude Code picks its own credential, and on most developer machines that would be a personal claude.ai login.
+Anthropic does not allow a product built on the Agent SDK to run on one, so ZenthOs never lets it (ADR 018):
+Claude Code always runs with ZenthOs's own config directory, `CODING_AGENT_CONFIG_DIR` (default
+`~/.zenthos/claude-code`), where your personal login does not exist. Sign that directory in once with a Claude
+Console account, which bills the organisation's API usage:
+
+```bash
+pnpm nx run @zenthos/worker:coding-agent-login
+```
+
+It runs `claude auth login --console` (the `claude` CLI must be installed for this step) and then checks the
+account the way the worker does at boot. Claude Code offers two ways to sign in; pick **Create an API key**. Claude
+Code creates a Console key for a workspace you choose and keeps it in that directory's credential store (the macOS
+Keychain entry for that directory), not in `.env` and not in the repository; give the workspace a spend limit in the
+Console. The other choice, **Sign in with your Console account**, writes your active Anthropic profile (the one
+`ant auth login` uses for the spec writer) and signs out claude.ai logins stored on the machine, which would sign
+your own Claude Code out too. The worker refuses to start when Claude Code reports a claude.ai subscription or no
+credential at all, and every run asks again before its prompt is sent.
+
+An `ant auth login` profile does not reach Claude Code on its own: Claude Code 2.1.296 and 2.1.309 ignored one
+named in `ANTHROPIC_PROFILE` (ADR 018), which is why the coding agent has its own sign-in step.
 
 ## GitHub Actions: Workload Identity Federation
 

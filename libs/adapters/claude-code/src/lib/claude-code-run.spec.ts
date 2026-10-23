@@ -2,18 +2,35 @@ import { repoProfile, type Spec, type Workspace } from '@zenthos/domain';
 import type { AgentTracingPort } from '@zenthos/ports';
 
 const messages: unknown[] = [];
-const seenOptions: { env?: Record<string, string> }[] = [];
+const seenOptions: { env?: Record<string, string | undefined> }[] = [];
+const sentPrompts: unknown[][] = [];
+const organisation = { email: 'ops@example.com', organization: 'Example Org', apiProvider: 'firstParty' };
+let account: Record<string, unknown> = organisation;
+// Like the real SDK: the session reads the prompt stream, answers accountInfo(), and ends without output when no message was sent.
 jest.mock('@anthropic-ai/claude-agent-sdk', () => ({
-  query: ({ options }: { options: { env?: Record<string, string> } }) => {
+  query: ({ prompt, options }: { prompt: AsyncIterable<unknown>; options: { env?: Record<string, string | undefined> } }) => {
     seenOptions.push(options);
-    return (async function* () {
-      yield* messages;
-    })();
+    const sent: unknown[] = [];
+    sentPrompts.push(sent);
+    return {
+      accountInfo: async () => account,
+      async *[Symbol.asyncIterator]() {
+        for await (const message of prompt) sent.push(message);
+        if (sent.length) yield* messages;
+      },
+    };
   },
 }));
 
 // Imported after the mock so the adapter sees the fake SDK.
 import { asResult, ClaudeCodeAgent } from './claude-code-agent.js';
+
+const configDir = '/home/ops/.zenthos/claude-code';
+const agent = (options: { tracing?: AgentTracingPort } = {}) => new ClaudeCodeAgent({ configDir, ...options });
+beforeEach(() => {
+  account = organisation;
+  messages.length = 0;
+});
 
 const profile = repoProfile({ repo: 'owner/repo', cloneUrl: 'x', baseBranch: 'main', allowedCommands: [], gateCommands: [] });
 const spec: Spec = { ticketKey: 'owner/repo#4', problem: 'Partners cannot export the list', inScope: ['it'], outOfScope: [], acceptanceCriteria: [{ id: 'AC-1', statement: 'It exports a CSV file', testHint: 'jest' }], touchedAreas: ['src/'], risks: [] };
@@ -47,7 +64,6 @@ describe('asResult', () => {
 
 describe('ClaudeCodeAgent tracing', () => {
   it('runs inside the tracer with the ticket session and version, and gives Claude Code the export environment', async () => {
-    messages.length = 0;
     messages.push({ type: 'assistant' }, result);
     const traced: { context: unknown; usage: unknown }[] = [];
     const tracing: AgentTracingPort = {
@@ -57,29 +73,54 @@ describe('ClaudeCodeAgent tracing', () => {
         return value;
       },
     };
-    const implementation = await new ClaudeCodeAgent({ tracing }).implement({ workspace, spec, profile });
+    const implementation = await agent({ tracing }).implement({ workspace, spec, profile });
     expect(implementation).toEqual({ summary: 'Added the export', estimatedCostUsd: 1.5, tokens: { inputTokens: 150, outputTokens: 210, cacheReadTokens: 3000, cacheWriteTokens: 400 } });
     expect(traced).toEqual([{ context: { sessionId: 'owner/repo#4', version: 'coding-agent/v1', name: 'coding agent' }, usage: ['claude-opus-5-5', 'claude-haiku-5-5'] }]);
     expect(seenOptions.at(-1)?.env?.['OTEL_TRACES_EXPORTER']).toBe('otlp');
     expect(seenOptions.at(-1)?.env?.['PATH']).toBe(process.env['PATH']);
   });
 
-  it('leaves the inherited environment alone when nothing traces the run', async () => {
-    messages.length = 0;
-    messages.push(result);
-    await new ClaudeCodeAgent().implement({ workspace, spec, profile });
-    expect(seenOptions.at(-1)?.env).toBeUndefined();
-  });
-
   it('fails when a success result carries is_error, as an expired login does, instead of reporting it as done', async () => {
-    messages.length = 0;
     messages.push({ type: 'result', subtype: 'success', is_error: true, result: 'Failed to authenticate: OAuth session expired and could not be refreshed', total_cost_usd: 0, modelUsage: {} });
-    await expect(new ClaudeCodeAgent().implement({ workspace, spec, profile })).rejects.toMatchObject({ code: 'implementation_failed', context: { reason: expect.stringContaining('api_error: Failed to authenticate') } });
+    await expect(agent().implement({ workspace, spec, profile })).rejects.toMatchObject({ code: 'implementation_failed', context: { reason: expect.stringContaining('api_error: Failed to authenticate') } });
   });
 
   it('fails with the cost of the failed run attached', async () => {
-    messages.length = 0;
     messages.push({ ...result, subtype: 'error_max_turns' });
-    await expect(new ClaudeCodeAgent().implement({ workspace, spec, profile })).rejects.toMatchObject({ code: 'implementation_failed', context: { reason: 'error_max_turns', estimatedCostUsd: 1.5 } });
+    await expect(agent().implement({ workspace, spec, profile })).rejects.toMatchObject({ code: 'implementation_failed', context: { reason: 'error_max_turns', estimatedCostUsd: 1.5 } });
+  });
+});
+
+describe('ClaudeCodeAgent credentials (ADR 018)', () => {
+  it('runs Claude Code in its own config directory, without a subscription token from the environment', async () => {
+    process.env['CLAUDE_CODE_OAUTH_TOKEN'] = 'sk-ant-oat01-test';
+    try {
+      messages.push(result);
+      await agent().implement({ workspace, spec, profile });
+      expect(seenOptions.at(-1)?.env).toMatchObject({ CLAUDE_CONFIG_DIR: configDir, PATH: process.env['PATH'] });
+      expect(seenOptions.at(-1)?.env).not.toHaveProperty('CLAUDE_CODE_OAUTH_TOKEN');
+    } finally {
+      delete process.env['CLAUDE_CODE_OAUTH_TOKEN'];
+    }
+  });
+
+  it('refuses a claude.ai subscription before the prompt reaches the model', async () => {
+    account = { email: 'me@example.com', organization: 'Personal', subscriptionType: 'Claude Max', apiProvider: 'firstParty' };
+    messages.push(result);
+    await expect(agent().implement({ workspace, spec, profile })).rejects.toMatchObject({ code: 'implementation_failed', context: { reason: expect.stringContaining('credential_refused: it is signed in to a claude.ai subscription') } });
+    expect(sentPrompts.at(-1)).toEqual([]);
+  });
+
+  it('sends the prompt once the account is an organisation one', async () => {
+    messages.push(result);
+    await agent().implement({ workspace, spec, profile });
+    expect(sentPrompts.at(-1)).toEqual([{ type: 'user', message: { role: 'user', content: expect.stringContaining('AC-1') }, parent_tool_use_id: null }]);
+  });
+
+  it('checks access at boot without sending anything', async () => {
+    await expect(agent().verifyAccess()).resolves.toBeUndefined();
+    expect(sentPrompts.at(-1)).toEqual([]);
+    account = { subscriptionType: 'Claude Pro', email: 'me@example.com' };
+    await expect(agent().verifyAccess()).rejects.toThrow('claude.ai subscription (Claude Pro)');
   });
 });

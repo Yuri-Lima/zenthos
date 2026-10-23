@@ -97,14 +97,19 @@ export async function sandbox(config: WorkerConfig, profiles: RepoProfilesPort, 
 /**
  * With LangFuse keys, each implementation runs inside a span in the ticket's trace and Claude Code exports its own
  * spans there (ADR 015); `tracing(config)` must have registered the OpenTelemetry provider first, as the worker does.
+ * Claude Code's credential is checked here, at boot: an organisation one or the worker does not start (ADR 018).
  */
-export function codingAgent(config: WorkerConfig): CodingAgentPort {
+export async function codingAgent(config: WorkerConfig, overrides: { maxTurns?: number } = {}): Promise<CodingAgentPort> {
   if (config.CODING_AGENT !== 'claude-code') return new InMemoryCodingAgent();
   const traced = config.LANGFUSE_PUBLIC_KEY && config.LANGFUSE_SECRET_KEY;
-  return new ClaudeCodeAgent({
+  const agent = new ClaudeCodeAgent({
+    configDir: config.CODING_AGENT_CONFIG_DIR,
     model: config.ZENTHOS_CODING_MODEL,
+    ...overrides,
     ...(traced ? { tracing: new LangfuseAgentTracing({ baseUrl: config.LANGFUSE_BASE_URL, publicKey: config.LANGFUSE_PUBLIC_KEY ?? '', secretKey: config.LANGFUSE_SECRET_KEY ?? '' }) } : {}),
   });
+  await agent.verifyAccess();
+  return agent;
 }
 
 export async function reviewer(config: WorkerConfig, trace: ReturnType<typeof tracing>, purpose: TracePurpose = 'run'): Promise<ReviewerPort> {

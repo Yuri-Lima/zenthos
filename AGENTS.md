@@ -95,8 +95,10 @@ bans vendor SDKs inside domain, ports and application. Every project carries a `
   and a test fails when one is missing.
 - No API keys in the repo or in CI. Model access comes from an `ant auth login` profile on a laptop and from
   Workload Identity Federation elsewhere; GitHub access from a GitHub App; `docs/authentication.md` has both.
-  Claude Code's claude.ai login is for a developer's own laptop only; shared deployments give the coding agent
-  the deployment's credentials (ADR 005).
+- The coding agent runs on organisation credentials only, never a claude.ai subscription, laptop included
+  (ADR 018). Claude Code gets ZenthOs's own config directory (`CODING_AGENT_CONFIG_DIR`); on a laptop sign it in
+  once with `pnpm nx run @zenthos/worker:coding-agent-login` (a Console account). The worker refuses to start on a
+  subscription, and each run checks the account again before its prompt is sent.
 - Model cost on a run is `estimatedCostUsd`, an estimate at list price, kept beside the reported token counts.
   Never present it as a bill.
 - The pipeline acts on GitHub only through installation tokens; a signed-in user's token identifies the person

@@ -65,4 +65,6 @@ The old plan's phase gate says the dashboard's numbers must match LangFuse. Thre
   adapter attributes those one-hour writes to the session's model and LangFuse gets `input_cache_creation_1h` and
   `input_cache_creation_5m`. The first live check without the split differed by exactly the one-hour premium
   ($0.365 against $0.249); with it, the check matched to the cent ($0.1794576 on both sides, 23 Oct 2026).
+  Those runs were on a subscription, which ADR 018 then ruled out; on organisation credentials every write is five
+  minutes unless `ENABLE_PROMPT_CACHING_1H` is set, and the split stays correct either way.
 

@@ -48,8 +48,7 @@ Date: 2026-10-13. Status: accepted.
 - Playwright is not a gate yet for Legal Connect: it needs the local database the repo's scripts create
   in Docker. Lint and format run; e2e joins the gate list once the sandbox can start that database.
 - Claude Code authenticates with the Anthropic credential chain (ADR 004 and `docs/authentication.md`),
-  never with a key held by ZenthOs. Its own claude.ai login is acceptable only on a developer's laptop:
-  Anthropic forbids offering claude.ai login or rate limits inside a product built on the Agent SDK, so any
-  shared deployment gives the coding agent the deployment's credentials, federation on Cloud Run.
+  never with a key held by ZenthOs. Amended by ADR 018: organisation credentials only, the laptop included; a
+  claude.ai login is refused everywhere.
 - The cost the agent reports is an estimate at list price and is recorded as such (`estimatedCostUsd`),
   beside the token counts a bill would be based on. The cost ceiling gate judges the estimate.

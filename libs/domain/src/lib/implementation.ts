@@ -59,8 +59,8 @@ export const addTokens = (a: TokenUsage, b: TokenUsage): TokenUsage => ({
 
 /**
  * What a coding agent reports back. The diff is read from the sandbox, not trusted from the agent.
- * `estimatedCostUsd` is the agent's own estimate at list price, never a bill: under a subscription
- * nothing is charged, and under an API key the invoice is the Console's number, not this one.
+ * `estimatedCostUsd` is the agent's own estimate at list price, never a bill: the invoice is the Console
+ * organisation's usage, not this number.
  */
 export type Implementation = {
   summary: string;

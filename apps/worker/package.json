@@ -56,6 +56,12 @@
           "cwd": "{workspaceRoot}"
         }
       },
+      "coding-agent-login": {
+        "command": "tsx --conditions=@zenthos/source apps/worker/src/scripts/coding-agent-login.ts",
+        "options": {
+          "cwd": "{workspaceRoot}"
+        }
+      },
       "coding-agent-trace-check": {
         "command": "tsx --conditions=@zenthos/source apps/worker/src/scripts/coding-agent-trace-check.ts",
         "options": {

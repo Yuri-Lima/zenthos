@@ -26,7 +26,7 @@ async function main() {
       issueTracker: issueTracker(config, clients),
       specWriter: await specWriter(config, trace),
       sandbox: await sandbox(config, profiles, clients),
-      codingAgent: codingAgent(config),
+      codingAgent: await codingAgent(config),
       scm: scm(config, clients),
       reviewer: await reviewer(config, trace),
       repoContext,
