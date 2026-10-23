@@ -11,7 +11,7 @@ import { migrate, PostgresProviderConnections, PostgresRepoProfiles, PostgresRun
 import { credentialsForRepo } from '@zenthos/application';
 import { traceSessionId, type TracePurpose } from '@zenthos/domain';
 import pg from 'pg';
-import { noTracing, startLangfuseTracing } from '@zenthos/adapter-langfuse';
+import { LangfuseAgentTracing, noTracing, startLangfuseTracing } from '@zenthos/adapter-langfuse';
 import { costEstimator, createAnthropicReviewerModels, createAnthropicSpecModel, LangGraphReviewer, LangGraphSpecWriter, REVIEWER_VERSION, SPEC_WRITER_VERSION, verifyAnthropicAccess } from '@zenthos/agents';
 import type { CodingAgentPort, IssueTrackerPort, ProviderConnectionsPort, RepoProfilesPort, ReviewerPort, RunsPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
 import { githubCredentials, loadConfig, type WorkerConfig } from './config.js';
@@ -94,8 +94,17 @@ export async function sandbox(config: WorkerConfig, profiles: RepoProfilesPort, 
   });
 }
 
+/**
+ * With LangFuse keys, each implementation runs inside a span in the ticket's trace and Claude Code exports its own
+ * spans there (ADR 015); `tracing(config)` must have registered the OpenTelemetry provider first, as the worker does.
+ */
 export function codingAgent(config: WorkerConfig): CodingAgentPort {
-  return config.CODING_AGENT === 'claude-code' ? new ClaudeCodeAgent({ model: config.ZENTHOS_CODING_MODEL }) : new InMemoryCodingAgent();
+  if (config.CODING_AGENT !== 'claude-code') return new InMemoryCodingAgent();
+  const traced = config.LANGFUSE_PUBLIC_KEY && config.LANGFUSE_SECRET_KEY;
+  return new ClaudeCodeAgent({
+    model: config.ZENTHOS_CODING_MODEL,
+    ...(traced ? { tracing: new LangfuseAgentTracing({ baseUrl: config.LANGFUSE_BASE_URL, publicKey: config.LANGFUSE_PUBLIC_KEY ?? '', secretKey: config.LANGFUSE_SECRET_KEY ?? '' }) } : {}),
+  });
 }
 
 export async function reviewer(config: WorkerConfig, trace: ReturnType<typeof tracing>, purpose: TracePurpose = 'run'): Promise<ReviewerPort> {

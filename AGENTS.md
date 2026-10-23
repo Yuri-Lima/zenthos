@@ -131,6 +131,7 @@ pnpm nx run @zenthos/worker:eval -- review owner/repo --limit 3   # review suite
 pnpm nx run @zenthos/worker:eval-dataset -- owner/repo --from runs    # the pipeline's own judged runs → owner-repo-runs, specs included (ADR 011)
 pnpm nx run @zenthos/worker:eval -- review owner/repo --dataset runs  # the fair review measurement; baselines keyed per dataset
 pnpm nx run @zenthos/worker:prompts-publish                        # agents' system prompts → LangFuse, label = version; CI runs it on main
+pnpm nx run @zenthos/worker:coding-agent-trace-check              # tiny real Claude Code run traced into LangFuse; prints the cost-check verdict (ADR 015)
 infra/hetzner/deploy.sh zenthos-platform-1 46-224-120-62.sslip.io   # Traefik + LangFuse on the Hetzner host; secrets generated there (ADR 017)
 ZENTHOS_SECRETS_KEY_NEXT=... pnpm nx run @zenthos/worker:rotate-key   # re-seal stored connections under a new deployment key
 pnpm nx g @nx/js:lib libs/adapters/<name> --importPath=@zenthos/adapter-<name> --tags=scope:adapter --bundler=tsc --linter=eslint --unitTestRunner=jest --minimal

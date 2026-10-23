@@ -267,7 +267,7 @@
     "totalSpend": "{{total}} across these runs",
     "fromRuns": "from {{n}} runs",
     "runsTitle": "Runs, cost by agent, and LangFuse",
-    "runsIntro": "Each run's estimate split by the agent that spent it. The spec writer and the reviewer are traced in LangFuse, so their share can be checked there.",
+    "runsIntro": "Each run's estimate split by the agent that spent it. All three agents are traced in LangFuse, so each share can be checked there.",
     "howCheck": "How the check works",
     "byAgent": "By agent",
     "toPr": "Ticket to PR",
@@ -280,7 +280,8 @@
     },
     "agentName": {
       "spec_writer": "Spec writer",
-      "reviewer": "Reviewer"
+      "reviewer": "Reviewer",
+      "coding_agent": "Coding agent"
     },
     "agent": "Agent",
     "stored": "Stored",
@@ -293,7 +294,6 @@
       "not_traced": "not in LangFuse"
     },
     "tolerance": "Match means within {{pct}}% or {{usd}}.",
-    "codingAgentUntraced": "The coding agent runs in Claude Code and is not traced in LangFuse.",
     "openLangfuse": "Open the session in LangFuse",
     "unavailable": "The API has no LangFuse keys (LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY), so nothing was compared.",
     "checkShort": "LangFuse"

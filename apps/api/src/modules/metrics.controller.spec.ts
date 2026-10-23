@@ -35,7 +35,7 @@ describe('GET /metrics/traces', () => {
     const res = await fetch(`${base}/metrics/traces?ticket=${encodeURIComponent('o/r#300')}`);
     const body = (await res.json()) as { comparison: { agent: string; verdict: string }[] };
     expect(body).toMatchObject({ ticketKey: 'o/r#300', available: true, sessionUrl: 'memory://traces/o%2Fr%23300', tolerance: { relative: 0.05, absoluteUsd: 0.01 } });
-    expect(body.comparison.map((c) => [c.agent, c.verdict])).toEqual([['spec_writer', 'match'], ['reviewer', 'mismatch']]);
+    expect(body.comparison.map((c) => [c.agent, c.verdict])).toEqual([['spec_writer', 'match'], ['coding_agent', 'not_traced'], ['reviewer', 'mismatch']]);
   });
 
   it('serves the eval metrics from the latest eval runs beside the ones from stored runs', async () => {

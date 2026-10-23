@@ -1,6 +1,8 @@
+import { TRACE_VERSION_PREFIX } from '@zenthos/domain';
 import type { ImplementInput } from '@zenthos/ports';
 
-export const CLAUDE_CODE_AGENT_VERSION = 'claude-code-implementer/v1';
+/** Names the coding agent in traces and in the cost check; bump it when the prompt below changes. */
+export const CLAUDE_CODE_AGENT_VERSION = `${TRACE_VERSION_PREFIX.coding_agent}v1`;
 
 /** The task as the coding agent reads it. The repo's own CLAUDE.md is loaded by Claude Code from the workspace. */
 export function implementationPrompt({ spec, profile, feedback }: ImplementInput): string {

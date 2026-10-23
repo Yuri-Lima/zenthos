@@ -312,9 +312,9 @@
     "setting_implement_rounds": "Quantas vezes o agente de código pode implementar antes de a execução escalar. Cada nova tentativa vê os portões que falharam.",
     "setting_review_rounds": "Quantas reimplementações uma revisão reprovada pode disparar antes de a execução escalar. Zero significa que uma revisão reprovada vai direto para uma pessoa.",
     "agent_spec_writer": "O workflow de LLM que rascunha a especificação: um grafo LangGraph que escreve, verifica o rascunho contra o esquema e escreve de novo com os problemas quando falha. Uma chamada de modelo por rascunho, sem ferramentas; rastreado no LangFuse.",
-    "agent_coding_agent": "O único agente de verdade: Claude Code, sem interface, no sandbox, decide seus próprios passos por até sessenta turnos, edita arquivos e roda só comandos permitidos. Ele reporta o próprio custo; não é rastreado no LangFuse.",
+    "agent_coding_agent": "O único agente de verdade: Claude Code, sem interface, no sandbox, decide seus próprios passos por até sessenta turnos, edita arquivos e roda só comandos permitidos. Rastreado no LangFuse: seus próprios spans de cada turno, chamada de modelo e ferramenta, dentro de um span da execução, com os tokens precificados pelo LangFuse.",
     "agent_reviewer": "O workflow de LLM que revisa o pull request: um grafo LangGraph que pontua as quatro linhas da rubrica em paralelo e reúne achados, publicados como comentário. Sem ferramentas; rastreado no LangFuse.",
-    "trace_check": "O custo armazenado de cada agente rastreado comparado com o que o LangFuse registrou para a mesma execução. São precificados separadamente, então coincidem dentro de 5% ou um centavo; execuções armazenadas antes de os custos serem guardados por agente não podem ser comparadas.",
+    "trace_check": "O custo armazenado de cada agente comparado com o que o LangFuse registrou para a mesma execução: o redator de especificações, o agente de código e o revisor. São precificados separadamente, então coincidem dentro de 5% ou um centavo; execuções armazenadas antes de os custos serem guardados por agente não podem ser comparadas.",
     "view_metrics": "As nove métricas com suas definições ao lado dos números, calculadas a partir das execuções armazenadas; as que vivem em outro lugar dizem onde. Abaixo, cada execução com seu custo dividido por agente e a verificação no LangFuse sob demanda."
   },
   "settings": {
@@ -441,7 +441,7 @@
     "totalSpend": "{{total}} nessas execuções",
     "fromRuns": "de {{n}} execuções",
     "runsTitle": "Execuções, custo por agente e LangFuse",
-    "runsIntro": "A estimativa de cada execução dividida pelo agente que a gastou. O redator de especificações e o revisor são rastreados no LangFuse, então sua parte pode ser verificada lá.",
+    "runsIntro": "A estimativa de cada execução dividida pelo agente que a gastou. Os três agentes são rastreados no LangFuse, então cada parte pode ser verificada lá.",
     "howCheck": "Como a verificação funciona",
     "byAgent": "Por agente",
     "toPr": "Ticket até PR",
@@ -454,7 +454,8 @@
     },
     "agentName": {
       "spec_writer": "Redator de especificações",
-      "reviewer": "Revisor"
+      "reviewer": "Revisor",
+      "coding_agent": "Agente de código"
     },
     "agent": "Agente",
     "stored": "Armazenado",
@@ -467,7 +468,6 @@
       "not_traced": "fora do LangFuse"
     },
     "tolerance": "Coincidir significa dentro de {{pct}}% ou {{usd}}.",
-    "codingAgentUntraced": "O agente de código roda no Claude Code e não é rastreado no LangFuse.",
     "openLangfuse": "Abrir a sessão no LangFuse",
     "unavailable": "A API não tem chaves do LangFuse (LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY), então nada foi comparado.",
     "checkShort": "LangFuse"

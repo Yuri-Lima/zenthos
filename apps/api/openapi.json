@@ -2597,6 +2597,7 @@
                             "type": "string",
                             "enum": [
                               "spec_writer",
+                              "coding_agent",
                               "reviewer"
                             ]
                           },

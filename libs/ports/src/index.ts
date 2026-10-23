@@ -25,3 +25,5 @@ export * from './lib/trace-usage.port.js';
 export * from './lib/trace-usage.contract.js';
 export * from './lib/eval-results.port.js';
 export * from './lib/eval-results.contract.js';
+export * from './lib/agent-tracing.port.js';
+export * from './lib/agent-tracing.contract.js';

@@ -1226,7 +1226,7 @@ export interface operations {
                         sessionUrl?: string;
                         comparison: {
                             /** @enum {string} */
-                            agent: "spec_writer" | "reviewer";
+                            agent: "spec_writer" | "coding_agent" | "reviewer";
                             stored?: {
                                 tokens: {
                                     inputTokens: number;

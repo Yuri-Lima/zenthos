@@ -47,3 +47,16 @@ The old plan's phase gate says the dashboard's numbers must match LangFuse. Thre
 - Clean merge rate, reviewer agreement, regression score and human minutes remain open: the first needs an
   SCM read per merged pull request, the eval two need the baselines served by the API, the last needs time
   recorded on approvals.
+
+## Amendment, 2026-10-23: the coding agent is traced too
+
+- Each implementation runs inside an agent span in the ticket's trace (`AgentTracingPort`, LangFuse adapter
+  `LangfuseAgentTracing`), carrying the session and the version `coding-agent/v1`. The Agent SDK passes the active
+  trace context to Claude Code, so Claude Code's own OpenTelemetry spans (each turn, model request and tool call)
+  nest inside it; Claude Code exports them straight to LangFuse's OTLP endpoint.
+- Claude Code's spans carry token counts under names LangFuse does not read as usage, and no cost. So when the run
+  returns, one generation per model records the tokens the SDK reported, without a cost: LangFuse prices them with
+  its own model table, as it does the spec writer's and the reviewer's calls. The cost check covers all three agents.
+- The adapter now takes tokens and cost from the SDK's `modelUsage`, which covers every model call; `usage`, used
+  before, is documented as the main agent loop only and undercounted subagent and auxiliary calls.
+

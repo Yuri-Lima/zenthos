@@ -199,7 +199,6 @@ export function formatMetric(value: number | null, unit: string): string {
                       </div>
                       <div class="check-foot">
                         <span>{{ 'metrics.tolerance' | translate: { pct: result.tolerance.relative * 100, usd: usd(result.tolerance.absoluteUsd) } }}</span>
-                        <span>{{ 'metrics.codingAgentUntraced' | translate }}</span>
                         @if (result.sessionUrl) {<a class="link" [href]="result.sessionUrl" target="_blank" rel="noopener">{{ 'metrics.openLangfuse' | translate }} ↗</a>}
                         @if (result.error) {<span class="error" role="alert">{{ result.error }}</span>}
                       </div>

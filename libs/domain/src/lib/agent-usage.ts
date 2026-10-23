@@ -12,12 +12,13 @@ export type UsageByAgent = z.infer<typeof UsageByAgentSchema>;
 export const addAgentUsage = (byAgent: UsageByAgent, agent: AgentRole, usage: Usage): UsageByAgent => ({ ...byAgent, [agent]: addUsage(byAgent[agent] ?? NO_USAGE, usage) });
 
 /**
- * The agents whose model calls reach LangFuse, by the prefix of their trace version (ADR 015). Both run as
- * LangGraph graphs with LangChain callbacks. The coding agent runs inside Claude Code and is not traced there.
+ * The agents whose model calls reach LangFuse, by the prefix of their trace version (ADR 015). The spec writer and
+ * the reviewer trace through LangChain callbacks; the coding agent through a span the worker opens around Claude
+ * Code, with Claude Code's own OpenTelemetry spans inside it and one generation per model it used.
  */
-export const TRACED_ROLES = ['spec_writer', 'reviewer'] as const satisfies readonly AgentRole[];
+export const TRACED_ROLES = ['spec_writer', 'coding_agent', 'reviewer'] as const satisfies readonly AgentRole[];
 export type TracedRole = (typeof TRACED_ROLES)[number];
-export const TRACE_VERSION_PREFIX: Record<TracedRole, string> = { spec_writer: 'spec-writer/', reviewer: 'reviewer/' };
+export const TRACE_VERSION_PREFIX: Record<TracedRole, string> = { spec_writer: 'spec-writer/', coding_agent: 'coding-agent/', reviewer: 'reviewer/' };
 
 export const roleOfTraceVersion = (version: string): TracedRole | undefined => TRACED_ROLES.find((role) => version.startsWith(TRACE_VERSION_PREFIX[role]));
 
