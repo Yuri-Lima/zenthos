@@ -59,4 +59,10 @@ The old plan's phase gate says the dashboard's numbers must match LangFuse. Thre
   its own model table, as it does the spec writer's and the reviewer's calls. The cost check covers all three agents.
 - The adapter now takes tokens and cost from the SDK's `modelUsage`, which covers every model call; `usage`, used
   before, is documented as the main agent loop only and undercounted subagent and auxiliary calls.
+- Cache writes are priced per lifetime. On a Claude subscription Claude Code writes the main conversation's cache for
+  one hour (twice the input price) and everything else for five minutes (1.25 times); on an API key all of it is
+  five minutes. The SDK's per-model totals do not split them, the main loop's `usage.cache_creation` does, so the
+  adapter attributes those one-hour writes to the session's model and LangFuse gets `input_cache_creation_1h` and
+  `input_cache_creation_5m`. The first live check without the split differed by exactly the one-hour premium
+  ($0.365 against $0.249); with it, the check matched to the cent ($0.1794576 on both sides, 23 Oct 2026).
 

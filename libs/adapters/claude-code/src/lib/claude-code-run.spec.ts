@@ -24,7 +24,7 @@ const result = {
   subtype: 'success',
   result: 'Added the export',
   total_cost_usd: 1.5,
-  usage: { input_tokens: 10, output_tokens: 20, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+  usage: { input_tokens: 10, output_tokens: 20, cache_read_input_tokens: 0, cache_creation_input_tokens: 300, cache_creation: { ephemeral_1h_input_tokens: 300, ephemeral_5m_input_tokens: 0 } },
   modelUsage: {
     'claude-opus-5-5': { inputTokens: 100, outputTokens: 200, cacheReadInputTokens: 3000, cacheCreationInputTokens: 400, costUSD: 1.4 },
     'claude-haiku-5-5[1m]': { inputTokens: 50, outputTokens: 10, cacheReadInputTokens: 0, cacheCreationInputTokens: 0, costUSD: 0.1, canonicalModel: 'claude-haiku-5-5' },
@@ -36,9 +36,12 @@ describe('asResult', () => {
     const parsed = asResult(result as never);
     expect(parsed?.tokens).toEqual({ inputTokens: 150, outputTokens: 210, cacheReadTokens: 3000, cacheWriteTokens: 400 });
     expect(parsed?.usageByModel.map((u) => [u.model, u.estimatedCostUsd])).toEqual([['claude-opus-5-5', 1.4], ['claude-haiku-5-5', 0.1]]);
+    // The main loop's one-hour writes go to the model with the most cache writes when the session model is unknown.
+    expect(parsed?.usageByModel.map((u) => u.cacheWriteOneHourTokens)).toEqual([300, 0]);
+    expect(asResult(result as never, 'claude-haiku-5-5[1m]')?.usageByModel.map((u) => u.cacheWriteOneHourTokens)).toEqual([0, 0]);
     const loopOnly: Partial<typeof result> = { ...result };
     delete loopOnly.modelUsage;
-    expect(asResult(loopOnly as never)?.tokens).toEqual({ inputTokens: 10, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 0 });
+    expect(asResult(loopOnly as never)?.tokens).toEqual({ inputTokens: 10, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 300 });
   });
 });
 

@@ -41,8 +41,10 @@ export class ClaudeCodeAgent implements CodingAgentPort {
       },
     });
 
+    let sessionModel: string | undefined;
     for await (const message of session) {
-      const result = asResult(message);
+      if (message.type === 'system' && message.subtype === 'init') sessionModel = message.model;
+      const result = asResult(message, sessionModel);
       if (!result) continue;
       const usage = { estimatedCostUsd: result.estimatedCostUsd, tokens: result.tokens };
       // A `success` with `is_error` is a turn that ended on an API error (an expired login, an overloaded model): its text is the error.
@@ -54,7 +56,7 @@ export class ClaudeCodeAgent implements CodingAgentPort {
 }
 
 type RawModelUsage = { inputTokens?: number; outputTokens?: number; cacheReadInputTokens?: number; cacheCreationInputTokens?: number; costUSD?: number; canonicalModel?: string };
-type RawUsage = { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
+type RawUsage = { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number; cache_creation?: { ephemeral_1h_input_tokens?: number } };
 type RawResult = { subtype?: string; result?: string; is_error?: boolean; total_cost_usd?: number; usage?: RawUsage; modelUsage?: Record<string, RawModelUsage> };
 
 export type ParsedResult = { subtype: string; result: string; isError: boolean; estimatedCostUsd: number; tokens: TokenUsage; usageByModel: ModelUsage[] };
@@ -64,16 +66,25 @@ export type ParsedResult = { subtype: string; result: string; isError: boolean; 
  * covers every model call of the run (subagents and auxiliary calls included); the SDK documents `usage` as the
  * main agent loop only, so it is the fallback when `modelUsage` is absent. Costs are the SDK's own estimates at
  * list price ("estimates, not billing").
+ *
+ * Cache lifetimes: on a Claude subscription the main conversation writes its cache for one hour, subagents and
+ * helpers for five minutes; on an API key everything uses five minutes (Claude Code's prompt-caching docs).
+ * `modelUsage` does not split them, the main loop's `usage.cache_creation` does, so its one-hour writes are
+ * attributed to the session's model and every other cache write counts as five minutes.
  */
-export function asResult(message: SDKMessage): ParsedResult | undefined {
+export function asResult(message: SDKMessage, sessionModel?: string): ParsedResult | undefined {
   if (message.type !== 'result') return undefined;
   const raw = message as unknown as RawResult;
-  const usageByModel: ModelUsage[] = Object.entries(raw.modelUsage ?? {}).map(([model, u]) => ({
-    model: u.canonicalModel ?? model,
+  const loop = raw.usage ?? {};
+  const oneHour = loop.cache_creation?.ephemeral_1h_input_tokens ?? 0;
+  const entries = Object.entries(raw.modelUsage ?? {});
+  const mainKey = entries.find(([key, u]) => key === sessionModel || u.canonicalModel === sessionModel)?.[0] ?? [...entries].sort(([, a], [, b]) => (b.cacheCreationInputTokens ?? 0) - (a.cacheCreationInputTokens ?? 0))[0]?.[0];
+  const usageByModel: ModelUsage[] = entries.map(([key, u]) => ({
+    model: u.canonicalModel ?? key,
     tokens: { inputTokens: u.inputTokens ?? 0, outputTokens: u.outputTokens ?? 0, cacheReadTokens: u.cacheReadInputTokens ?? 0, cacheWriteTokens: u.cacheCreationInputTokens ?? 0 },
+    cacheWriteOneHourTokens: key === mainKey ? Math.min(oneHour, u.cacheCreationInputTokens ?? 0) : 0,
     estimatedCostUsd: u.costUSD ?? 0,
   }));
-  const loop = raw.usage ?? {};
   const tokens = usageByModel.length
     ? usageByModel.reduce((sum, u) => addTokens(sum, u.tokens), NO_TOKENS)
     : { inputTokens: loop.input_tokens ?? 0, outputTokens: loop.output_tokens ?? 0, cacheReadTokens: loop.cache_read_input_tokens ?? 0, cacheWriteTokens: loop.cache_creation_input_tokens ?? 0 };

@@ -40,13 +40,20 @@ export class LangfuseAgentTracing implements AgentTracingPort {
         async (agent) => {
           try {
             const { value, usageByModel } = await run(this.exportEnv);
-            for (const { model, tokens } of usageByModel) {
+            for (const { model, tokens, cacheWriteOneHourTokens } of usageByModel) {
               startObservation(
                 `${context.name} ${model}`,
                 {
                   model,
                   version: context.version,
-                  usageDetails: { input: tokens.inputTokens, output: tokens.outputTokens, input_cache_read: tokens.cacheReadTokens, input_cache_creation: tokens.cacheWriteTokens },
+                  // LangFuse prices cache writes per lifetime: `_5m` at 1.25 times input, `_1h` at twice input.
+                  usageDetails: {
+                    input: tokens.inputTokens,
+                    output: tokens.outputTokens,
+                    input_cache_read: tokens.cacheReadTokens,
+                    input_cache_creation_5m: tokens.cacheWriteTokens - cacheWriteOneHourTokens,
+                    input_cache_creation_1h: cacheWriteOneHourTokens,
+                  },
                 },
                 { asType: 'generation' },
               ).end();

@@ -11,7 +11,7 @@ const config = { baseUrl: 'https://langfuse.example.test', publicKey: 'pk-lf-tes
 const exporter = new InMemorySpanExporter();
 const provider = new NodeTracerProvider({ spanProcessors: [new LangfuseSpanProcessor({ ...config, exporter, exportMode: 'immediate' })] });
 const context = { sessionId: 'owner/repo#4', version: 'coding-agent/v1', name: 'coding agent' };
-const usage = { model: 'claude-opus-5-5', tokens: { inputTokens: 100, outputTokens: 200, cacheReadTokens: 3000, cacheWriteTokens: 400 }, estimatedCostUsd: 1.4 };
+const usage = { model: 'claude-opus-5-5', tokens: { inputTokens: 100, outputTokens: 200, cacheReadTokens: 3000, cacheWriteTokens: 400 }, cacheWriteOneHourTokens: 300, estimatedCostUsd: 1.4 };
 
 describe('LangfuseAgentTracing', () => {
   beforeAll(() => provider.register());
@@ -43,7 +43,8 @@ describe('LangfuseAgentTracing', () => {
     const values = (span: typeof agent) => Object.values(span?.attributes ?? {}).map(String);
     expect(values(agent)).toEqual(expect.arrayContaining(['owner/repo#4', 'coding-agent/v1', 'agent']));
     expect(values(generation)).toEqual(expect.arrayContaining(['claude-opus-5-5', 'coding-agent/v1', 'generation']));
-    expect(values(generation).find((v) => v.includes('input_cache_read'))).toContain('3000');
+    const usageDetails = JSON.parse(values(generation).find((v) => v.includes('input_cache_read')) ?? '{}');
+    expect(usageDetails).toEqual({ input: 100, output: 200, input_cache_read: 3000, input_cache_creation_5m: 100, input_cache_creation_1h: 300 });
     expect(values(generation).some((v) => v.includes('cost'))).toBe(false);
     expect(env['OTEL_EXPORTER_OTLP_TRACES_ENDPOINT']).toBe('https://langfuse.example.test/api/public/otel/v1/traces');
     expect(decodeURIComponent(env['OTEL_EXPORTER_OTLP_TRACES_HEADERS'])).toBe(`Authorization=Basic ${Buffer.from('pk-lf-test:sk-lf-test').toString('base64')},x-langfuse-ingestion-version=4`);

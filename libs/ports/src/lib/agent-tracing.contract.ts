@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import type { AgentTracingPort } from './agent-tracing.port.js';
 
 const context = { sessionId: 'o/r#1', version: 'coding-agent/v1', name: 'coding agent' };
-const usage = { model: 'claude-opus-5-5', tokens: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 100, cacheWriteTokens: 20 }, estimatedCostUsd: 0.01 };
+const usage = { model: 'claude-opus-5-5', tokens: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 100, cacheWriteTokens: 20 }, cacheWriteOneHourTokens: 20, estimatedCostUsd: 0.01 };
 
 /** Any tracer: the run's value comes back untouched, its error is rethrown, and it always gets an environment. */
 export const agentTracingContract: Record<string, (port: AgentTracingPort) => Promise<void>> = {

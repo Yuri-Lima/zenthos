@@ -1,7 +1,11 @@
 import type { TokenUsage } from '@zenthos/domain';
 
-/** What one model cost inside an agent run, as the agent reported it. */
-export type ModelUsage = { model: string; tokens: TokenUsage; estimatedCostUsd: number };
+/**
+ * What one model cost inside an agent run, as the agent reported it. `cacheWriteOneHourTokens` is the part of
+ * `tokens.cacheWriteTokens` written with the one-hour cache lifetime, which Anthropic prices at twice the input rate
+ * instead of 1.25 times; the rest used five minutes.
+ */
+export type ModelUsage = { model: string; tokens: TokenUsage; cacheWriteOneHourTokens: number; estimatedCostUsd: number };
 
 export type TracedRun<T> = { value: T; usageByModel: ModelUsage[] };
 
