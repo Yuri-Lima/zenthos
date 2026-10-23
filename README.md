@@ -4,7 +4,11 @@
 out, with a human approving the spec and the risky steps. Built as a hexagonal core with pluggable adapters,
 orchestrated by Temporal, traced and evaluated with LangFuse, and proven on two real codebases.
 
-Status: phase 3 in progress. A ticket key starts a Temporal workflow that fetches the issue, has a LangGraph agent draft a
+Status: phases 0 to 3 done, phase 4 in progress: an Angular dashboard over the REST API (runs, three views of a run,
+settings, metrics checked against LangFuse, a glossary), evals as LangFuse experiments gated in CI, and LangFuse
+hosted on a Hetzner server behind Traefik.
+
+A ticket key starts a Temporal workflow that fetches the issue, has a LangGraph agent draft a
 spec validated against the zod schema, posts it as a comment, and waits for a human to approve or reject by
 label or CLI signal. After approval, Claude Code implements the spec headless in a fresh clone where only the
 repository profile's commands may run; deterministic gates (forbidden paths, diff budget, secret scan, cost

@@ -102,4 +102,11 @@ jobs:
           path: ~/.local/share/pnpm/store
           key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
-      - run: pnpm nx run @zenthos/worker:prompts-publish
+      # Skips with a notice until the repository has the LangFuse secrets, instead of failing every push to main.
+      - name: Publish prompts to LangFuse
+        run: |
+          if [ -z "$LANGFUSE_SECRET_KEY" ] || [ -z "$LANGFUSE_BASE_URL" ]; then
+            echo "::notice::LANGFUSE_SECRET_KEY or LANGFUSE_BASE_URL is not set; prompts not published"
+            exit 0
+          fi
+          pnpm nx run @zenthos/worker:prompts-publish
