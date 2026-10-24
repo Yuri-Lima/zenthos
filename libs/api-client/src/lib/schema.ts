@@ -61,7 +61,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Who is signed in; 401 otherwise. With ZENTHOS_AUTH=off, the anonymous marker */
+        /** Who is signed in and in which workspace; 401 otherwise. With ZENTHOS_AUTH=off, the anonymous marker in the dry-run workspace */
         get: operations["AuthController_me"];
         put?: never;
         post?: never;
@@ -88,6 +88,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The workspaces the signed-in person belongs to, with their role in each and which one the session is in */
+        get: operations["WorkspacesController_mine"];
+        put?: never;
+        /** Create a workspace; the creator owns it and the session moves into it */
+        post: operations["WorkspacesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{id}/select": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Work in this workspace from now on; refused unless the person is a member */
+        post: operations["WorkspacesController_select"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The members of a workspace the person belongs to */
+        get: operations["WorkspacesController_members"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{id}/members/{login}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Invite a GitHub login into the workspace, or change their role; owners only, and the last owner stays */
+        put: operations["WorkspacesController_setMember"];
+        post?: never;
+        /** Remove a member; owners only, and the last owner stays */
+        delete: operations["WorkspacesController_removeMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/providers": {
         parameters: {
             query?: never;
@@ -95,7 +165,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List provider connections, secrets redacted */
+        /** List the workspace's provider connections, secrets redacted */
         get: operations["ProvidersController_list"];
         put?: never;
         post?: never;
@@ -163,7 +233,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GitHub returns here with the manifest code; the app becomes a connection */
+        /** GitHub returns here with the manifest code; the app becomes a connection of the workspace that started the flow */
         get: operations["ProvidersController_finishManifest"];
         put?: never;
         post?: never;
@@ -231,7 +301,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List repository profiles */
+        /** List the workspace's repository profiles */
         get: operations["ReposController_list"];
         put?: never;
         post?: never;
@@ -265,10 +335,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The newest run for a ticket, or the newest runs overall, newest first */
+        /** The newest run for a ticket, or the newest runs of the workspace, newest first */
         get: operations["RunsController_list"];
         put?: never;
-        /** Start a run for a ticket (idempotent per ticket) */
+        /** Start a run for a ticket of one of the workspace's repositories (idempotent per ticket) */
         post: operations["RunsController_start"];
         delete?: never;
         options?: never;
@@ -447,6 +517,15 @@ export interface operations {
                         /** Format: uri */
                         avatarUrl?: string;
                         anonymous?: boolean;
+                        workspace?: {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** @enum {string} */
+                            role: "owner" | "admin" | "member";
+                        };
                     };
                 };
             };
@@ -457,6 +536,172 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkspacesController_mine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        name: string;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** @enum {string} */
+                        role: "owner" | "admin" | "member";
+                        current: boolean;
+                    }[];
+                };
+            };
+        };
+    };
+    WorkspacesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        name: string;
+                        /** Format: date-time */
+                        createdAt: string;
+                    };
+                };
+            };
+        };
+    };
+    WorkspacesController_select: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkspacesController_members: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        workspaceId: string;
+                        login: string;
+                        /** @enum {string} */
+                        role: "owner" | "admin" | "member";
+                        invitedBy?: string;
+                        /** Format: date-time */
+                        createdAt: string;
+                    }[];
+                };
+            };
+        };
+    };
+    WorkspacesController_setMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                login: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    role: "owner" | "admin" | "member";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        workspaceId: string;
+                        login: string;
+                        /** @enum {string} */
+                        role: "owner" | "admin" | "member";
+                        invitedBy?: string;
+                        /** Format: date-time */
+                        createdAt: string;
+                    };
+                };
+            };
+        };
+    };
+    WorkspacesController_removeMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                login: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -729,6 +974,8 @@ export interface operations {
                         };
                         /** Format: uuid */
                         connectionId?: string;
+                        /** Format: uuid */
+                        workspaceId?: string;
                     }[];
                 };
             };
@@ -767,6 +1014,8 @@ export interface operations {
                         };
                         /** Format: uuid */
                         connectionId?: string;
+                        /** Format: uuid */
+                        workspaceId?: string;
                     };
                 };
             };
@@ -825,6 +1074,8 @@ export interface operations {
                         };
                         /** Format: uuid */
                         connectionId?: string;
+                        /** Format: uuid */
+                        workspaceId?: string;
                     };
                 };
             };
@@ -885,6 +1136,8 @@ export interface operations {
                         /** Format: date-time */
                         createdAt: string;
                         requestedBy?: string;
+                        /** Format: uuid */
+                        workspaceId?: string;
                         estimatedCostUsd: number;
                         tokens: {
                             inputTokens: number;
@@ -995,6 +1248,8 @@ export interface operations {
                         /** Format: date-time */
                         createdAt: string;
                         requestedBy?: string;
+                        /** Format: uuid */
+                        workspaceId?: string;
                         estimatedCostUsd: number;
                         tokens: {
                             inputTokens: number;

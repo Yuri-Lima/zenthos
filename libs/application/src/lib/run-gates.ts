@@ -10,7 +10,7 @@ import {
   type GateResult,
   type RepoProfile,
   type Run,
-  type Workspace,
+  type Checkout,
 } from '@zenthos/domain';
 import type { SandboxPort } from '@zenthos/ports';
 
@@ -23,7 +23,7 @@ import type { SandboxPort } from '@zenthos/ports';
 export async function runGates(
   { sandbox }: { sandbox: SandboxPort },
   run: Run,
-  workspace: Workspace,
+  checkout: Checkout,
   diff: Diff,
   profile: RepoProfile,
   baselineFailures: readonly string[] = [],
@@ -42,7 +42,7 @@ export async function runGates(
       results.push(skipped('ci', `${command} skipped: it already fails on ${profile.baseBranch} before this change`));
       continue;
     }
-    const result = await sandbox.run(workspace, command);
+    const result = await sandbox.run(checkout, command);
     if (result.exitCode !== 0) {
       results.push(fail('ci', `${command} exited ${result.exitCode}\n${tail(result.stderr || result.stdout)}`));
       return results;

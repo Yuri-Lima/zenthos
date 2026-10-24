@@ -1,10 +1,11 @@
 import { existsSync } from 'node:fs';
 import { OctokitGitHubApps } from '@zenthos/adapter-github/live';
-import { InMemoryGitHubApps, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryRunControl, InMemoryRuns, InMemorySessions } from '@zenthos/adapter-in-memory';
-import { migrate, PostgresProviderConnections, PostgresRepoProfiles, PostgresRuns, PostgresSessions, SecretBox } from '@zenthos/adapter-postgres';
+import { InMemoryGitHubApps, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryRunControl, InMemoryRuns, InMemorySessions, InMemoryWorkspaces } from '@zenthos/adapter-in-memory';
+import { migrate, PostgresProviderConnections, PostgresRepoProfiles, PostgresRuns, PostgresSessions, PostgresWorkspaces, SecretBox } from '@zenthos/adapter-postgres';
 import { LangfuseEvalResults, LangfuseTraceUsage } from '@zenthos/adapter-langfuse';
 import { TemporalRunControl } from '@zenthos/adapter-temporal';
-import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort, RunsPort, SessionsPort } from '@zenthos/ports';
+import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort, RunsPort, SessionsPort, WorkspacesPort } from '@zenthos/ports';
+import { DRY_RUN_WORKSPACE } from '@zenthos/domain';
 import pg from 'pg';
 import { loadConfig, type ApiConfig } from './config.js';
 
@@ -22,6 +23,7 @@ export async function composePorts(config: ApiConfig): Promise<ApiPorts> {
   let profiles: RepoProfilesPort = new InMemoryRepoProfiles();
   let runStore: RunsPort = new InMemoryRuns();
   let sessions: SessionsPort = new InMemorySessions();
+  let workspaces: WorkspacesPort = new InMemoryWorkspaces();
   if (config.DATABASE_URL && config.ZENTHOS_SECRETS_KEY) {
     const pool = new pg.Pool({ connectionString: config.DATABASE_URL });
     await migrate(pool);
@@ -29,6 +31,10 @@ export async function composePorts(config: ApiConfig): Promise<ApiPorts> {
     profiles = new PostgresRepoProfiles(pool);
     runStore = new PostgresRuns(pool);
     sessions = new PostgresSessions(pool);
+    workspaces = new PostgresWorkspaces(pool);
+    // With auth off every row belongs to the dry-run workspace, which the foreign keys need to exist. It has no
+    // members, so the first person to sign in once auth is on claims it, with everything configured so far (ADR 019).
+    if (config.ZENTHOS_AUTH === 'off') await workspaces.save(DRY_RUN_WORKSPACE);
     closers.push(() => pool.end());
   }
   let runs: RunControlPort = new InMemoryRunControl();
@@ -44,5 +50,5 @@ export async function composePorts(config: ApiConfig): Promise<ApiPorts> {
       : undefined;
   const traces = langfuse && new LangfuseTraceUsage(langfuse);
   const evals = langfuse && new LangfuseEvalResults(langfuse);
-  return { connections, profiles, runs, runStore, githubApps, sessions, traces, evals, close: async () => void (await Promise.all(closers.map((close) => close()))) };
+  return { connections, profiles, runs, runStore, githubApps, sessions, workspaces, traces, evals, close: async () => void (await Promise.all(closers.map((close) => close()))) };
 }

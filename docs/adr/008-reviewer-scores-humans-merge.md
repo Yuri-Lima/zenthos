@@ -18,7 +18,7 @@ replace the human's.
   model judge more consistent than one call asked for everything.
 - The verdict is a gate (`review_threshold`) decided by the run's policy: any blocker finding fails, otherwise
   the mean must reach `reviewThreshold` (3.5 by default). A failed review sends the coding agent back to the
-  same workspace once (`maxReviewRounds`), with the findings as feedback; a second failure escalates.
+  same checkout once (`maxReviewRounds`), with the findings as feedback; a second failure escalates.
 - The review is posted as a pull-request **comment**, never as an approval or a request for changes. A bot
   approving its own pull request would make the human reviewer a formality. Humans merge.
 - The reviewer sees the diff as the host serves it (`ScmPort.readPullRequestDiff`), not the sandbox's, so it

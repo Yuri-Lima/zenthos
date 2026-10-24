@@ -20,6 +20,8 @@ export const RepoProfileSchema = z.object({
   policy: RunPolicySchema,
   /** The provider connection whose credentials act on this repository; absent for in-memory dry runs. */
   connectionId: z.uuid().optional(),
+  /** The workspace that owns the repository (ADR 019); absent only on profiles stored before workspaces existed. */
+  workspaceId: z.uuid().optional(),
 });
 
 export type RepoProfile = z.infer<typeof RepoProfileSchema>;

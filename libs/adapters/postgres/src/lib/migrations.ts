@@ -53,6 +53,42 @@ export const MIGRATIONS: { name: string; sql: string }[] = [
       CREATE INDEX sessions_expires_at ON sessions (expires_at);
     `,
   },
+  {
+    name: '004-workspaces',
+    sql: `
+      CREATE TABLE workspaces (
+        id uuid PRIMARY KEY,
+        name text NOT NULL,
+        created_at timestamptz NOT NULL
+      );
+      CREATE TABLE workspace_members (
+        workspace_id uuid NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
+        login text NOT NULL,
+        role text NOT NULL,
+        invited_by text,
+        created_at timestamptz NOT NULL
+      );
+      CREATE UNIQUE INDEX workspace_members_workspace_login ON workspace_members (workspace_id, lower(login));
+      CREATE INDEX workspace_members_login ON workspace_members (lower(login));
+      ALTER TABLE provider_connections ADD COLUMN workspace_id uuid REFERENCES workspaces (id) ON DELETE CASCADE;
+      ALTER TABLE repo_profiles ADD COLUMN workspace_id uuid REFERENCES workspaces (id) ON DELETE CASCADE;
+      ALTER TABLE runs ADD COLUMN workspace_id uuid REFERENCES workspaces (id) ON DELETE CASCADE;
+      CREATE INDEX provider_connections_workspace ON provider_connections (workspace_id);
+      CREATE INDEX repo_profiles_workspace ON repo_profiles (workspace_id);
+      CREATE INDEX runs_workspace_created_at ON runs (workspace_id, created_at DESC);
+      -- Rows from before workspaces existed move into one workspace with no members; the first sign-in claims it (ADR 019).
+      DO $$
+      DECLARE legacy uuid;
+      BEGIN
+        IF EXISTS (SELECT 1 FROM repo_profiles) OR EXISTS (SELECT 1 FROM provider_connections) OR EXISTS (SELECT 1 FROM runs) THEN
+          INSERT INTO workspaces (id, name, created_at) VALUES (gen_random_uuid(), 'Workspace', now()) RETURNING id INTO legacy;
+          UPDATE repo_profiles SET workspace_id = legacy;
+          UPDATE provider_connections SET workspace_id = legacy;
+          UPDATE runs SET workspace_id = legacy;
+        END IF;
+      END $$;
+    `,
+  },
 ];
 
 export async function migrate(pool: Pool): Promise<string[]> {

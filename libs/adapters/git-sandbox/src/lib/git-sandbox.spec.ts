@@ -49,23 +49,23 @@ describe('GitSandbox', () => {
       check({
         port: new GitSandbox({ root, profiles: profilesOf(profile) }),
         profile,
-        change: (workspace) => writeFile(path.join(workspace.path, 'feature.ts'), 'export const feature = true;\n'),
+        change: (checkout) => writeFile(path.join(checkout.path, 'feature.ts'), 'export const feature = true;\n'),
       }),
     );
   }
 
   it('commits and pushes the branch to origin as the provider identity, and leaves the base branch alone', async () => {
     const sandbox = new GitSandbox({ root, profiles: profilesOf(profile), author: async () => ({ name: 'zenthos-test[bot]', email: '1+zenthos-test[bot]@users.noreply.github.com' }) });
-    const workspace = await sandbox.prepare(profile, 'zenthos/local-origin-1');
-    await writeFile(path.join(workspace.path, 'feature.ts'), 'export const feature = true;\n');
-    await sandbox.commitAndPush(workspace, 'Add feature (local/origin#1)');
+    const checkout = await sandbox.prepare(profile, 'zenthos/local-origin-1');
+    await writeFile(path.join(checkout.path, 'feature.ts'), 'export const feature = true;\n');
+    await sandbox.commitAndPush(checkout, 'Add feature (local/origin#1)');
     const { stdout } = await git(origin, 'branch', '--list');
     expect(stdout).toContain('zenthos/local-origin-1');
     const { stdout: author } = await git(origin, 'log', '-1', '--format=%an <%ae>', 'zenthos/local-origin-1');
     expect(author.trim()).toBe('zenthos-test[bot] <1+zenthos-test[bot]@users.noreply.github.com>');
     const { stdout: log } = await git(origin, 'log', '--oneline', 'staging');
     expect(log.trim().split('\n')).toHaveLength(1);
-    await sandbox.cleanup(workspace);
+    await sandbox.cleanup(checkout);
   });
 
   it('can be retried after a failed push and replaces a stale branch of the same name', async () => {
@@ -89,8 +89,8 @@ describe('GitSandbox', () => {
   it('returns a non-zero exit code instead of throwing when an allowed command fails', async () => {
     const failing = repoProfile({ ...profile, allowedCommands: ['exit 3'], gateCommands: [] });
     const sandbox = new GitSandbox({ root, profiles: profilesOf(failing) });
-    const workspace = await sandbox.prepare(failing, 'zenthos/fail');
-    expect((await sandbox.run(workspace, 'exit 3')).exitCode).toBe(3);
-    await sandbox.cleanup(workspace);
+    const checkout = await sandbox.prepare(failing, 'zenthos/fail');
+    expect((await sandbox.run(checkout, 'exit 3')).exitCode).toBe(3);
+    await sandbox.cleanup(checkout);
   });
 });

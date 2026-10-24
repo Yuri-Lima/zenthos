@@ -1,7 +1,7 @@
 import { mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { DomainError, isCommandAllowed, type CommandResult, type Diff, type RepoProfile, type Workspace } from '@zenthos/domain';
+import { DomainError, isCommandAllowed, type CommandResult, type Diff, type RepoProfile, type Checkout } from '@zenthos/domain';
 import { InMemoryRepoProfiles } from './in-memory-stores.js';
 import type { RepoProfilesPort, SandboxPort } from '@zenthos/ports';
 
@@ -11,39 +11,39 @@ import type { RepoProfilesPort, SandboxPort } from '@zenthos/ports';
  */
 export class LocalSandbox implements SandboxPort {
   readonly commands: string[] = [];
-  readonly pushed: { workspace: Workspace; message: string }[] = [];
+  readonly pushed: { checkout: Checkout; message: string }[] = [];
 
   constructor(
     private readonly profiles: RepoProfilesPort = new InMemoryRepoProfiles(),
     private readonly failing: Record<string, string> = {},
   ) {}
 
-  async prepare(profile: RepoProfile, branch: string): Promise<Workspace> {
+  async prepare(profile: RepoProfile, branch: string): Promise<Checkout> {
     const dir = await mkdtemp(path.join(tmpdir(), 'zenthos-memory-'));
     return { id: path.basename(dir), path: dir, repo: profile.repo, baseBranch: profile.baseBranch, branch };
   }
 
-  async run(workspace: Workspace, command: string): Promise<CommandResult> {
+  async run(checkout: Checkout, command: string): Promise<CommandResult> {
     this.commands.push(command);
-    const profile = await this.profiles.get(workspace.repo);
+    const profile = await this.profiles.get(checkout.repo);
     if (!isCommandAllowed(command, profile?.allowedCommands ?? [])) throw new DomainError('command_not_allowed', { command });
     const stderr = this.failing[command];
     return { command, exitCode: stderr ? 1 : 0, stdout: '', stderr: stderr ?? '' };
   }
 
-  async diff(workspace: Workspace): Promise<Diff> {
-    const files = (await listFiles(workspace.path)).map((file) => path.relative(workspace.path, file));
-    const contents = await Promise.all(files.map((file) => readFile(path.join(workspace.path, file), 'utf8')));
+  async diff(checkout: Checkout): Promise<Diff> {
+    const files = (await listFiles(checkout.path)).map((file) => path.relative(checkout.path, file));
+    const contents = await Promise.all(files.map((file) => readFile(path.join(checkout.path, file), 'utf8')));
     const patch = contents.map((text, i) => `+++ ${files[i]}\n${text.split('\n').map((l) => `+${l}`).join('\n')}`).join('\n');
     return { files, changedLines: contents.reduce((n, text) => n + text.split('\n').length, 0), patch };
   }
 
-  async commitAndPush(workspace: Workspace, message: string): Promise<void> {
-    this.pushed.push({ workspace, message });
+  async commitAndPush(checkout: Checkout, message: string): Promise<void> {
+    this.pushed.push({ checkout, message });
   }
 
-  async cleanup(workspace: Workspace): Promise<void> {
-    await rm(workspace.path, { recursive: true, force: true });
+  async cleanup(checkout: Checkout): Promise<void> {
+    await rm(checkout.path, { recursive: true, force: true });
   }
 }
 

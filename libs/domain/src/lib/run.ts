@@ -28,6 +28,8 @@ export const RunSchema = z.object({
   createdAt: z.iso.datetime(),
   /** Who started the run when a person did; absent for label polling and dry runs. */
   requestedBy: z.string().optional(),
+  /** The workspace the repository belongs to, copied from its profile at intake (ADR 019); absent on runs stored before. */
+  workspaceId: z.uuid().optional(),
   /** Sum of the agents' own estimates at list price. A budget signal, not an invoice. */
   estimatedCostUsd: z.number().min(0),
   /** Sum of the token counts the models reported; the figure a bill is actually based on. */
@@ -59,13 +61,14 @@ export function parseRun(input: unknown): Run {
 
 /** Uses Web Crypto so this file stays free of node imports and can be bundled into a Temporal workflow. */
 /** `id` is for callers without `crypto` at hand, such as workflow code that must stay deterministic. */
-export function createRun(ticket: Ticket, options: { policy?: RunPolicy; now?: Date; id?: string; requestedBy?: string } = {}): Run {
+export function createRun(ticket: Ticket, options: { policy?: RunPolicy; now?: Date; id?: string; requestedBy?: string; workspaceId?: string } = {}): Run {
   return {
     id: options.id ?? globalThis.crypto.randomUUID(),
     ticket,
     state: 'intake',
     createdAt: (options.now ?? new Date()).toISOString(),
     ...(options.requestedBy ? { requestedBy: options.requestedBy } : {}),
+    ...(options.workspaceId ? { workspaceId: options.workspaceId } : {}),
     estimatedCostUsd: 0,
     tokens: NO_TOKENS,
     usageByAgent: {},

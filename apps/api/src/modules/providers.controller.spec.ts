@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import type { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { createConnection } from '@zenthos/domain';
+import { createConnection, DRY_RUN_WORKSPACE } from '@zenthos/domain';
 import { createAppModule } from '../app.module.js';
 import { loadConfig } from '../config.js';
 import { inMemoryPorts } from '../ports.js';
@@ -27,7 +27,7 @@ describe('providers over HTTP', () => {
     const refused = await post('/providers/github/token', { name: 'me', token: 'rejected' });
     expect(refused.status).toBe(400);
     expect(await refused.json()).toMatchObject({ code: 'invalid_credentials' });
-    expect(await ports.connections.list()).toEqual([]);
+    expect(await ports.connections.list(DRY_RUN_WORKSPACE.id)).toEqual([]);
 
     const accepted = await post('/providers/github/token', { name: 'me', token: 'ghp_ok' });
     const connection = (await accepted.json()) as { id: string; kind: string; token?: string };
@@ -40,7 +40,7 @@ describe('providers over HTTP', () => {
   });
 
   it('records an installation and sends the browser back to the dashboard settings', async () => {
-    const appConnection = createConnection({ provider: 'github', name: 'zenthos-memory', credentials: { type: 'github-app', appId: '7', privateKey: 'pem' }, app: { slug: 'zenthos-memory', webhookSecret: 'w' } });
+    const appConnection = createConnection({ provider: 'github', name: 'zenthos-memory', credentials: { type: 'github-app', appId: '7', privateKey: 'pem' }, app: { slug: 'zenthos-memory', webhookSecret: 'w' }, workspaceId: DRY_RUN_WORKSPACE.id });
     await ports.connections.save(appConnection);
     const res = await fetch(`${base}/providers/github/install/callback?connection=${appConnection.id}&installation_id=99`, { redirect: 'manual' });
     expect(res.status).toBe(302);

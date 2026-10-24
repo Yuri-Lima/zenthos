@@ -1,8 +1,8 @@
-import type { Diff, PullRequest, PullRequestState, RepoProfile, Workspace } from '@zenthos/domain';
+import type { Diff, PullRequest, PullRequestState, RepoProfile, Checkout } from '@zenthos/domain';
 
 export type OpenPullRequestInput = {
   profile: RepoProfile;
-  workspace: Workspace;
+  checkout: Checkout;
   title: string;
   body: string;
   /** The adapter adds the line that links and closes the ticket in its tracker's syntax. */

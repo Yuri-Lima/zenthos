@@ -19,7 +19,7 @@ describe('LocalSandbox', () => {
       check({
         port: new LocalSandbox(new InMemoryRepoProfiles([profile])),
         profile,
-        change: (workspace) => writeFile(path.join(workspace.path, 'a.txt'), 'one\ntwo\n'),
+        change: (checkout) => writeFile(path.join(checkout.path, 'a.txt'), 'one\ntwo\n'),
       }),
     );
   }

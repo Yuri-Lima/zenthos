@@ -1,4 +1,4 @@
-import { repoProfile, type Spec, type Workspace } from '@zenthos/domain';
+import { repoProfile, type Spec, type Checkout } from '@zenthos/domain';
 import { decideToolUse } from './permissions.js';
 import { implementationPrompt } from './prompt.js';
 
@@ -18,11 +18,11 @@ const spec: Spec = {
   touchedAreas: ['src/routes/clients'],
   risks: [],
 };
-const workspace: Workspace = { id: 'w', path: '/tmp/w', repo: profile.repo, baseBranch: 'staging', branch: 'zenthos/owner-repo-4' };
+const checkout: Checkout = { id: 'w', path: '/tmp/w', repo: profile.repo, baseBranch: 'staging', branch: 'zenthos/owner-repo-4' };
 
 describe('implementationPrompt', () => {
   it('carries the criteria, the allowlist, the forbidden paths and the feedback', () => {
-    const prompt = implementationPrompt({ workspace, spec, profile, feedback: 'ci: bun run lint exited 1' });
+    const prompt = implementationPrompt({ checkout, spec, profile, feedback: 'ci: bun run lint exited 1' });
     expect(prompt).toContain('AC-1: Export downloads a CSV');
     expect(prompt).toContain('`bun run lint`, `bun run format:check`');
     expect(prompt).toContain('eslint.config');

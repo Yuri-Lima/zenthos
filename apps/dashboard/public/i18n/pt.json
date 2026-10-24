@@ -3,13 +3,15 @@
     "tagline": "Sistema operacional de agentes",
     "signOut": "Sair",
     "anonymous": "login desligado",
-    "language": "Trocar idioma"
+    "language": "Trocar idioma",
+    "newWorkspace": "Novo workspace",
+    "switchWorkspace": "Trocar de workspace"
   },
   "signIn": {
     "title": "Entrar",
-    "body": "O ZenthOs faz o login pelo GitHub, com o mesmo App que atua nos seus repositórios. Só entram logins da lista permitida.",
+    "body": "O ZenthOs faz o login pelo GitHub. Seus workspaces decidem o que você vê: crie um para a sua equipe ou seja convidado para um.",
     "button": "Entrar com GitHub",
-    "notAllowed": "Se o GitHub devolveu você para cá, seu login não está na lista permitida."
+    "afterwards": "Primeira vez? Você dá nome ao seu primeiro workspace logo depois de entrar."
   },
   "common": {
     "cancel": "Cancelar"
@@ -207,7 +209,6 @@
     "view_graph": "Visão da máquina de estados",
     "view_inspector": "Inspetor",
     "setting_connection": "Conexão de provedor",
-    "setting_allowlist": "Lista de permitidos",
     "setting_manifest": "Fluxo de manifesto",
     "metric_spec_approval_rate": "Taxa de aprovação de specs",
     "metric_clean_merge_rate": "Taxa de merge limpo",
@@ -228,7 +229,9 @@
     "agent_coding_agent": "Agente de código",
     "agent_reviewer": "Revisor",
     "trace_check": "Verificação no LangFuse",
-    "view_metrics": "Página de métricas"
+    "view_metrics": "Página de métricas",
+    "workspace": "Workspace",
+    "setting_role": "Papel"
   },
   "glossary": {
     "run": "Um ticket atravessando o pipeline, da entrada até um pull request mesclado ou uma parada. Um workflow Temporal por ticket; seu estado só muda pela máquina de estados e cada mudança é armazenada.",
@@ -294,7 +297,6 @@
     "view_graph": "A tabela de transições desenhada como grafo, a mesma imagem para toda execução, com as arestas que esta execução percorreu acesas.",
     "view_inspector": "A carga do passo selecionado: a especificação, os portões com seus detalhes, as pontuações da rubrica com evidências e achados, custo e tokens por tipo, a execução bruta.",
     "setting_connection": "As credenciais com as quais o pipeline age em um provedor: um GitHub App (padrão) ou um token. Credenciais e segredos do app são selados em repouso; a API só mostra a metade pública.",
-    "setting_allowlist": "Os logins do GitHub autorizados a entrar no painel após Entrar com GitHub. Vazia não admite ninguém.",
     "setting_manifest": "Como o GitHub é conectado: a API envia o navegador ao GitHub com um manifesto de app, o GitHub devolve um código, a API o troca pelas credenciais do app e armazena uma conexão.",
     "metric_spec_approval_rate": "Specs aprovadas divididas por specs rascunhadas.",
     "metric_clean_merge_rate": "PRs mesclados sem mudança humana de código divididos por PRs abertos.",
@@ -315,7 +317,9 @@
     "agent_coding_agent": "O único agente de verdade: Claude Code, sem interface, no sandbox, decide seus próprios passos por até sessenta turnos, edita arquivos e roda só comandos permitidos. Rastreado no LangFuse: seus próprios spans de cada turno, chamada de modelo e ferramenta, dentro de um span da execução, com os tokens precificados pelo LangFuse.",
     "agent_reviewer": "O workflow de LLM que revisa o pull request: um grafo LangGraph que pontua as quatro linhas da rubrica em paralelo e reúne achados, publicados como comentário. Sem ferramentas; rastreado no LangFuse.",
     "trace_check": "O custo armazenado de cada agente comparado com o que o LangFuse registrou para a mesma execução: o redator de especificações, o agente de código e o revisor. São precificados separadamente, então coincidem dentro de 5% ou um centavo; execuções armazenadas antes de os custos serem guardados por agente não podem ser comparadas.",
-    "view_metrics": "As nove métricas com suas definições ao lado dos números, calculadas a partir das execuções armazenadas; as que vivem em outro lugar dizem onde. Abaixo, cada execução com seu custo dividido por agente e a verificação no LangFuse sob demanda."
+    "view_metrics": "As nove métricas com suas definições ao lado dos números, calculadas a partir das execuções armazenadas; as que vivem em outro lugar dizem onde. Abaixo, cada execução com seu custo dividido por agente e a verificação no LangFuse sob demanda.",
+    "workspace": "O que uma equipe configura e vê: seus membros, conexões de provedor, perfis de repositório e execuções. Toda consulta ao armazenamento é limitada a um workspace; uma pessoa pertence a um ou mais e trabalha em um por vez, escolhido na barra superior.",
+    "setting_role": "O que um membro pode fazer em um workspace. Donos gerenciam membros; donos e admins configuram conexões, repositórios e credenciais; todo membro inicia execuções e decide especificações. A API verifica o papel em cada requisição, e um workspace mantém ao menos um dono."
   },
   "settings": {
     "eyebrow": "Configuração",
@@ -386,7 +390,8 @@
     "checkRepos": "Instalações atualizadas: {{n}} repositórios.",
     "manage": "Gerenciar repositórios no GitHub",
     "manageHint": "Adicione ou remova, no GitHub, os repositórios em que este app pode agir; depois clique em Verificar para atualizar a lista aqui.",
-    "addThisRepo": "Adicionar este repositório no GitHub"
+    "addThisRepo": "Adicionar este repositório no GitHub",
+    "members": "Membros"
   },
   "repoForm": {
     "newTitle": "Adicionar um repositório",
@@ -471,5 +476,29 @@
     "openLangfuse": "Abrir a sessão no LangFuse",
     "unavailable": "A API não tem chaves do LangFuse (LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY), então nada foi comparado.",
     "checkShort": "LangFuse"
+  },
+  "workspaceNew": {
+    "eyebrow": "Workspace",
+    "title": "Dê um nome ao seu workspace",
+    "titleAnother": "Criar outro workspace",
+    "body": "Um workspace reúne uma equipe: seus membros, instalações do GitHub, repositórios e execuções. Você será o dono e poderá convidar outras pessoas pelo login do GitHub.",
+    "name": "Nome do workspace",
+    "create": "Criar workspace"
+  },
+  "members": {
+    "title": "Membros",
+    "login": "Login do GitHub",
+    "roleLabel": "Papel",
+    "invite": "Convidar",
+    "inviteHint": "A pessoa ganha acesso na próxima vez que entrar com essa conta do GitHub.",
+    "invitedBy": "Convidado por",
+    "since": "Desde",
+    "remove": "Remover",
+    "none": "Nenhum membro ainda.",
+    "role": {
+      "owner": "dono",
+      "admin": "admin",
+      "member": "membro"
+    }
   }
 }

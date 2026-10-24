@@ -7,7 +7,8 @@ class Connections implements ProviderConnectionsPort {
   readonly byId = new Map<string, ProviderConnection>();
   get = async (id: string) => this.byId.get(id);
   findByAppId = async (appId: string) => [...this.byId.values()].find((c) => c.credentials.type === 'github-app' && c.credentials.appId === appId);
-  list = async () => [...this.byId.values()];
+  signInApp = async () => [...this.byId.values()].find((c) => c.app?.clientId && c.app.clientSecret);
+  list = async (workspaceId: string) => [...this.byId.values()].filter((c) => c.workspaceId === workspaceId);
   save = async (c: ProviderConnection) => void this.byId.set(c.id, c);
   remove = async (id: string) => void this.byId.delete(id);
 }
@@ -39,14 +40,15 @@ const githubApps = {
 } as unknown as GitHubAppsPort;
 
 const manifest = { appId: '42', slug: 'zenthos-dev', privateKey: 'pem', webhookSecret: 'whs', clientId: 'c', clientSecret: 'cs' };
+const W = '00000000-0000-4000-8000-0000000000a1';
 
 describe('provider connections', () => {
   it('checks credentials before storing them, and reports the health of a stored connection without throwing', async () => {
     const connections = new Connections();
-    await expect(connectGitHubToken({ connections, githubApps }, 'me', 'rejected')).rejects.toMatchObject({ code: 'invalid_credentials' });
+    await expect(connectGitHubToken({ connections, githubApps }, { name: 'me', token: 'rejected', workspaceId: W })).rejects.toMatchObject({ code: 'invalid_credentials' });
     await expect(connectExistingGitHubApp({ connections, githubApps }, { name: 'x', appId: '1', privateKey: 'rejected' })).rejects.toMatchObject({ code: 'invalid_credentials' });
-    expect(await connections.list()).toEqual([]);
-    const token = await connectGitHubToken({ connections, githubApps }, 'me', 'ghp_ok');
+    expect(await connections.list(W)).toEqual([]);
+    const token = await connectGitHubToken({ connections, githubApps }, { name: 'me', token: 'ghp_ok', workspaceId: W });
     const now = new Date('2026-10-18T12:00:00Z');
     expect(await checkConnection({ connections, githubApps }, token.id, now)).toEqual({ ok: true, actsAs: 'octocat', checkedAt: now.toISOString() });
     await connections.save({ ...token, credentials: { type: 'github-token', token: 'rejected' } });
@@ -70,14 +72,16 @@ describe('provider connections', () => {
     const connections = new Connections();
     const silent = await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-dev', appId: '9', privateKey: 'pem' });
     expect(silent.app).toBeUndefined();
-    const hooked = await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-hooked', appId: '10', privateKey: 'pem', webhookSecret: 'whs' });
+    const hooked = await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-hooked', appId: '10', privateKey: 'pem', webhookSecret: 'whs', workspaceId: W });
     expect(hooked.app).toEqual({ slug: 'zenthos-hooked', webhookSecret: 'whs' });
     expect((await connections.findByAppId('9'))?.id).toBe(silent.id);
     expect((await connections.findByAppId('10'))?.id).toBe(hooked.id);
-    const updated = await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-hooked', appId: '10', privateKey: 'pem2', webhookSecret: 'whs', clientId: 'Iv1.c', clientSecret: 'cs' });
+    const updated = await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-hooked', appId: '10', privateKey: 'pem2', webhookSecret: 'whs', clientId: 'Iv1.c', clientSecret: 'cs', workspaceId: W });
     expect(updated.id).toBe(hooked.id);
     expect(updated.app?.clientId).toBe('Iv1.c');
-    expect((await connections.list()).filter((c) => c.credentials.type === 'github-app' && c.credentials.appId === '10')).toHaveLength(1);
+    expect((await connections.list(W)).filter((c) => c.credentials.type === 'github-app' && c.credentials.appId === '10')).toHaveLength(1);
+    // Another workspace cannot take the app over by connecting it again.
+    await expect(connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-hooked', appId: '10', privateKey: 'pem', workspaceId: '00000000-0000-4000-8000-0000000000b2' })).rejects.toMatchObject({ code: 'forbidden' });
   });
 
   it('applies webhook commands: labels drive runs only for known repositories, installation events update the connection', async () => {

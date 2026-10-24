@@ -1,6 +1,7 @@
 import { Controller, Get, Inject, Logger, NotFoundException, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { compareWithTraces, computeMetrics, MetricValueSchema, TRACE_MATCH_TOLERANCE, TraceComparisonSchema, type EvalRunResult } from '@zenthos/domain';
+import { compareWithTraces, computeMetrics, MetricValueSchema, TRACE_MATCH_TOLERANCE, TraceComparisonSchema, type EvalRunResult, type WorkspaceActor } from '@zenthos/domain';
+import { CurrentWorkspace } from '../auth/session.guard.js';
 import { z } from 'zod';
 import { jsonSchema } from '../openapi.js';
 import { API_PORTS, type ApiPorts } from '../ports.js';
@@ -29,8 +30,8 @@ export class MetricsController {
   @Get()
   @ApiOperation({ summary: 'Every metric, with its definition beside its value: from the stored runs, the eval metrics from the latest eval runs in LangFuse; null where neither is the source' })
   @ApiOkResponse({ schema: jsonSchema(z.array(MetricValueSchema)) })
-  async list() {
-    const [runs, evalRuns] = await Promise.all([this.ports.runStore.list({ limit: METRICS_WINDOW }), this.evalRuns()]);
+  async list(@CurrentWorkspace() actor: WorkspaceActor) {
+    const [runs, evalRuns] = await Promise.all([this.ports.runStore.list({ workspaceId: actor.workspaceId, limit: METRICS_WINDOW }), this.evalRuns()]);
     return computeMetrics(runs, evalRuns);
   }
 
@@ -49,9 +50,9 @@ export class MetricsController {
   @ApiOperation({ summary: "Compare one run's stored cost per agent with what LangFuse recorded for its session" })
   @ApiQuery({ name: 'ticket', required: true })
   @ApiOkResponse({ schema: jsonSchema(TraceCheck) })
-  async traces(@Query('ticket') ticketKey: string): Promise<z.infer<typeof TraceCheck>> {
+  async traces(@Query('ticket') ticketKey: string, @CurrentWorkspace() actor: WorkspaceActor): Promise<z.infer<typeof TraceCheck>> {
     const run = ticketKey ? await this.ports.runStore.latest(ticketKey) : undefined;
-    if (!run) throw new NotFoundException(`no stored run for ${ticketKey}`);
+    if (!run || run.workspaceId !== actor.workspaceId) throw new NotFoundException(`no stored run for ${ticketKey} in this workspace`);
     const base = { ticketKey, tolerance: { ...TRACE_MATCH_TOLERANCE } };
     const traces = this.ports.traces;
     if (!traces) return { ...base, available: false, comparison: compareWithTraces(run.usageByAgent, {}) };

@@ -9,9 +9,8 @@ const hash = (id: string) => createHash('sha256').update(id).digest('hex');
 export class PostgresSessions implements SessionsPort {
   constructor(private readonly pool: Pool) {}
 
-  async create(session: Session): Promise<void> {
-    const stored = { user: session.user, createdAt: session.createdAt, expiresAt: session.expiresAt };
-    await this.pool.query('INSERT INTO sessions (id_hash, session, expires_at) VALUES ($1, $2, $3)', [hash(session.id), stored, session.expiresAt]);
+  async save({ id, ...stored }: Session): Promise<void> {
+    await this.pool.query('INSERT INTO sessions (id_hash, session, expires_at) VALUES ($1, $2, $3) ON CONFLICT (id_hash) DO UPDATE SET session = EXCLUDED.session, expires_at = EXCLUDED.expires_at', [hash(id), stored, stored.expiresAt]);
   }
 
   async get(id: string): Promise<Session | undefined> {

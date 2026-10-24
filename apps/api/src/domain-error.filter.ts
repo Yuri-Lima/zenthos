@@ -7,8 +7,12 @@ const STATUS: Partial<Record<ErrorCode, HttpStatus>> = {
   connection_not_found: HttpStatus.NOT_FOUND,
   unknown_repository: HttpStatus.NOT_FOUND,
   ticket_not_found: HttpStatus.NOT_FOUND,
-  not_allowed: HttpStatus.FORBIDDEN,
   sign_in_unavailable: HttpStatus.NOT_FOUND,
+  forbidden: HttpStatus.FORBIDDEN,
+  not_a_member: HttpStatus.FORBIDDEN,
+  workspace_not_found: HttpStatus.NOT_FOUND,
+  workspace_required: HttpStatus.CONFLICT,
+  last_owner: HttpStatus.CONFLICT,
 };
 
 @Catch(DomainError)

@@ -2,15 +2,15 @@ import { execFile } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { DomainError, isCommandAllowed, isPipelineBranch, type CommandResult, type Diff, type GitAuthor, type RepoProfile, type Workspace } from '@zenthos/domain';
+import { DomainError, isCommandAllowed, isPipelineBranch, type CommandResult, type Diff, type GitAuthor, type RepoProfile, type Checkout } from '@zenthos/domain';
 import type { RepoProfilesPort, SandboxPort } from '@zenthos/ports';
 
 const run = promisify(execFile);
 
 export type GitSandboxOptions = {
-  /** Directory that holds one subdirectory per workspace. */
+  /** Directory that holds one subdirectory per checkout. */
   root: string;
-  /** Every repository this worker may work on; a workspace names its repo and the profile is looked up here. */
+  /** Every repository this worker may work on; a checkout names its repo and the profile is looked up here. */
   profiles: RepoProfilesPort;
   /**
    * A token for the repository, asked for right before each clone and each push so short-lived
@@ -33,20 +33,20 @@ const UNLINKED_AUTHOR: GitAuthor = { name: 'ZenthOs', email: 'zenthos@pipeline.i
 export class GitSandbox implements SandboxPort {
   constructor(private readonly options: GitSandboxOptions) {}
 
-  async prepare(profile: RepoProfile, branch: string): Promise<Workspace> {
+  async prepare(profile: RepoProfile, branch: string): Promise<Checkout> {
     const dir = await mkdtemp(path.join(this.options.root, 'ws-'));
     await git(this.options.root, ['clone', '--quiet', '--depth', '50', '--branch', profile.baseBranch, await this.remoteUrl(profile), dir]);
     await git(dir, ['checkout', '--quiet', '-b', branch]);
     return { id: path.basename(dir), path: dir, repo: profile.repo, baseBranch: profile.baseBranch, branch };
   }
 
-  async run(workspace: Workspace, command: string): Promise<CommandResult> {
-    if (!isCommandAllowed(command, (await this.profile(workspace)).allowedCommands)) {
-      throw new DomainError('command_not_allowed', { command, repo: workspace.repo });
+  async run(checkout: Checkout, command: string): Promise<CommandResult> {
+    if (!isCommandAllowed(command, (await this.profile(checkout)).allowedCommands)) {
+      throw new DomainError('command_not_allowed', { command, repo: checkout.repo });
     }
     try {
       const { stdout, stderr } = await run('/bin/sh', ['-c', command], {
-        cwd: workspace.path,
+        cwd: checkout.path,
         timeout: (this.options.commandTimeoutSeconds ?? 900) * 1000,
         maxBuffer: 16 * 1024 * 1024,
         env: { ...process.env, CI: '1', GIT_TERMINAL_PROMPT: '0' },
@@ -58,14 +58,14 @@ export class GitSandbox implements SandboxPort {
     }
   }
 
-  async diff(workspace: Workspace): Promise<Diff> {
-    await git(workspace.path, ['add', '--all']);
-    const numstat = await git(workspace.path, ['diff', '--cached', '--numstat']);
+  async diff(checkout: Checkout): Promise<Diff> {
+    await git(checkout.path, ['add', '--all']);
+    const numstat = await git(checkout.path, ['diff', '--cached', '--numstat']);
     const rows = numstat.split('\n').filter(Boolean).map((line) => line.split('\t'));
     return {
       files: rows.map(([, , file]) => file),
       changedLines: rows.reduce((n, [added, deleted]) => n + (Number(added) || 0) + (Number(deleted) || 0), 0),
-      patch: await git(workspace.path, ['diff', '--cached']),
+      patch: await git(checkout.path, ['diff', '--cached']),
     };
   }
 
@@ -74,27 +74,27 @@ export class GitSandbox implements SandboxPort {
    * pipeline owns (`isPipelineBranch`), so a stale branch from an earlier escalated run of the same
    * ticket is replaced and no human branch can ever be overwritten.
    */
-  async commitAndPush(workspace: Workspace, message: string): Promise<void> {
-    if (!isPipelineBranch(workspace.branch)) throw new Error(`refusing to force-push to ${workspace.branch}: not a pipeline branch`);
-    await git(workspace.path, ['add', '--all']);
-    const staged = await git(workspace.path, ['diff', '--cached', '--quiet']).then(() => false, () => true);
-    const profile = await this.profile(workspace);
+  async commitAndPush(checkout: Checkout, message: string): Promise<void> {
+    if (!isPipelineBranch(checkout.branch)) throw new Error(`refusing to force-push to ${checkout.branch}: not a pipeline branch`);
+    await git(checkout.path, ['add', '--all']);
+    const staged = await git(checkout.path, ['diff', '--cached', '--quiet']).then(() => false, () => true);
+    const profile = await this.profile(checkout);
     if (staged) {
       const author = (await this.options.author?.(profile)) ?? UNLINKED_AUTHOR;
-      await git(workspace.path, ['-c', `user.name=${author.name}`, '-c', `user.email=${author.email}`, 'commit', '--quiet', '-m', message]);
+      await git(checkout.path, ['-c', `user.name=${author.name}`, '-c', `user.email=${author.email}`, 'commit', '--quiet', '-m', message]);
     }
-    await git(workspace.path, ['remote', 'set-url', 'origin', await this.remoteUrl(profile)]);
-    await git(workspace.path, ['push', '--quiet', '--force', '--set-upstream', 'origin', workspace.branch]);
+    await git(checkout.path, ['remote', 'set-url', 'origin', await this.remoteUrl(profile)]);
+    await git(checkout.path, ['push', '--quiet', '--force', '--set-upstream', 'origin', checkout.branch]);
   }
 
-  async cleanup(workspace: Workspace): Promise<void> {
-    await rm(workspace.path, { recursive: true, force: true });
+  async cleanup(checkout: Checkout): Promise<void> {
+    await rm(checkout.path, { recursive: true, force: true });
   }
 
   /** Looked up by repository, not by instance memory, so any worker on this host can continue a run. */
-  private async profile(workspace: Workspace): Promise<RepoProfile> {
-    const profile = await this.options.profiles.get(workspace.repo);
-    if (!profile) throw new DomainError('unknown_repository', { repo: workspace.repo });
+  private async profile(checkout: Checkout): Promise<RepoProfile> {
+    const profile = await this.options.profiles.get(checkout.repo);
+    if (!profile) throw new DomainError('unknown_repository', { repo: checkout.repo });
     return profile;
   }
 

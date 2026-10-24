@@ -43,6 +43,8 @@ export const ProviderConnectionSchema = z.object({
   credentials: CredentialsSchema,
   app: GitHubAppSchema.optional(),
   installations: z.array(InstallationSchema).default([]),
+  /** The workspace that owns the connection (ADR 019); absent only on connections stored before workspaces existed. */
+  workspaceId: z.uuid().optional(),
   createdAt: z.string().datetime(),
 });
 
@@ -71,6 +73,7 @@ export type PublicConnection = z.infer<typeof PublicConnectionSchema>;
 
 export function redactConnection(connection: ProviderConnection): PublicConnection {
   const { id, provider, name, credentials, app, installations, createdAt } = connection;
+  // workspaceId stays out: the caller is already inside the workspace.
   return { id, provider, name, kind: credentials.type, appSlug: app?.slug, installations, installUrl: installUrl(connection), createdAt };
 }
 

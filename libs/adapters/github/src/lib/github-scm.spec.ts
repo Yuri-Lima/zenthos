@@ -4,7 +4,7 @@ import type { GitHubClients, GitHubPullsApi } from './clients.js';
 import { GitHubScm } from './github-scm.js';
 
 const profile = repoProfile({ repo: 'owner/repo', cloneUrl: 'x', baseBranch: 'staging', allowedCommands: [], gateCommands: [] });
-const workspace = { id: 'w', path: '/w', repo: 'owner/repo', baseBranch: 'staging', branch: 'zenthos/owner-repo-12' };
+const checkout = { id: 'w', path: '/w', repo: 'owner/repo', baseBranch: 'staging', branch: 'zenthos/owner-repo-12' };
 
 /** A pulls API that remembers what it created, plus one pull request already open for `openForBranch`. */
 function fakeClients(openForBranch?: string) {
@@ -42,7 +42,7 @@ function fakeClients(openForBranch?: string) {
 
 describe('GitHubScm', () => {
   for (const [name, check] of Object.entries(scmContract)) {
-    it(name, () => check({ port: new GitHubScm(fakeClients().clients), profile, workspace }));
+    it(name, () => check({ port: new GitHubScm(fakeClients().clients), profile, checkout }));
   }
 
   it('finds the open pull request for a branch, reads its diff, and posts a review as a comment', async () => {
@@ -63,7 +63,7 @@ describe('GitHubScm', () => {
     const { clients, created } = fakeClients();
     const pr = await new GitHubScm(clients).openPullRequest({
       profile,
-      workspace,
+      checkout,
       title: 'Add CSV export (owner/repo#12)',
       body: 'Implemented by ZenthOs.',
       ticketKey: 'owner/repo#12',

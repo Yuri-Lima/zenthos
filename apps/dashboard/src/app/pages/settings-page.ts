@@ -11,6 +11,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { coversRepository } from '@zenthos/domain';
 import { manifestUrl } from '../core/api';
 import { GlossaryService } from '../core/glossary';
+import { SessionService } from '../core/session';
 import { SettingsService, type Connection, type ConnectionCheck, type Profile } from '../core/settings';
 import { StatusChip } from '../shared/status-chip';
 import { TermLink } from '../shared/term';
@@ -64,6 +65,8 @@ type ConnectMode = 'manifest' | 'app' | 'token' | undefined;
   template: `
     <div class="toolbar">
       <div><div class="eyebrow">{{ 'settings.eyebrow' | translate }}</div><h1 class="text-lg font-semibold m-0">{{ 'settings.title' | translate }}</h1></div>
+      <span class="flex-1"></span>
+      <a mat-stroked-button routerLink="/settings/members"><mat-icon>group</mat-icon>{{ 'settings.members' | translate }}</a>
     </div>
 
     @if (connected()) {<div class="banner" role="status">{{ 'settings.connectedBanner' | translate }}</div>}
@@ -88,9 +91,11 @@ type ConnectMode = 'manifest' | 'app' | 'token' | undefined;
       <div class="section-head">
         <h2 id="providers-title"><zen-term id="setting_connection">{{ 'settings.providers' | translate }}</zen-term></h2>
         <span class="flex-1"></span>
-        <button mat-flat-button (click)="toggle('manifest')"><mat-icon>add</mat-icon>{{ 'settings.createApp' | translate }}</button>
-        <button mat-stroked-button (click)="toggle('app')">{{ 'settings.existingApp' | translate }}</button>
-        <button mat-stroked-button (click)="toggle('token')">{{ 'settings.token' | translate }}</button>
+        @if (canConfigure()) {
+          <button mat-flat-button (click)="toggle('manifest')"><mat-icon>add</mat-icon>{{ 'settings.createApp' | translate }}</button>
+          <button mat-stroked-button (click)="toggle('app')">{{ 'settings.existingApp' | translate }}</button>
+          <button mat-stroked-button (click)="toggle('token')">{{ 'settings.token' | translate }}</button>
+        }
       </div>
 
       @switch (mode()) {
@@ -156,7 +161,7 @@ type ConnectMode = 'manifest' | 'app' | 'token' | undefined;
                     <a mat-flat-button [href]="url" [matTooltip]="glossary.tip('setting_installation')" matTooltipShowDelay="300"><mat-icon>add_link</mat-icon>{{ 'settings.install' | translate }}</a>
                   }
                 }
-                <button mat-button (click)="removeConnection(c)" [attr.aria-label]="('settings.remove' | translate) + ' ' + c.name"><mat-icon>delete</mat-icon>{{ 'settings.remove' | translate }}</button>
+                @if (canConfigure()) {<button mat-button (click)="removeConnection(c)" [attr.aria-label]="('settings.remove' | translate) + ' ' + c.name"><mat-icon>delete</mat-icon>{{ 'settings.remove' | translate }}</button>}
               </div>
             </header>
             @if (checks()[c.id]; as result) {
@@ -187,7 +192,7 @@ type ConnectMode = 'manifest' | 'app' | 'token' | undefined;
       <div class="section-head">
         <h2 id="repos-title"><zen-term id="repo_profile">{{ 'settings.repositories' | translate }}</zen-term></h2>
         <span class="flex-1"></span>
-        <a mat-flat-button routerLink="/settings/repos/new"><mat-icon>add</mat-icon>{{ 'settings.addRepo' | translate }}</a>
+        @if (canConfigure()) {<a mat-flat-button routerLink="/settings/repos/new"><mat-icon>add</mat-icon>{{ 'settings.addRepo' | translate }}</a>}
       </div>
       <!-- relative: the visually hidden header text is positioned, and must stay inside the scroll box -->
       <div class="surface overflow-x-auto relative">
@@ -217,8 +222,10 @@ type ConnectMode = 'manifest' | 'app' | 'token' | undefined;
                 <td class="r mono">{{ p.policy.reviewThreshold }}</td>
                 <td class="r mono">US$ {{ p.policy.costCeilingUsd }}</td>
                 <td class="r whitespace-nowrap">
-                  <a mat-icon-button [routerLink]="['/settings/repos', p.repo]" [attr.aria-label]="('settings.edit' | translate) + ' ' + p.repo"><mat-icon>edit</mat-icon></a>
-                  <button mat-icon-button (click)="removeProfile(p)" [attr.aria-label]="('settings.remove' | translate) + ' ' + p.repo"><mat-icon>delete</mat-icon></button>
+                  @if (canConfigure()) {
+                    <a mat-icon-button [routerLink]="['/settings/repos', p.repo]" [attr.aria-label]="('settings.edit' | translate) + ' ' + p.repo"><mat-icon>edit</mat-icon></a>
+                    <button mat-icon-button (click)="removeProfile(p)" [attr.aria-label]="('settings.remove' | translate) + ' ' + p.repo"><mat-icon>delete</mat-icon></button>
+                  }
                 </td>
               </tr>
             } @empty {
@@ -234,6 +241,9 @@ export class SettingsPage {
   private readonly settings = inject(SettingsService);
   private readonly translate = inject(TranslateService);
   readonly glossary = inject(GlossaryService);
+  private readonly session = inject(SessionService);
+  /** Owners and admins configure; members only read. The API enforces it; this hides what would be refused. */
+  readonly canConfigure = computed(() => this.session.can('configure'));
   /** Set by the API's redirect after GitHub: the connection that was just created or installed. */
   readonly connected = input<string>();
   readonly connections = signal<Connection[]>([]);

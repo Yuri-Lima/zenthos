@@ -1,4 +1,4 @@
-import type { GateResult, PullRequest, RepoProfile, Run, Workspace } from '@zenthos/domain';
+import type { GateResult, PullRequest, RepoProfile, Run, Checkout } from '@zenthos/domain';
 import type { SandboxPort, ScmPort } from '@zenthos/ports';
 
 /**
@@ -8,22 +8,22 @@ import type { SandboxPort, ScmPort } from '@zenthos/ports';
 export async function openPullRequest(
   { sandbox, scm }: { sandbox: SandboxPort; scm: ScmPort },
   run: Run,
-  workspace: Workspace,
+  checkout: Checkout,
   gates: GateResult[],
   profile: RepoProfile,
 ): Promise<PullRequest> {
   const title = `${run.ticket.title} (${run.ticket.key})`;
-  await sandbox.commitAndPush(workspace, title);
-  const existing = await scm.findPullRequest(profile, workspace.branch);
+  await sandbox.commitAndPush(checkout, title);
+  const existing = await scm.findPullRequest(profile, checkout.branch);
   if (existing) return existing;
-  return scm.openPullRequest({ profile, workspace, title, body: renderPullRequestBody(run, gates), ticketKey: run.ticket.key });
+  return scm.openPullRequest({ profile, checkout, title, body: renderPullRequestBody(run, gates), ticketKey: run.ticket.key });
 }
 
 /** When a run escalates, the branch is still pushed so a human can pick the work up. No merge request. */
-export async function pushWorkInProgress({ sandbox }: { sandbox: SandboxPort }, run: Run, workspace: Workspace, gates: GateResult[]): Promise<string> {
+export async function pushWorkInProgress({ sandbox }: { sandbox: SandboxPort }, run: Run, checkout: Checkout, gates: GateResult[]): Promise<string> {
   const failed = gates.filter((gate) => !gate.passed).map((gate) => gate.gate).join(', ');
-  await sandbox.commitAndPush(workspace, `WIP: ${run.ticket.title} (${run.ticket.key}); gates failed: ${failed}`);
-  return workspace.branch;
+  await sandbox.commitAndPush(checkout, `WIP: ${run.ticket.title} (${run.ticket.key}); gates failed: ${failed}`);
+  return checkout.branch;
 }
 
 export function renderPullRequestBody(run: Run, gates: GateResult[]): string {

@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import type { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { InMemoryEvalResults, InMemoryTraceUsage } from '@zenthos/adapter-in-memory';
-import { createRun, NO_TOKENS, withUsage } from '@zenthos/domain';
+import { createRun, DRY_RUN_WORKSPACE, NO_TOKENS, withUsage } from '@zenthos/domain';
 import { createAppModule } from '../app.module.js';
 import { loadConfig } from '../config.js';
 import { inMemoryPorts } from '../ports.js';
@@ -19,7 +19,7 @@ describe('GET /metrics/traces', () => {
   let base: string;
 
   beforeAll(async () => {
-    let run = createRun(ticket);
+    let run = createRun(ticket, { workspaceId: DRY_RUN_WORKSPACE.id });
     run = withUsage(withUsage(withUsage(run, usage(0.56), 'spec_writer'), usage(5), 'coding_agent'), usage(0.9), 'reviewer');
     await ports.runStore.save(run);
     app = await NestFactory.create(createAppModule(ports, loadConfig({})), { logger: false });

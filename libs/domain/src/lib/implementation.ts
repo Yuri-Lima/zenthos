@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { RepoProfile } from './repo-profile.js';
 
 /** An isolated checkout of the target repository on a branch of its own. */
-export type Workspace = {
+export type Checkout = {
   id: string;
   /** Absolute path on the worker that prepared it. Activities that use it must run on that worker. */
   path: string;

@@ -15,7 +15,7 @@ export type ClaudeCodeAgentOptions = {
 };
 
 /**
- * Claude Code, headless, inside the workspace. Edits are auto-approved; shell commands must be in
+ * Claude Code, headless, inside the checkout. Edits are auto-approved; shell commands must be in
  * the repository profile's allowlist; web tools are removed. It runs on organisation credentials only and
  * never on a key held by ZenthOs (ADR 018, credentials.ts).
  */
@@ -42,7 +42,7 @@ export class ClaudeCodeAgent implements CodingAgentPort {
 
   private async run(input: ImplementInput, exportEnv: Record<string, string>) {
     const { session, check } = guardedSession(implementationPrompt(input), {
-      cwd: input.workspace.path,
+      cwd: input.checkout.path,
       model: this.options.model,
       maxTurns: this.options.maxTurns ?? 60,
       permissionMode: 'acceptEdits',

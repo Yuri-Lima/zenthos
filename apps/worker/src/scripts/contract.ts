@@ -48,10 +48,10 @@ const root = path.join(tmpdir(), 'zenthos-contract');
 await mkdir(root, { recursive: true });
 const sandbox = new GitSandbox({ root, profiles: store.profiles, credential: () => repo.gitToken(), author: async () => identity });
 const branch = `zenthos/contract-${Date.now()}`;
-const workspace = await sandbox.prepare(profile, branch);
+const checkout = await sandbox.prepare(profile, branch);
 try {
-  await writeFile(path.join(workspace.path, '.zenthos-contract'), `${new Date().toISOString()}\n`);
-  await sandbox.commitAndPush(workspace, 'ZenthOs contract check (delete me)');
+  await writeFile(path.join(checkout.path, '.zenthos-contract'), `${new Date().toISOString()}\n`);
+  await sandbox.commitAndPush(checkout, 'ZenthOs contract check (delete me)');
   const { data } = await repo.commits.getCommit({ ...ref, ref: branch });
   const shown = data.author?.login ?? '(unlinked)';
   if (shown !== identity.name) {
@@ -59,7 +59,7 @@ try {
   }
   console.log(`ok  commits are attributed to ${shown}`);
 } finally {
-  await deleteBranch(workspace.path, branch);
-  await sandbox.cleanup(workspace);
+  await deleteBranch(checkout.path, branch);
+  await sandbox.cleanup(checkout);
 }
 console.log(`cleaned up branch ${branch}`);

@@ -180,8 +180,9 @@ pnpm nx run @zenthos/worker:contract -- owner/repo#123
 
 ## Dashboard: Sign in with GitHub
 
-People sign in to the dashboard through the connected GitHub App's user authorization (ADR 007); a
-configured allowlist of GitHub logins decides who may use it (ADR 012). The API needs the App's OAuth
+People sign in to the dashboard through the connected GitHub App's user authorization (ADR 007). Anyone GitHub
+vouches for gets in; the workspaces they belong to decide what they see, and owners invite others by GitHub
+login (ADR 019). The API needs the App's OAuth
 client id and secret: the manifest flow stores them; for an app created by hand, copy them from the app's
 settings page on GitHub (generate a client secret there) and connect the app again with them:
 
@@ -193,7 +194,7 @@ curl -X POST localhost:3200/providers/github/app -H 'content-type: application/j
 The app's **Callback URL** must be `<ZENTHOS_API_BASE_URL>/auth/github/callback` (the manifest sets it). Then:
 
 ```bash
-ZENTHOS_AUTH=github ZENTHOS_ALLOWED_LOGINS=your-login pnpm api
+ZENTHOS_AUTH=github pnpm api
 ```
 
 `GET /auth/github` starts the flow, the session lives in an httpOnly cookie whose hash is stored, `GET /auth/me`

@@ -13,8 +13,12 @@ export class InMemoryProviderConnections implements ProviderConnectionsPort {
     return [...this.byId.values()].find((c) => c.credentials.type === 'github-app' && c.credentials.appId === appId);
   }
 
-  async list(): Promise<ProviderConnection[]> {
-    return [...this.byId.values()];
+  async signInApp(): Promise<ProviderConnection | undefined> {
+    return [...this.byId.values()].find((c) => c.app?.clientId && c.app.clientSecret);
+  }
+
+  async list(workspaceId: string): Promise<ProviderConnection[]> {
+    return [...this.byId.values()].filter((c) => c.workspaceId === workspaceId);
   }
 
   async save(connection: ProviderConnection): Promise<void> {
@@ -38,8 +42,8 @@ export class InMemoryRepoProfiles implements RepoProfilesPort {
     return this.byRepo.get(repo);
   }
 
-  async list(): Promise<RepoProfile[]> {
-    return [...this.byRepo.values()];
+  async list(workspaceId: string): Promise<RepoProfile[]> {
+    return [...this.byRepo.values()].filter((p) => p.workspaceId === workspaceId);
   }
 
   async save(profile: RepoProfile): Promise<void> {

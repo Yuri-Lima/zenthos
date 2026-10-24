@@ -5,8 +5,8 @@ import type { CodingAgentPort, ImplementInput } from '@zenthos/ports';
 
 /** Coding agent that needs no model: writes one markdown file describing what it would do. */
 export class InMemoryCodingAgent implements CodingAgentPort {
-  async implement({ workspace, spec, feedback }: ImplementInput): Promise<Implementation> {
-    const file = path.join(workspace.path, 'docs', 'zenthos-implementation.md');
+  async implement({ checkout, spec, feedback }: ImplementInput): Promise<Implementation> {
+    const file = path.join(checkout.path, 'docs', 'zenthos-implementation.md');
     await mkdir(path.dirname(file), { recursive: true });
     await writeFile(
       file,
@@ -19,6 +19,6 @@ export class InMemoryCodingAgent implements CodingAgentPort {
         feedback ? `\nPrevious attempt feedback:\n${feedback}` : '',
       ].join('\n'),
     );
-    return { summary: `Described ${spec.acceptanceCriteria.length} criteria in ${path.relative(workspace.path, file)}`, estimatedCostUsd: 0, tokens: NO_TOKENS };
+    return { summary: `Described ${spec.acceptanceCriteria.length} criteria in ${path.relative(checkout.path, file)}`, estimatedCostUsd: 0, tokens: NO_TOKENS };
   }
 }

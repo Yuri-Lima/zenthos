@@ -10,10 +10,12 @@ export const sampleSession = (id = 'a'.repeat(64)): Session => ({
 });
 
 export const sessionsContract: Record<string, (port: SessionsPort) => Promise<void>> = {
-  'a created session is found by its id and gone after removal': async (port) => {
+  'a saved session is found by its id, save replaces it, and it is gone after removal': async (port) => {
     const session = sampleSession(`${Date.now()}`.padStart(64, 'b'));
-    await port.create(session);
+    await port.save(session);
     assert.deepEqual(await port.get(session.id), session);
+    await port.save({ ...session, workspaceId: '00000000-0000-4000-8000-000000000001' });
+    assert.equal((await port.get(session.id))?.workspaceId, '00000000-0000-4000-8000-000000000001');
     assert.equal(await port.get('c'.repeat(64)), undefined);
     await port.remove(session.id);
     assert.equal(await port.get(session.id), undefined);

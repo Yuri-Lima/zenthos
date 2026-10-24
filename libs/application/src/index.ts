@@ -10,3 +10,4 @@ export * from './lib/provider-connections.js';
 export * from './lib/repo-profiles.js';
 export * from './lib/repo-credentials.js';
 export * from './lib/sign-in.js';
+export * from './lib/workspaces.js';

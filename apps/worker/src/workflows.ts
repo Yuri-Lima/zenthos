@@ -1,5 +1,5 @@
 import { condition, defineQuery, defineSignal, proxyActivities, setHandler } from '@temporalio/workflow';
-import { applyEvent, canRetryAfter, DEFAULT_APPROVAL_POLICY, withUsage, WORKFLOW_CONTRACT, type Approval, type ApprovalPolicy, type Run, type RunEvent, type Workspace } from '@zenthos/domain';
+import { applyEvent, canRetryAfter, DEFAULT_APPROVAL_POLICY, withUsage, WORKFLOW_CONTRACT, type Approval, type ApprovalPolicy, type Run, type RunEvent, type Checkout } from '@zenthos/domain';
 import type { Activities } from './activities.js';
 
 const activities = proxyActivities<Activities>({
@@ -36,7 +36,7 @@ export const runQuery = defineQuery<Run>(WORKFLOW_CONTRACT.runQuery);
 
 /**
  * One workflow per ticket: intake, spec, human decision, implementation in a sandbox, gates, pull
- * request, review on the pull request. A failed review sends the agent back to the same workspace
+ * request, review on the pull request. A failed review sends the agent back to the same checkout
  * once; humans merge. State changes go through the domain state machine only.
  */
 export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
@@ -79,19 +79,19 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
 
   const implementRounds = input.maxImplementRounds ?? run.policy.maxImplementRounds;
   const reviewRounds = input.maxReviewRounds ?? run.policy.maxReviewRounds;
-  const workspace = await activities.prepare(run);
-  run = { ...run, branch: workspace.branch };
+  const checkout = await activities.prepare(run);
+  run = { ...run, branch: checkout.branch };
   // What already fails on the pristine checkout is the base branch's problem, not this run's.
-  const baselineFailures = await longActivities.baseline(run, workspace);
+  const baselineFailures = await longActivities.baseline(run, checkout);
 
   /** Implements until the gates pass or the rounds run out. On exhaustion the branch is pushed and the run escalates. */
   const implementUntilGatesPass = async (feedback: string | undefined): Promise<'passed' | 'escalated'> => {
     for (let round = 1; round <= implementRounds; round++) {
-      const { implementation, diff } = await longActivities.implement(run, workspace, feedback);
+      const { implementation, diff } = await longActivities.implement(run, checkout, feedback);
       run = withUsage(run, implementation, 'coding_agent');
       await advance('implemented');
 
-      const gates = await longActivities.runGates(run, workspace, diff, baselineFailures);
+      const gates = await longActivities.runGates(run, checkout, diff, baselineFailures);
       run = { ...run, gates };
       if (gates.every((gate) => gate.passed)) return 'passed';
       if (round < implementRounds && canRetryAfter(gates)) {
@@ -99,8 +99,8 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
         await advance('gates_failed');
         continue;
       }
-      await activities.pushWorkInProgress(run, workspace, gates);
-      await activities.cleanup(workspace);
+      await activities.pushWorkInProgress(run, checkout, gates);
+      await activities.cleanup(checkout);
       await advance('escalated');
       return 'escalated';
     }
@@ -112,13 +112,13 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
   for (let reviewRound = 0; reviewRound <= reviewRounds; reviewRound++) {
     if ((await implementUntilGatesPass(feedback)) === 'escalated') return run;
     await advance('gates_passed');
-    run = { ...run, pullRequest: await activities.openPullRequest(run, workspace, run.gates ?? []) };
+    run = { ...run, pullRequest: await activities.openPullRequest(run, checkout, run.gates ?? []) };
     await advance('mr_opened');
 
     const { review, gate, ...reviewUsage } = await longActivities.review(run);
     run = { ...withUsage(run, reviewUsage, 'reviewer'), review, gates: [...(run.gates ?? []), gate] };
     if (gate.passed) {
-      await activities.cleanup(workspace);
+      await activities.cleanup(checkout);
       return await advance('review_passed');
     }
     if (reviewRound < reviewRounds) {
@@ -126,7 +126,7 @@ export async function ticketRunWorkflow(input: TicketRunInput): Promise<Run> {
       await advance('review_failed');
       continue;
     }
-    await activities.cleanup(workspace);
+    await activities.cleanup(checkout);
     return await advance('escalated');
   }
   return run;
@@ -149,4 +149,4 @@ async function waitForDecision(
   return { value: 'timeout' };
 }
 
-export type { Workspace };
+export type { Checkout };

@@ -7,14 +7,14 @@ import { parseIssueKey } from './issue-key.js';
 export class GitHubScm implements ScmPort {
   constructor(private readonly clients: GitHubClients) {}
 
-  async openPullRequest({ profile, workspace, title, body, ticketKey }: OpenPullRequestInput): Promise<PullRequest> {
+  async openPullRequest({ profile, checkout, title, body, ticketKey }: OpenPullRequestInput): Promise<PullRequest> {
     const { owner, repo, issueNumber } = parseIssueKey(ticketKey);
     const { pulls } = await this.clients.for({ owner, repo });
     const { data } = await pulls.create({
       owner,
       repo,
       title,
-      head: workspace.branch,
+      head: checkout.branch,
       base: profile.baseBranch,
       body: `${body}\n\nCloses #${issueNumber}`,
     });

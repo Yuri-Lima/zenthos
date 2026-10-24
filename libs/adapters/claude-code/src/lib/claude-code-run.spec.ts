@@ -1,4 +1,4 @@
-import { repoProfile, type Spec, type Workspace } from '@zenthos/domain';
+import { repoProfile, type Spec, type Checkout } from '@zenthos/domain';
 import type { AgentTracingPort } from '@zenthos/ports';
 
 const messages: unknown[] = [];
@@ -34,7 +34,7 @@ beforeEach(() => {
 
 const profile = repoProfile({ repo: 'owner/repo', cloneUrl: 'x', baseBranch: 'main', allowedCommands: [], gateCommands: [] });
 const spec: Spec = { ticketKey: 'owner/repo#4', problem: 'Partners cannot export the list', inScope: ['it'], outOfScope: [], acceptanceCriteria: [{ id: 'AC-1', statement: 'It exports a CSV file', testHint: 'jest' }], touchedAreas: ['src/'], risks: [] };
-const workspace: Workspace = { id: 'w', path: '/tmp/w', repo: 'owner/repo', baseBranch: 'main', branch: 'zenthos/owner-repo-4' };
+const checkout: Checkout = { id: 'w', path: '/tmp/w', repo: 'owner/repo', baseBranch: 'main', branch: 'zenthos/owner-repo-4' };
 
 const result = {
   type: 'result',
@@ -73,7 +73,7 @@ describe('ClaudeCodeAgent tracing', () => {
         return value;
       },
     };
-    const implementation = await agent({ tracing }).implement({ workspace, spec, profile });
+    const implementation = await agent({ tracing }).implement({ checkout, spec, profile });
     expect(implementation).toEqual({ summary: 'Added the export', estimatedCostUsd: 1.5, tokens: { inputTokens: 150, outputTokens: 210, cacheReadTokens: 3000, cacheWriteTokens: 400 } });
     expect(traced).toEqual([{ context: { sessionId: 'owner/repo#4', version: 'coding-agent/v1', name: 'coding agent' }, usage: ['claude-opus-5-5', 'claude-haiku-5-5'] }]);
     expect(seenOptions.at(-1)?.env?.['OTEL_TRACES_EXPORTER']).toBe('otlp');
@@ -82,12 +82,12 @@ describe('ClaudeCodeAgent tracing', () => {
 
   it('fails when a success result carries is_error, as an expired login does, instead of reporting it as done', async () => {
     messages.push({ type: 'result', subtype: 'success', is_error: true, result: 'Failed to authenticate: OAuth session expired and could not be refreshed', total_cost_usd: 0, modelUsage: {} });
-    await expect(agent().implement({ workspace, spec, profile })).rejects.toMatchObject({ code: 'implementation_failed', context: { reason: expect.stringContaining('api_error: Failed to authenticate') } });
+    await expect(agent().implement({ checkout, spec, profile })).rejects.toMatchObject({ code: 'implementation_failed', context: { reason: expect.stringContaining('api_error: Failed to authenticate') } });
   });
 
   it('fails with the cost of the failed run attached', async () => {
     messages.push({ ...result, subtype: 'error_max_turns' });
-    await expect(agent().implement({ workspace, spec, profile })).rejects.toMatchObject({ code: 'implementation_failed', context: { reason: 'error_max_turns', estimatedCostUsd: 1.5 } });
+    await expect(agent().implement({ checkout, spec, profile })).rejects.toMatchObject({ code: 'implementation_failed', context: { reason: 'error_max_turns', estimatedCostUsd: 1.5 } });
   });
 });
 
@@ -96,7 +96,7 @@ describe('ClaudeCodeAgent credentials (ADR 018)', () => {
     process.env['CLAUDE_CODE_OAUTH_TOKEN'] = 'sk-ant-oat01-test';
     try {
       messages.push(result);
-      await agent().implement({ workspace, spec, profile });
+      await agent().implement({ checkout, spec, profile });
       expect(seenOptions.at(-1)?.env).toMatchObject({ CLAUDE_CONFIG_DIR: configDir, PATH: process.env['PATH'] });
       expect(seenOptions.at(-1)?.env).not.toHaveProperty('CLAUDE_CODE_OAUTH_TOKEN');
     } finally {
@@ -107,13 +107,13 @@ describe('ClaudeCodeAgent credentials (ADR 018)', () => {
   it('refuses a claude.ai subscription before the prompt reaches the model', async () => {
     account = { email: 'me@example.com', organization: 'Personal', subscriptionType: 'Claude Max', apiProvider: 'firstParty' };
     messages.push(result);
-    await expect(agent().implement({ workspace, spec, profile })).rejects.toMatchObject({ code: 'implementation_failed', context: { reason: expect.stringContaining('credential_refused: it is signed in to a claude.ai subscription') } });
+    await expect(agent().implement({ checkout, spec, profile })).rejects.toMatchObject({ code: 'implementation_failed', context: { reason: expect.stringContaining('credential_refused: it is signed in to a claude.ai subscription') } });
     expect(sentPrompts.at(-1)).toEqual([]);
   });
 
   it('sends the prompt once the account is an organisation one', async () => {
     messages.push(result);
-    await agent().implement({ workspace, spec, profile });
+    await agent().implement({ checkout, spec, profile });
     expect(sentPrompts.at(-1)).toEqual([{ type: 'user', message: { role: 'user', content: expect.stringContaining('AC-1') }, parent_tool_use_id: null }]);
   });
 

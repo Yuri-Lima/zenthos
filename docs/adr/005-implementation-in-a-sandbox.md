@@ -18,7 +18,7 @@ Date: 2026-10-13. Status: accepted.
    mr_opened, reviewed, verified, done. A failed review returns to spec_approved and the next
    implementation pushes to the same branch. This is how humans review, and the reviewer agent of
    phase 3 posts where they already look.
-5. **Workspace activities run on one worker.** The workspace path is local to the worker that cloned
+5. **Checkout activities run on one worker.** The checkout path is local to the worker that cloned
    it. Phase 2 deploys one worker; phase 5 moves to Temporal sessions or a per-worker task queue if
    more than one is needed.
 

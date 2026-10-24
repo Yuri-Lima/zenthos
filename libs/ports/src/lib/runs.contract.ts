@@ -22,6 +22,16 @@ export const runsContract: Record<string, (port: RunsPort, ticketKey: string) =>
     assert.equal(await port.latest('owner/none#0'), undefined);
   },
 
+  'a workspace lists only its own runs': async (port, ticketKey) => {
+    const mine = createRun(ticket(ticketKey), { now: new Date('2026-01-04T00:00:00Z'), workspaceId: '00000000-0000-4000-8000-0000000000a1' });
+    const theirs = createRun(ticket(`${ticketKey}1`), { now: new Date('2026-01-04T00:00:01Z'), workspaceId: '00000000-0000-4000-8000-0000000000b2' });
+    await port.save(mine);
+    await port.save(theirs);
+    const listed = await port.list({ workspaceId: mine.workspaceId });
+    assert.ok(listed.some((run) => run.id === mine.id));
+    assert.ok(!listed.some((run) => run.id === theirs.id));
+  },
+
   'a run stored before a field existed comes back parsed, with that field at its default': async (port, ticketKey) => {
     const older: Partial<Run> = createRun(ticket(ticketKey), { now: new Date('2026-01-03T00:00:00Z') });
     delete older.usageByAgent;

@@ -16,13 +16,14 @@ async function verified(githubApps: GitHubAppsPort, credentials: GitHubCredentia
  * Use case 8: a GitHub App created through the manifest flow becomes a provider connection. The id is
  * chosen before the flow starts so the app's setup URL can carry it back on the install callback.
  */
-export async function connectGitHubApp({ connections }: { connections: ProviderConnectionsPort }, result: GitHubAppManifestResult, id?: string): Promise<ProviderConnection> {
+export async function connectGitHubApp({ connections }: { connections: ProviderConnectionsPort }, result: GitHubAppManifestResult, id?: string, workspaceId?: string): Promise<ProviderConnection> {
   const connection = createConnection(
     {
       provider: 'github',
       name: result.slug,
       credentials: { type: 'github-app', appId: result.appId, privateKey: result.privateKey },
       app: { slug: result.slug, webhookSecret: result.webhookSecret, clientId: result.clientId, clientSecret: result.clientSecret },
+      workspaceId,
     },
     id,
   );
@@ -36,22 +37,24 @@ export async function connectGitHubApp({ connections }: { connections: ProviderC
  */
 export async function connectExistingGitHubApp(
   { connections, githubApps }: ConnectDeps,
-  input: { name: string; appId: string; privateKey: string; webhookSecret?: string; clientId?: string; clientSecret?: string },
+  input: { name: string; appId: string; privateKey: string; webhookSecret?: string; clientId?: string; clientSecret?: string; workspaceId?: string },
 ): Promise<ProviderConnection> {
   await verified(githubApps, { type: 'github-app', appId: input.appId, privateKey: input.privateKey });
   const existing = await connections.findByAppId(input.appId);
+  // An app already held by another workspace is not taken over from here.
+  if (existing?.workspaceId && existing.workspaceId !== input.workspaceId) throw new DomainError('forbidden', { reason: 'this GitHub App is connected in another workspace' });
   const app = input.webhookSecret ? { slug: input.name, webhookSecret: input.webhookSecret, clientId: input.clientId, clientSecret: input.clientSecret } : undefined;
   const connection = existing
     ? { ...existing, name: input.name, credentials: { type: 'github-app' as const, appId: input.appId, privateKey: input.privateKey }, app: app ?? existing.app }
-    : createConnection({ provider: 'github', name: input.name, credentials: { type: 'github-app', appId: input.appId, privateKey: input.privateKey }, app });
+    : createConnection({ provider: 'github', name: input.name, credentials: { type: 'github-app', appId: input.appId, privateKey: input.privateKey }, app, workspaceId: input.workspaceId });
   await connections.save(connection);
   return connection;
 }
 
 /** A personal token as the interim connection for one account, checked against GitHub before it is stored. */
-export async function connectGitHubToken({ connections, githubApps }: ConnectDeps, name: string, token: string): Promise<ProviderConnection> {
-  await verified(githubApps, { type: 'github-token', token });
-  const connection = createConnection({ provider: 'github', name, credentials: { type: 'github-token', token } });
+export async function connectGitHubToken({ connections, githubApps }: ConnectDeps, input: { name: string; token: string; workspaceId?: string }): Promise<ProviderConnection> {
+  await verified(githubApps, { type: 'github-token', token: input.token });
+  const connection = createConnection({ provider: 'github', name: input.name, credentials: { type: 'github-token', token: input.token }, workspaceId: input.workspaceId });
   await connections.save(connection);
   return connection;
 }

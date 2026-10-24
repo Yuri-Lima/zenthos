@@ -13,9 +13,7 @@ import { SessionService } from '../core/session';
       <h1 class="text-xl font-semibold m-0">{{ 'signIn.title' | translate }}</h1>
       <p class="text-slate-500 m-0">{{ 'signIn.body' | translate }}</p>
       <a mat-flat-button [href]="url"><mat-icon>login</mat-icon>{{ 'signIn.button' | translate }}</a>
-      @if (session.user() === null) {
-        <p class="text-sm text-slate-500 m-0">{{ 'signIn.notAllowed' | translate }}</p>
-      }
+      <p class="text-sm text-slate-500 m-0">{{ 'signIn.afterwards' | translate }}</p>
     </section>
   `,
 })

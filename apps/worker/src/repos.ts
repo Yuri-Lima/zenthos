@@ -1,8 +1,9 @@
-import { repoProfile, type RepoProfile } from '@zenthos/domain';
+import { DRY_RUN_WORKSPACE, repoProfile, type RepoProfile } from '@zenthos/domain';
 
 /**
- * The repositories ZenthOs may work on. One entry per repo, nothing else decides what the agent or
- * the gates may run. Ticket keys select the profile by prefix (`owner/name#123`).
+ * The repositories ZenthOs may work on when it runs without Postgres. One entry per repo, nothing else decides
+ * what the agent or the gates may run. Ticket keys select the profile by prefix (`owner/name#123`). They belong
+ * to the dry-run workspace (ADR 019); with Postgres, profiles come from the dashboard and its workspaces.
  */
 export const REPO_PROFILES: RepoProfile[] = [
   repoProfile({
@@ -12,6 +13,7 @@ export const REPO_PROFILES: RepoProfile[] = [
     allowedCommands: ['bun install', 'bun run lint', 'bun run format:check'],
     gateCommands: ['bun install', 'bun run lint', 'bun run format:check'],
     policy: { costCeilingUsd: 25, forbiddenPathPrefixes: ['planning/sql-migrations/', 'supabase/', '.github/workflows/'] },
+    workspaceId: DRY_RUN_WORKSPACE.id,
   }),
   /** Dry runs: `pnpm cli run memory#1` with the in-memory adapters. */
   repoProfile({
@@ -20,5 +22,6 @@ export const REPO_PROFILES: RepoProfile[] = [
     baseBranch: 'main',
     allowedCommands: ['echo ok'],
     gateCommands: ['echo ok'],
+    workspaceId: DRY_RUN_WORKSPACE.id,
   }),
 ];

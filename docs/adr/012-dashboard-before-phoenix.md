@@ -21,7 +21,8 @@ improve the Legal Connect workflow with numbers in front of them, before swappin
   reach. Decided 18 Oct 2026 after seeing the notice on the first page.
 - **Sign in with GitHub through the connected App (ADR 007); authorization is an allowlist of GitHub
   logins in configuration.** Explicit and auditable; a collaborator check against the connected
-  repositories can replace it later without touching the pages.
+  repositories can replace it later without touching the pages. *Superseded by ADR 019 (24 Oct 2026): anyone
+  may sign in, and workspace membership decides what they see.*
 - **The dashboard talks only to the API, through a TypeScript client generated from OpenAPI (ADR 003)**,
   and metrics are computed by the API from the runs store. LangFuse stays the trace viewer the dashboard
   links to; it is not a data source for the pages.

@@ -29,7 +29,7 @@ const trace = startLangfuseTracing(langfuse);
 try {
   const agent = await codingAgent({ ...config, CODING_AGENT: 'claude-code' }, { maxTurns: 6 });
   const implementation = await agent.implement({
-    workspace: { id: 'trace-check', path: repo, repo: 'zenthos/trace-check', baseBranch: 'main', branch: 'zenthos/trace-check' },
+    checkout: { id: 'trace-check', path: repo, repo: 'zenthos/trace-check', baseBranch: 'main', branch: 'zenthos/trace-check' },
     spec: { ticketKey, problem: 'The repository has no greeting file', inScope: ['Add hello.txt'], outOfScope: [], acceptanceCriteria: [{ id: 'AC-1', statement: 'hello.txt exists and contains the line: hi', testHint: 'read the file' }], touchedAreas: ['hello.txt'], risks: [] },
     profile: repoProfile({ repo: 'zenthos/trace-check', cloneUrl: repo, baseBranch: 'main', allowedCommands: [], gateCommands: [] }),
   });

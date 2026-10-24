@@ -4,7 +4,7 @@ import type { ImplementInput } from '@zenthos/ports';
 /** Names the coding agent in traces and in the cost check; bump it when the prompt below changes. */
 export const CLAUDE_CODE_AGENT_VERSION = `${TRACE_VERSION_PREFIX.coding_agent}v1`;
 
-/** The task as the coding agent reads it. The repo's own CLAUDE.md is loaded by Claude Code from the workspace. */
+/** The task as the coding agent reads it. The repo's own CLAUDE.md is loaded by Claude Code from the checkout. */
 export function implementationPrompt({ spec, profile, feedback }: ImplementInput): string {
   const criteria = spec.acceptanceCriteria.map((c) => `- ${c.id}: ${c.statement}\n  Test: ${c.testHint}`).join('\n');
   return [

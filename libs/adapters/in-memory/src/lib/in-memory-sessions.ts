@@ -4,7 +4,7 @@ import type { SessionsPort } from '@zenthos/ports';
 export class InMemorySessions implements SessionsPort {
   private readonly byId = new Map<string, Session>();
 
-  async create(session: Session): Promise<void> {
+  async save(session: Session): Promise<void> {
     this.byId.set(session.id, session);
   }
 

@@ -9,5 +9,6 @@ export interface RunsPort {
   save(run: Run): Promise<void>;
   /** The newest run for a ticket. */
   latest(ticketKey: string): Promise<Run | undefined>;
-  list(filter?: { state?: RunState; limit?: number }): Promise<Run[]>;
+  /** Newest first. The API always passes the workspace (ADR 019); only the operator's own tooling reads across all of them. */
+  list(filter?: { workspaceId?: string; state?: RunState; limit?: number }): Promise<Run[]>;
 }

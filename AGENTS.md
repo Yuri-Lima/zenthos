@@ -46,10 +46,10 @@ These win over any pattern below when the two conflict. The goal is a codebase a
 | `libs/adapters/*` | One library per concrete adapter: `in-memory` (tests and dry runs), `github` (issues and pull requests), `langfuse` (tracing callbacks, and reading a run's usage back for the check, ADR 015), `git-sandbox` (a clone per run with the command allowlist), `claude-code` (headless Claude Code with the same allowlist) | domain, ports |
 | `libs/agents` | LangGraph graphs that implement agent ports. Spec writer: draft, validate against the schema, retry with the errors | domain, ports, LangChain |
 | `libs/evals` | Golden item schema and its LangFuse dataset-item shape, the scorers, the spec and review suites as experiment definitions (task, item and run evaluators) and the baseline check; no vendor import, LangFuse runs them (ADR 009, ADR 016) | domain, ports |
-| `libs/adapters/postgres` | Provider connections (secrets sealed at rest) and repository profiles in Postgres; the schema as ordered statements (ADR 010) | domain, ports |
+| `libs/adapters/postgres` | Workspaces and members, provider connections (secrets sealed at rest), repository profiles, runs and sessions in Postgres; the schema as ordered statements (ADR 010, ADR 019) | domain, ports |
 | `libs/adapters/temporal` | `RunControlPort` over the Temporal client and the workflow bundler config, shared by the API, the CLI and the worker | domain, ports |
 | `apps/api` | NestJS REST API: provider connections with a credential check before storing and on demand, the GitHub manifest and install flows, repository profiles, runs from the stored projection, metrics computed from it, the GitHub webhook; OpenAPI at `/docs` and committed as `openapi.json` (ADR 010, ADR 011) | everything |
-| `apps/dashboard` | Angular dashboard (Material + Tailwind, en/pt JSON under `public/i18n`): sign-in gate, runs list, run detail with approve and reject, start a run, settings for providers and repository profiles with derived first-run steps (ADR 010), metrics with cost by agent and the LangFuse check (ADR 015), glossary with inline help (ADR 014); only the generated client reaches the API; polls until server-sent events exist (ADR 012) | api-client |
+| `apps/dashboard` | Angular dashboard (Material + Tailwind, en/pt JSON under `public/i18n`): sign-in gate, workspace switcher, create-workspace and members pages (ADR 019), runs list, run detail with approve and reject, start a run, settings for providers and repository profiles with derived first-run steps (ADR 010), metrics with cost by agent and the LangFuse check (ADR 015), glossary with inline help (ADR 014); only the generated client reaches the API; polls until server-sent events exist (ADR 012) | api-client |
 | `libs/api-client` | The typed client the dashboard uses: `schema.ts` generated from `apps/api/openapi.json` with openapi-typescript, `createApiClient` over openapi-fetch; never hand-edited (ADR 003) | nothing |
 | `apps/worker` | Temporal worker: `workflows.ts` (one workflow per ticket), `activities.ts` (thin, call use cases), `config.ts` (zod-validated env), `composition.ts` (the adapters, chosen once), `repos.ts` (the dry-run repository profiles), `scripts/` (contract check, manual review, evals) | anything |
 | `apps/cli` | `zenthos run|approve|reject|state <ticket-key>` against the running worker | anything |
@@ -103,6 +103,10 @@ bans vendor SDKs inside domain, ports and application. Every project carries a `
   Never present it as a bill.
 - The pipeline acts on GitHub only through installation tokens; a signed-in user's token identifies the person
   and never does the bot's work (ADR 007).
+- Everything a customer configures belongs to a workspace (ADR 019): connections, profiles and runs carry a
+  `workspaceId`, every store list takes one, and the API gets it from the session (`CurrentWorkspace(action)`
+  checks the role too), never from the client. A new table gets a `workspace_id` column and a scoping case in the
+  port's contract test. The sandbox's checkout is a `Checkout`; "workspace" means the tenant and nothing else.
 - Provider connections and repository profiles are configuration the product owns (ADR 006, ADR 010): the
   stores behind `ProviderConnectionsPort` and `RepoProfilesPort`, written by the API. The worker resolves
   credentials per repository from the connection a profile names (`credentialsForRepo`), with
@@ -151,7 +155,7 @@ change that lowers the scores (ADR 009); the REST API keeps provider connections
 Postgres with secrets sealed, connects GitHub by the manifest flow and takes the app's webhook (ADR 010); the worker
 acts with the connection each profile names and records every run transition to the store, which the API serves
 (ADR 011). Phases were swapped (ADR 012): phase 4 is the Angular dashboard (PrimeNG, en/pt, Sign in with GitHub
-with an allowlist, generated OpenAPI client, metrics from the runs store) plus Legal Connect hardening; phase 5
+with workspaces since ADR 019, generated OpenAPI client, metrics from the runs store) plus Legal Connect hardening; phase 5
 is Phoenix (YouTrack, GitLab, TeamCity, Codex); phase 6 is Cloud Run and the write-up.
 Then 4 Phoenix adapters and Codex; 5 dashboard, Cloud Run, write-up.
 

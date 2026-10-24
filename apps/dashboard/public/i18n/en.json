@@ -3,13 +3,15 @@
     "tagline": "Agent Operating System",
     "signOut": "Sign out",
     "anonymous": "sign-in off",
-    "language": "Switch language"
+    "language": "Switch language",
+    "newWorkspace": "New workspace",
+    "switchWorkspace": "Switch workspace"
   },
   "signIn": {
     "title": "Sign in",
-    "body": "ZenthOs signs you in through GitHub, with the same App that acts on your repositories. Only allowlisted logins get in.",
+    "body": "ZenthOs signs you in through GitHub. Your workspaces decide what you see: create one for your team, or be invited into one.",
     "button": "Sign in with GitHub",
-    "notAllowed": "If GitHub sent you back here, your login is not on the allowlist."
+    "afterwards": "New here? You will name your first workspace right after signing in."
   },
   "common": {
     "cancel": "Cancel"
@@ -212,7 +214,8 @@
     "checkRepos": "Installations refreshed: {{n}} repositories.",
     "manage": "Manage repositories on GitHub",
     "manageHint": "Add or remove the repositories this app may act on, on GitHub; then press Check to refresh the list here.",
-    "addThisRepo": "Add this repository on GitHub"
+    "addThisRepo": "Add this repository on GitHub",
+    "members": "Members"
   },
   "repoForm": {
     "newTitle": "Add a repository",
@@ -297,5 +300,29 @@
     "openLangfuse": "Open the session in LangFuse",
     "unavailable": "The API has no LangFuse keys (LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY), so nothing was compared.",
     "checkShort": "LangFuse"
+  },
+  "workspaceNew": {
+    "eyebrow": "Workspace",
+    "title": "Name your workspace",
+    "titleAnother": "Create another workspace",
+    "body": "A workspace holds a team: its members, GitHub installations, repositories and runs. You will be its owner, and you can invite others by GitHub login.",
+    "name": "Workspace name",
+    "create": "Create workspace"
+  },
+  "members": {
+    "title": "Members",
+    "login": "GitHub login",
+    "roleLabel": "Role",
+    "invite": "Invite",
+    "inviteHint": "They get access the next time they sign in with that GitHub account.",
+    "invitedBy": "Invited by",
+    "since": "Since",
+    "remove": "Remove",
+    "none": "No members yet.",
+    "role": {
+      "owner": "owner",
+      "admin": "admin",
+      "member": "member"
+    }
   }
 }

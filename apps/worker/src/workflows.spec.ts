@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
-import { APPROVAL_LABELS, createRun, fail, pass, WORKFLOW_CONTRACT, type Approval, type GateResult, type Run, type Ticket, type Workspace } from '@zenthos/domain';
+import { APPROVAL_LABELS, createRun, fail, pass, WORKFLOW_CONTRACT, type Approval, type GateResult, type Run, type Ticket, type Checkout } from '@zenthos/domain';
 import type { Activities } from './activities.js';
 import { bundlerOptions } from '@zenthos/adapter-temporal';
 import { approvalDecisionSignal, ticketRunWorkflow, type TicketRunInput } from './workflows.js';
@@ -17,7 +17,7 @@ const ticket: Ticket = {
 };
 
 /** Activities as the workflow sees them, with knobs for what the "human" and the "model" do. */
-const workspace: Workspace = { id: 'w', path: '/tmp/w', repo: 'owner/repo', baseBranch: 'staging', branch: 'zenthos/owner-repo-1' };
+const checkout: Checkout = { id: 'w', path: '/tmp/w', repo: 'owner/repo', baseBranch: 'staging', branch: 'zenthos/owner-repo-1' };
 
 const goodReview = {
   scores: {
@@ -37,9 +37,9 @@ function fakeActivities(options: { approvals?: Approval[]; failDraftsBeforeSucce
   let failingReviews = options.failingReviewRounds ?? 0;
   const calls = { intake: 0, draftSpec: 0, readApproval: 0, implement: 0, runGates: 0, openPullRequest: 0, cleanup: 0, pushed: 0, review: 0, feedback: [] as (string | undefined)[], baselines: [] as string[][], recorded: [] as string[] };
   const activities: Activities = {
-    prepare: async () => workspace,
+    prepare: async () => checkout,
     baseline: async () => options.baselineFailures ?? [],
-    implement: async (_run, _workspace, feedback) => {
+    implement: async (_run, _checkout, feedback) => {
       calls.implement++;
       calls.feedback.push(feedback);
       return {
@@ -47,7 +47,7 @@ function fakeActivities(options: { approvals?: Approval[]; failDraftsBeforeSucce
         diff: { files: ['src/a.ts'], changedLines: 12, patch: '+a' },
       };
     },
-    runGates: async (_run, _workspace, _diff, baselineFailures): Promise<GateResult[]> => {
+    runGates: async (_run, _checkout, _diff, baselineFailures): Promise<GateResult[]> => {
       calls.runGates++;
       calls.baselines.push(baselineFailures);
       if (options.costBreach) return [pass('secret_scan'), fail('cost_ceiling', 'spent 7.3 USD, ceiling is 5 USD')];
@@ -163,7 +163,7 @@ describe('ticketRunWorkflow', () => {
     expect(run.history.find((h) => h.event === 'spec_approved')?.by).toBe('yuri');
   });
 
-  it('sends a failed review back to the same workspace once, reuses the pull request, then passes', async () => {
+  it('sends a failed review back to the same checkout once, reuses the pull request, then passes', async () => {
     const { activities, calls } = fakeActivities({ approvals: ['approved'], failingReviewRounds: 1 });
     const run = await runWith(activities, 'review-retry');
     expect(run.state).toBe('reviewed');
@@ -182,7 +182,7 @@ describe('ticketRunWorkflow', () => {
     expect(run.history.at(-1)?.event).toBe('escalated');
   });
 
-  it('retries the implementation once in the same workspace with the gate feedback, then escalates with the branch pushed', async () => {
+  it('retries the implementation once in the same checkout with the gate feedback, then escalates with the branch pushed', async () => {
     const { activities, calls } = fakeActivities({ approvals: ['approved'], failingGateRounds: 2 });
     const run = await runWith(activities, 'gates');
     expect(run.state).toBe('needs_human');
@@ -191,7 +191,7 @@ describe('ticketRunWorkflow', () => {
     expect(calls.openPullRequest).toBe(0);
     expect(calls.pushed).toBe(1);
     expect(calls.cleanup).toBe(1);
-    expect(run.branch).toBe(workspace.branch);
+    expect(run.branch).toBe(checkout.branch);
     expect(run.history.map((h) => h.event)).toEqual(['spec_drafted', 'spec_approved', 'implemented', 'gates_failed', 'implemented', 'escalated']);
   });
 

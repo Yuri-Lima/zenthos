@@ -15,7 +15,7 @@ export class InMemoryScm implements ScmPort {
     this.opened.push(input);
     const number = this.opened.length;
     const pullRequest = { number, url: `https://example.test/${input.profile.repo}/pull/${number}` };
-    this.byBranch.set(`${input.profile.repo}@${input.workspace.branch}`, pullRequest);
+    this.byBranch.set(`${input.profile.repo}@${input.checkout.branch}`, pullRequest);
     return pullRequest;
   }
 

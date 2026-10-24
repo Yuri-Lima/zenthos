@@ -1,12 +1,11 @@
-import { DomainError, isLoginAllowed, type Session } from '@zenthos/domain';
-import type { GitHubAppsPort, ProviderConnectionsPort, SessionsPort } from '@zenthos/ports';
+import { DomainError, type Session } from '@zenthos/domain';
+import type { GitHubAppsPort, ProviderConnectionsPort, SessionsPort, WorkspacesPort } from '@zenthos/ports';
 
-export type SignInDeps = { githubApps: GitHubAppsPort; connections: ProviderConnectionsPort; sessions: SessionsPort };
+export type SignInDeps = { githubApps: GitHubAppsPort; connections: ProviderConnectionsPort; sessions: SessionsPort; workspaces: WorkspacesPort };
 
 export type SignInInput = {
   code: string;
   redirectUri: string;
-  allowedLogins: readonly string[];
   /** The session id the API minted; a random secret the browser will hold. */
   sessionId: string;
   ttlHours: number;
@@ -14,16 +13,31 @@ export type SignInInput = {
 };
 
 /**
- * Use case 12: Sign in with GitHub through the connected App (ADR 007). The App whose OAuth credentials
- * are stored vouches for the person; the allowlist decides whether they may use the dashboard (ADR 012).
+ * Use case 12: Sign in with GitHub through the connected App (ADR 007). Anyone GitHub vouches for gets a session
+ * (ADR 019); what they see is decided by the workspaces they belong to. The session opens in their first workspace.
+ * A person with no workspace claims the one the migration left without members, when there is one; otherwise the
+ * dashboard asks them to create one.
  */
-export async function signInWithGitHub({ githubApps, connections, sessions }: SignInDeps, input: SignInInput): Promise<Session> {
-  const app = (await connections.list()).find((c) => c.app?.clientId && c.app.clientSecret)?.app;
+export async function signInWithGitHub({ githubApps, connections, sessions, workspaces }: SignInDeps, input: SignInInput): Promise<Session> {
+  const app = (await connections.signInApp())?.app;
   if (!app?.clientId || !app.clientSecret) throw new DomainError('sign_in_unavailable');
   const user = await githubApps.signInUser({ clientId: app.clientId, clientSecret: app.clientSecret }, input.code, input.redirectUri);
-  if (!isLoginAllowed(user.login, input.allowedLogins)) throw new DomainError('not_allowed', { login: user.login });
   const now = input.now ?? new Date();
-  const session: Session = { id: input.sessionId, user, createdAt: now.toISOString(), expiresAt: new Date(now.getTime() + input.ttlHours * 3_600_000).toISOString() };
-  await sessions.create(session);
+  let memberships = await workspaces.listForLogin(user.login);
+  if (memberships.length === 0) {
+    const [legacy] = await workspaces.unclaimed();
+    if (legacy) {
+      await workspaces.saveMember({ workspaceId: legacy.id, login: user.login, role: 'owner', createdAt: now.toISOString() });
+      memberships = [{ workspace: legacy, role: 'owner' }];
+    }
+  }
+  const session: Session = {
+    id: input.sessionId,
+    user,
+    ...(memberships[0] ? { workspaceId: memberships[0].workspace.id } : {}),
+    createdAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + input.ttlHours * 3_600_000).toISOString(),
+  };
+  await sessions.save(session);
   return session;
 }
