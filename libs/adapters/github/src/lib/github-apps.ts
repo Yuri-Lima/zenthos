@@ -33,6 +33,18 @@ export class OctokitGitHubApps implements GitHubAppsPort {
     return Promise.all(installations.map((installation) => this.describeInstallation(credentials, installation.id)));
   }
 
+  /** GET /orgs/{org}/members/{username} with the installation's token: a 2xx is a member, 404 is not (needs organisation permission members: read). */
+  async isMember({ appId, privateKey }: Extract<GitHubCredentials, { type: 'github-app' }>, installationId: number, organisation: string, login: string): Promise<boolean> {
+    const octokit = new Octokit({ authStrategy: createAppAuth, auth: { appId, privateKey, installationId } });
+    try {
+      await octokit.rest.orgs.checkMembershipForUser({ org: organisation, username: login });
+      return true;
+    } catch (error) {
+      if ((error as { status?: number }).status === 404) return false;
+      throw error;
+    }
+  }
+
   /** GET /repos/{owner}/{repo} through the installation that covers it (an app) or the token; GitHub's 404 is `repository_not_found`. */
   async describeRepository(credentials: GitHubCredentials, repo: string): Promise<RepositoryInfo> {
     const [owner, name] = repo.split('/');

@@ -7,12 +7,12 @@ import { API } from '../core/api';
 import { RepoFormPage } from './repo-form-page';
 
 const ok = { ok: true, status: 200 } as Response;
-const app = { id: '0bab83fe-b715-469c-8ead-54ba81b10157', provider: 'github', name: 'zenthos-yl', kind: 'github-app', appSlug: 'zenthos-yl', installUrl: 'https://github.com/apps/zenthos-yl/installations/new', installations: [{ installationId: 1, account: 'o', repositories: ['o/s', 'o/r'] }], createdAt: '2026-10-15T09:00:00.000Z' };
+const installation = { installationId: 1, account: 'o', repositories: ['o/s', 'o/r'], workspaceId: '00000000-0000-4000-8000-000000000001' };
 
-function setup(connections: unknown[]) {
+function setup(installations: unknown[]) {
   const puts: { path: unknown; body: { gateCommands: string[]; allowedCommands: string[]; policy: { forbiddenPathPrefixes: string[] } } }[] = [];
   const api = {
-    GET: async (path: string) => ({ data: path === '/providers' ? connections : path.startsWith('/providers/') ? { defaultBranch: 'develop', cloneUrl: 'https://github.com/o/r.git' } : [], response: ok }),
+    GET: async (path: string) => ({ data: path === '/github/installations' ? installations : path.startsWith('/github/repositories/') ? { defaultBranch: 'develop', cloneUrl: 'https://github.com/o/r.git' } : [], response: ok }),
     PUT: async (_: string, init: { params: { path: unknown }; body: (typeof puts)[number]['body'] }) => {
       puts.push({ path: init.params.path, body: init.body });
       return { response: ok };
@@ -53,11 +53,10 @@ describe('RepoFormPage', () => {
     fixture.destroy();
   });
 
-  it('preselects the only connection, offers the repositories its app is installed on, and fills branch and clone URL from the provider', async () => {
-    const { fixture } = setup([app]);
+  it('offers the repositories the workspace\'s installations cover, and fills branch and clone URL from GitHub', async () => {
+    const { fixture } = setup([installation]);
     await fixture.whenStable();
     const page = fixture.componentInstance;
-    expect(page.form().connectionId).toBe(app.id);
     expect(page.coveredRepos()).toEqual(['o/r', 'o/s']);
     page.patch({ repo: 'o/S' });
     expect(page.matchingRepos()).toEqual(['o/s']);

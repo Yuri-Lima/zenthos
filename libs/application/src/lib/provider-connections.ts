@@ -1,4 +1,4 @@
-import { createConnection, DomainError, withInstallation, withoutInstallation, withRepositories, type ConnectionCheck, type GitHubAppManifestResult, type GitHubCredentials, type Installation, type ProviderConnection, type RepositoryInfo, type WebhookCommand } from '@zenthos/domain';
+import { bindInstallation, coversRepository, createConnection, DomainError, installUrl, sameLogin, unbindInstallation, withInstallation, withoutInstallation, withRepositories, workspaceInstallations, type GitHubAppManifestResult, type GitHubCredentials, type Installation, type PlatformStatus, type ProviderConnection, type RepositoryInfo, type WebhookCommand, type WorkspaceActor } from '@zenthos/domain';
 import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort } from '@zenthos/ports';
 
 type ConnectDeps = { connections: ProviderConnectionsPort; githubApps: GitHubAppsPort };
@@ -51,40 +51,58 @@ export async function connectExistingGitHubApp(
   return connection;
 }
 
+/** Whether the operator has set the platform app up, and where it installs: what the dashboard asks before anything else. */
+export async function platformStatus({ connections }: { connections: ProviderConnectionsPort }): Promise<PlatformStatus> {
+  const app = await connections.platformApp();
+  return app ? { configured: true, slug: app.app?.slug, installUrl: installUrl(app) } : { configured: false };
+}
+
+type PlatformApp = ProviderConnection & { credentials: Extract<GitHubCredentials, { type: 'github-app' }> };
+
+async function requirePlatformApp(connections: ProviderConnectionsPort): Promise<PlatformApp> {
+  const app = await connections.platformApp();
+  if (!app || app.credentials.type !== 'github-app') throw new DomainError('platform_not_configured');
+  return app as PlatformApp;
+}
+
 /**
- * The health check behind the settings page, never a throw: one authenticated read with the stored credentials,
- * and for an app, its installations refreshed from GitHub and stored. The install redirect and the webhook keep
- * them current when they can reach the API; this catches up when they could not (a laptop without a public URL).
+ * Use case 9: a member claims an installation of the platform app for their workspace (ADR 019). GitHub describes
+ * it; the installation must be on the person's own account or on an organisation they belong to, and not already
+ * bound to another workspace. `trusted` skips the ownership check: with auth off nobody is identified, and the API is local.
  */
-export async function checkConnection({ connections, githubApps }: ConnectDeps, connectionId: string, now = new Date()): Promise<ConnectionCheck> {
-  const connection = await connections.get(connectionId);
-  if (!connection) throw new DomainError('connection_not_found', { connectionId });
-  const checkedAt = now.toISOString();
-  try {
-    const actsAs = await githubApps.whoAmI(connection.credentials);
-    if (connection.credentials.type !== 'github-app') return { ok: true, actsAs, checkedAt };
-    const installations = await githubApps.listInstallations(connection.credentials);
-    await connections.save({ ...connection, installations });
-    return { ok: true, actsAs, repositories: installations.reduce((n, i) => n + i.repositories.length, 0), checkedAt };
-  } catch (error) {
-    return { ok: false, reason: error instanceof Error ? error.message : String(error), checkedAt };
-  }
+export async function claimInstallation({ connections, githubApps }: ConnectDeps, actor: WorkspaceActor, installationId: number, trusted = false): Promise<Installation> {
+  const app = await requirePlatformApp(connections);
+  const installation = await githubApps.describeInstallation(app.credentials, installationId).catch((error: { status?: number }) => {
+    if (error.status === 404) throw new DomainError('installation_not_found', { installationId });
+    throw error;
+  });
+  const known = app.installations.find((i) => i.installationId === installationId);
+  if (known?.workspaceId && known.workspaceId !== actor.workspaceId) throw new DomainError('installation_not_yours', { installationId, reason: 'bound to another workspace' });
+  const yours = trusted || sameLogin(installation.account, actor.login) || (await githubApps.isMember(app.credentials, installationId, installation.account, actor.login));
+  if (!yours) throw new DomainError('installation_not_yours', { installationId, account: installation.account });
+  const bound = { ...installation, workspaceId: actor.workspaceId };
+  await connections.save(bindInstallation(app, bound, actor.workspaceId));
+  return bound;
 }
 
-/** What the profile form needs for a repository the connection can see: its default branch and clone URL. */
-export async function describeRepository({ connections, githubApps }: ConnectDeps, connectionId: string, repo: string): Promise<RepositoryInfo> {
-  const connection = await connections.get(connectionId);
-  if (!connection) throw new DomainError('connection_not_found', { connectionId });
-  return githubApps.describeRepository(connection.credentials, repo);
+/** The workspace lets an installation go; the app stays installed on GitHub until its owner removes it there. */
+export async function releaseInstallation({ connections }: { connections: ProviderConnectionsPort }, actor: WorkspaceActor, installationId: number): Promise<void> {
+  const app = await requirePlatformApp(connections);
+  if (!workspaceInstallations(app, actor.workspaceId).some((i) => i.installationId === installationId)) throw new DomainError('installation_not_found', { installationId });
+  await connections.save(unbindInstallation(app, installationId));
 }
 
-/** Use case 9: the install callback or the webhook tells us where the app is now installed. */
-export async function recordInstallation({ connections }: { connections: ProviderConnectionsPort }, connectionId: string, installation: Installation): Promise<ProviderConnection> {
-  const connection = await connections.get(connectionId);
-  if (!connection) throw new DomainError('connection_not_found', { connectionId });
-  const updated = withInstallation(connection, installation);
-  await connections.save(updated);
-  return updated;
+/** The installations a workspace has claimed; none until the platform app exists. */
+export async function installationsOf({ connections }: { connections: ProviderConnectionsPort }, workspaceId: string): Promise<Installation[]> {
+  const app = await connections.platformApp();
+  return app ? workspaceInstallations(app, workspaceId) : [];
+}
+
+/** What the profile form needs for a repository one of the workspace's installations covers: its default branch and clone URL. */
+export async function describeRepository({ connections, githubApps }: ConnectDeps, workspaceId: string, repo: string): Promise<RepositoryInfo> {
+  const app = await requirePlatformApp(connections);
+  if (!coversRepository(workspaceInstallations(app, workspaceId), repo)) throw new DomainError('repository_not_found', { repo });
+  return githubApps.describeRepository(app.credentials, repo);
 }
 
 export type WebhookDeps = { connections: ProviderConnectionsPort; profiles: RepoProfilesPort; runs: RunControlPort };

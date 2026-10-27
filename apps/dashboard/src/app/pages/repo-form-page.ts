@@ -6,19 +6,18 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { coversRepository, DEFAULT_POLICY, TOOLING_PATH_PREFIXES } from '@zenthos/domain';
+import { installUrl } from '../core/api';
 import { GlossaryService } from '../core/glossary';
-import { SettingsService, type Connection } from '../core/settings';
+import { SettingsService, type Installation } from '../core/settings';
 
 type Form = {
   repo: string;
   cloneUrl: string;
   baseBranch: string;
-  connectionId: string;
   allowedText: string;
   gates: string[];
   extraForbiddenText: string;
@@ -37,7 +36,6 @@ const blank = (): Form => ({
   repo: '',
   cloneUrl: '',
   baseBranch: 'main',
-  connectionId: '',
   allowedText: '',
   gates: [],
   extraForbiddenText: DEFAULT_POLICY.forbiddenPathPrefixes.filter((p) => !isTooling(p)).join('\n'),
@@ -49,15 +47,15 @@ const blank = (): Form => ({
 });
 
 /**
- * One repository profile as a form over PUT /repos. The connection comes first: for a GitHub App it already knows
- * which repositories it is installed on, so the repository is picked from that list and its default branch and
- * clone URL come from the provider; a token or the environment leaves the name to type. Gate commands are picked
- * from the allowed commands, so "gates are a subset" holds by construction; the tooling prefixes are always
+ * One repository profile as a form over PUT /repos. The workspace's installations already know which repositories
+ * the app may act on, so the repository is picked from that list and its default branch and clone URL come from
+ * GitHub; without an installation (a dry run on the environment's credentials) the name is typed. Gate commands are
+ * picked from the allowed commands, so "gates are a subset" holds by construction; the tooling prefixes are always
  * forbidden and shown, not edited. Defaults come from the domain's DEFAULT_POLICY; every field's meaning comes from the glossary.
  */
 @Component({
   selector: 'zen-repo-form-page',
-  imports: [FormsModule, RouterLink, TranslateModule, MatAutocompleteModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule, MatTooltipModule],
+  imports: [FormsModule, RouterLink, TranslateModule, MatAutocompleteModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatTooltipModule],
   styles: `
     form { display: grid; gap: 16px; max-width: 880px; }
     fieldset { border: 1px solid var(--zen-line); border-radius: var(--zen-radius); padding: 14px 16px 16px; margin: 0; display: grid; gap: 12px; background: var(--zen-surface); }
@@ -79,14 +77,6 @@ const blank = (): Form => ({
     <form (ngSubmit)="save()">
       <fieldset>
         <legend>{{ 'repoForm.repository' | translate }}</legend>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>{{ 'settings.connection' | translate }}</mat-label>
-          <mat-select name="connectionId" [ngModel]="form().connectionId" (ngModelChange)="patch({ connectionId: $event })">
-            <mat-option value="">{{ 'settings.environment' | translate }}</mat-option>
-            @for (c of connections(); track c.id) {<mat-option [value]="c.id">{{ c.name }} · {{ 'settings.kind.' + c.kind | translate }}</mat-option>}
-          </mat-select>
-          <mat-icon matSuffix class="help" [matTooltip]="glossary.tip('setting_connection')">help_outline</mat-icon>
-        </mat-form-field>
         <div class="row">
           @if (!editing() && coveredRepos().length) {
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -118,7 +108,7 @@ const blank = (): Form => ({
           <div class="warn" role="status">
             <mat-icon aria-hidden="true">warning</mat-icon>
             <span>{{ 'settings.notCovered' | translate }}</span>
-            @if (selectedConnection()?.installUrl; as url) {<a mat-button [href]="url" [matTooltip]="'settings.manageHint' | translate">{{ 'settings.addThisRepo' | translate }}</a>}
+            <a mat-button [href]="installHref">{{ 'settings.addThisRepo' | translate }}</a>
           </div>
         }
       </fieldset>
@@ -197,42 +187,35 @@ export class RepoFormPage implements OnInit {
   /** The repository being edited, from the route; absent on /settings/repos/new. */
   readonly repo = input<string>();
   readonly form = signal<Form>(blank());
-  readonly connections = signal<Connection[]>([]);
+  readonly installations = signal<Installation[]>([]);
   readonly busy = signal(false);
   readonly error = signal<string | undefined>(undefined);
   readonly editing = computed(() => Boolean(this.repo()));
   readonly tooling = TOOLING_PATH_PREFIXES;
+  readonly installHref = installUrl();
   readonly allowed = computed(() => lines(this.form().allowedText));
-  readonly selectedConnection = computed(() => this.connections().find((c) => c.id === this.form().connectionId));
-  /** The repositories the selected app is installed on, across its installations; a token's reach is unknown, so none. */
-  readonly coveredRepos = computed(() => {
-    const connection = this.selectedConnection();
-    return connection?.kind === 'github-app' ? [...new Set(connection.installations.flatMap((i) => i.repositories))].sort() : [];
-  });
+  /** The repositories the workspace's installations cover: what the app may act on. */
+  readonly coveredRepos = computed(() => [...new Set(this.installations().flatMap((i) => i.repositories))].sort());
   readonly matchingRepos = computed(() => {
     const typed = this.form().repo.toLowerCase();
     return this.coveredRepos().filter((repo) => repo.toLowerCase().includes(typed)).slice(0, 50);
   });
-  readonly coverage = computed(() => {
-    const connection = this.selectedConnection();
-    return connection && REPO_PATTERN.test(this.form().repo) ? coversRepository(connection, this.form().repo) : undefined;
-  });
+  /** Undefined while nothing is installed (a dry run on the environment's credentials) or the name is incomplete. */
+  readonly coverage = computed(() => (this.installations().length && REPO_PATTERN.test(this.form().repo) ? coversRepository(this.installations(), this.form().repo) : undefined));
   readonly valid = computed(() => {
     const f = this.form();
     return REPO_PATTERN.test(f.repo) && f.cloneUrl.trim().length > 0 && f.baseBranch.trim().length > 0;
   });
 
   async ngOnInit() {
-    const [connections, profiles] = await Promise.all([this.settings.connections(), this.settings.profiles()]);
-    this.connections.set(connections);
-    if (!this.repo() && connections.length === 1) this.patch({ connectionId: connections[0].id });
+    const [installations, profiles] = await Promise.all([this.settings.installations(), this.settings.profiles()]);
+    this.installations.set(installations);
     const profile = profiles.find((p) => p.repo === this.repo());
     if (!profile) return;
     this.form.set({
       repo: profile.repo,
       cloneUrl: profile.cloneUrl,
       baseBranch: profile.baseBranch,
-      connectionId: profile.connectionId ?? '',
       allowedText: profile.allowedCommands.join('\n'),
       gates: profile.gateCommands,
       extraForbiddenText: profile.policy.forbiddenPathPrefixes.filter((p) => !isTooling(p)).join('\n'),
@@ -255,10 +238,10 @@ export class RepoFormPage implements OnInit {
     this.patch({ gates: on ? [...gates, command] : gates });
   }
 
-  /** A repository picked from the connection's list: its default branch and clone URL come from the provider. */
+  /** A repository picked from the installations' list: its default branch and clone URL come from GitHub. */
   async pickRepository(repo: string) {
     this.patch({ repo });
-    const info = this.form().connectionId ? await this.settings.describeRepository(this.form().connectionId, repo) : undefined;
+    const info = await this.settings.describeRepository(repo);
     if (info) this.patch({ baseBranch: info.defaultBranch, cloneUrl: info.cloneUrl });
     else this.suggestCloneUrl();
   }
@@ -277,7 +260,6 @@ export class RepoFormPage implements OnInit {
       baseBranch: f.baseBranch.trim(),
       allowedCommands: this.allowed(),
       gateCommands: this.allowed().filter((command) => f.gates.includes(command)),
-      ...(f.connectionId ? { connectionId: f.connectionId } : {}),
       policy: {
         costCeilingUsd: f.costCeilingUsd,
         diffBudgetLines: f.diffBudgetLines,

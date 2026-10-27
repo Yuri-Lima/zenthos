@@ -28,10 +28,9 @@ export class PostgresProviderConnections implements ProviderConnectionsPort {
     return rows[0] && this.fromRow(rows[0]);
   }
 
-  /** The OAuth client lives in the sealed half, so the apps are opened one by one; there are a handful at most. */
-  async signInApp(): Promise<ProviderConnection | undefined> {
-    const { rows } = await this.pool.query<ConnectionRow>('SELECT * FROM provider_connections WHERE app_id IS NOT NULL ORDER BY created_at');
-    return rows.map((row) => this.fromRow(row)).find((c) => c.app?.clientId && c.app.clientSecret);
+  async platformApp(): Promise<ProviderConnection | undefined> {
+    const { rows } = await this.pool.query<ConnectionRow>('SELECT * FROM provider_connections WHERE workspace_id IS NULL AND app_id IS NOT NULL ORDER BY created_at LIMIT 1');
+    return rows[0] && this.fromRow(rows[0]);
   }
 
   async list(workspaceId: string): Promise<ProviderConnection[]> {

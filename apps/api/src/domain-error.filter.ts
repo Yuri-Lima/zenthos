@@ -6,6 +6,11 @@ import type { Response } from 'express';
 const STATUS: Partial<Record<ErrorCode, HttpStatus>> = {
   connection_not_found: HttpStatus.NOT_FOUND,
   repository_not_found: HttpStatus.NOT_FOUND,
+  platform_not_configured: HttpStatus.CONFLICT,
+  platform_already_configured: HttpStatus.CONFLICT,
+  setup_token_invalid: HttpStatus.UNAUTHORIZED,
+  installation_not_found: HttpStatus.NOT_FOUND,
+  installation_not_yours: HttpStatus.FORBIDDEN,
   unknown_repository: HttpStatus.NOT_FOUND,
   ticket_not_found: HttpStatus.NOT_FOUND,
   sign_in_unavailable: HttpStatus.NOT_FOUND,

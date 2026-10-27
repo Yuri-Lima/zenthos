@@ -90,6 +90,27 @@ export const MIGRATIONS: { name: string; sql: string }[] = [
       END $$;
     `,
   },
+  {
+    name: '005-platform-app',
+    sql: `
+      -- The one GitHub App a deployment had becomes the platform app, owned by no workspace (ADR 019 slice 2); its
+      -- installations are bound to the dry-run workspace that held it, and profiles stop naming a connection.
+      DO $$
+      DECLARE app uuid;
+      BEGIN
+        SELECT id INTO app FROM provider_connections WHERE app_id IS NOT NULL ORDER BY created_at LIMIT 1;
+        IF app IS NOT NULL THEN
+          UPDATE provider_connections
+            SET workspace_id = NULL,
+                public = jsonb_set(public, '{installations}', (
+                  SELECT COALESCE(jsonb_agg(i || jsonb_build_object('workspaceId', '00000000-0000-4000-8000-000000000001')), '[]'::jsonb)
+                  FROM jsonb_array_elements(public->'installations') i))
+            WHERE id = app;
+          UPDATE repo_profiles SET connection_id = NULL WHERE connection_id = app;
+        END IF;
+      END $$;
+    `,
+  },
 ];
 
 export async function migrate(pool: Pool): Promise<string[]> {

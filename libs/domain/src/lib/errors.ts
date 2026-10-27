@@ -23,6 +23,11 @@ export const ERROR_CODES = {
   connection_not_found: 'No provider connection with that id',
   invalid_credentials: 'The provider rejected these credentials',
   repository_not_found: 'The provider has no such repository, or this connection cannot see it',
+  platform_not_configured: 'No ZenthOs GitHub App is set up yet; the operator does that once',
+  platform_already_configured: 'The ZenthOs GitHub App is already set up',
+  setup_token_invalid: 'The setup token does not match the one the API printed at boot',
+  installation_not_found: 'The GitHub App has no such installation',
+  installation_not_yours: 'This installation belongs to an account the signed-in person is not a member of, or to another workspace',
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

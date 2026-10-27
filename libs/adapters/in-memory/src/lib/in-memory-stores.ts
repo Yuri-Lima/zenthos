@@ -13,8 +13,8 @@ export class InMemoryProviderConnections implements ProviderConnectionsPort {
     return [...this.byId.values()].find((c) => c.credentials.type === 'github-app' && c.credentials.appId === appId);
   }
 
-  async signInApp(): Promise<ProviderConnection | undefined> {
-    return [...this.byId.values()].find((c) => c.app?.clientId && c.app.clientSecret);
+  async platformApp(): Promise<ProviderConnection | undefined> {
+    return [...this.byId.values()].find((c) => !c.workspaceId && c.credentials.type === 'github-app');
   }
 
   async list(workspaceId: string): Promise<ProviderConnection[]> {

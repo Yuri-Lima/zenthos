@@ -127,50 +127,37 @@ Trigger the workflow once inside the wizard's 15-minute window and the rule's pa
 exchanges appear under **Authentication events** with a reason: `jti_reused` (a token presented twice), a
 claim mismatch against the rule, or `workspace_id_required`.
 
-## GitHub: the ZenthOs app
+## GitHub: the platform app
 
-ZenthOs talks to GitHub as a GitHub App, so comments and pull requests come from `<app>[bot]` and each
-repository owner decides where it is installed (ADR 006). The API creates the app for you through GitHub's
-manifest flow and stores it as a provider connection (ADR 007, ADR 010): start `pnpm api` with
-`DATABASE_URL`, `ZENTHOS_SECRETS_KEY`, `GITHUB_APPS=octokit` and `ZENTHOS_API_BASE_URL` set to a URL GitHub
-can reach (a tunnel on a laptop), open `/providers/github/manifest?name=zenthos-dev` in a browser, create the
-app on GitHub, and install it; the webhook, the callbacks and the permissions are all in the manifest.
+ZenthOs talks to GitHub as one GitHub App per deployment, the platform app (ADR 019): comments and pull requests
+come from `<app>[bot]`, each team installs it on its own accounts and organisations from Settings, and the API acts
+on a repository only through an installation the team's workspace has claimed. The operator creates the app once.
 
-To create it by hand instead, for a worker that takes credentials from `.env`:
+**1. Set it up.** Start the API; while no platform app exists it prints a line with the setup token (or set
+`ZENTHOS_SETUP_TOKEN` yourself). Open `<dashboard>/setup`, enter the token, an app name and optionally the
+organisation to own it, and continue: GitHub shows the manifest, you confirm, and the app becomes the platform app.
+The manifest asks for Contents, Issues and Pull requests write, Metadata read and, at organisation level, Members
+read, which lets the API check that whoever claims an installation belongs to the organisation. The webhook and the
+callbacks hang off `ZENTHOS_API_BASE_URL`, so it must be a URL GitHub can reach (a tunnel on a laptop). An app
+created by hand on GitHub becomes the platform app through `POST /platform/github/app` with the same token.
 
-1. GitHub → **Settings → Developer settings → GitHub Apps → New GitHub App**. Name it `zenthos` (or
-   `zenthos-dev` for your own tests). Homepage URL can be the repository. Uncheck **Webhook → Active** for now.
-2. Repository permissions: **Contents** read and write, **Issues** read and write, **Pull requests** read and
-   write, **Metadata** read. No organisation or account permissions.
-3. **Where can this app be installed**: only on this account, unless others will install it.
-4. After creating it, note the **App ID** and generate a **private key** (a `.pem` download).
-5. **Install App** on the repositories ZenthOs may work on, for example `mara-sandra-connect`.
+**2. Install it.** Sign in, create a workspace, and press *Install on GitHub* in Settings. GitHub asks which
+account or organisation and which repositories; back in Settings the installation is claimed for the workspace. A
+member can claim an installation on their own account, or on an organisation they belong to; one installation
+belongs to one workspace, and *Release* lets it go without uninstalling on GitHub.
 
-Then either store it as a connection through the API, which the worker resolves per repository profile:
+**3. Add repositories.** *Add repository* offers the repositories the workspace's installations cover; picking one
+fills the default branch and clone URL from GitHub.
 
-```bash
-curl -X POST localhost:3200/providers/github/app -H 'content-type: application/json' \
-  -d "{\"name\":\"zenthos-dev\",\"appId\":\"123456\",\"privateKey\":$(jq -Rs . < zenthos.private-key.pem)}"
-```
+**Upgrading an app created before slice 2.** Migration 005 promotes a deployment's one existing app to platform
+app and binds its installations to the dry-run workspace. On GitHub, edit that app once: make it public, set the
+setup URL to `<ZENTHOS_API_BASE_URL>/github/install/callback`, and add the organisation permission Members read
+(installers are asked to accept it).
 
-or, for a worker without the store, in `.env` as the fallback credentials:
-
-```bash
-ISSUE_TRACKER=github
-SCM=github
-GITHUB_APP_ID=123456
-GITHUB_APP_PRIVATE_KEY_FILE=/absolute/path/zenthos.private-key.pem
-```
-
-The worker resolves the installation per repository at first use and mints tokens as needed; nothing else
-to configure per repo. Commits are authored as the app's bot user, `<slug>[bot]`, with the no-reply address
-GitHub assigns to it, so the commit, the comment and the pull request all show the same bot. Never set a
-hand-written no-reply address: GitHub maps it to whichever account owns that name. Keep the `.pem` out of the repository; on Cloud Run it comes from Secret Manager.
-The private key is the one long-lived secret in this design.
-
-The product stores and offers apps only. A fine-grained personal token (`GITHUB_TOKEN`, scoped to the named
-repositories, with Contents, Issues and Pull requests write) remains only as the worker's environment fallback for a
-dry run without a store, and is ignored once an app is configured.
+The private key is the one long-lived secret in this design; it is sealed at rest with `ZENTHOS_SECRETS_KEY`.
+`GITHUB_TOKEN` (scoped to the named repositories, with Contents, Issues and Pull requests write) remains only as the
+worker's environment fallback for a dry run without a store, and is ignored where a bound installation covers the
+repository.
 
 Prove the connection before the first real run, on an issue you own. It posts one comment there, pushes one
 marker commit to a throwaway branch, checks that GitHub attributes that commit to the bot, and deletes the branch:
@@ -181,16 +168,11 @@ pnpm nx run @zenthos/worker:contract -- owner/repo#123
 
 ## Dashboard: Sign in with GitHub
 
-People sign in to the dashboard through the connected GitHub App's user authorization (ADR 007). Anyone GitHub
-vouches for gets in; the workspaces they belong to decide what they see, and owners invite others by GitHub
-login (ADR 019). The API needs the App's OAuth
-client id and secret: the manifest flow stores them; for an app created by hand, copy them from the app's
-settings page on GitHub (generate a client secret there) and connect the app again with them:
-
-```bash
-curl -X POST localhost:3200/providers/github/app -H 'content-type: application/json' \
-  -d "{\"name\":\"zenthos-dev\",\"appId\":\"123456\",\"privateKey\":$(jq -Rs . < key.pem),\"clientId\":\"Iv1....\",\"clientSecret\":\"...\"}"
-```
+People sign in to the dashboard through the platform app's user authorization (ADR 007). Anyone GitHub vouches
+for gets in; the workspaces they belong to decide what they see, and owners invite others by GitHub login (ADR 019).
+The API needs the app's OAuth client id and secret: the manifest flow stores them; for an app created by hand, copy
+them from the app's settings page on GitHub (generate a client secret there) and pass them to
+`POST /platform/github/app` with the setup token.
 
 The app's **Callback URL** must be `<ZENTHOS_API_BASE_URL>/auth/github/callback` (the manifest sets it). Then:
 

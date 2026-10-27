@@ -29,11 +29,12 @@ appears while no platform app exists and asks for a setup token the API prints a
 copied into an environment file. Its OAuth client is the one "Sign in with GitHub" uses.
 
 **Installing binds an installation to a workspace.** Settings > GitHub sends the person to
-`github.com/apps/<slug>/installations/new` with a signed, expiring state naming the workspace. GitHub returns to the
-setup URL with the installation id; the API accepts it only if the signed-in person can see that installation
-(`GET /user/installations` with their own token), so nobody can claim someone else's installation. The
-`installation` and `installation_repositories` webhooks keep the repository list current and unbind a removed
-installation. One installation belongs to one workspace.
+`github.com/apps/<slug>/installations/new` with a one-time, expiring state naming the workspace. GitHub returns to the
+setup URL with the installation id; the API claims it for the workspace only if the installation is on the signed-in
+person's own account, or on an organisation they belong to, asked with the installation's own token (the app carries
+the organisation permission `members: read` for that), so nobody can claim someone else's installation and no user
+token is stored. The `installation` and `installation_repositories` webhooks keep the repository list current, and a
+binding survives them until the workspace releases it. One installation belongs to one workspace.
 
 **Each workspace brings its own Anthropic credential.** Settings > Model provider takes an API key, checks it with a
 zero-token model lookup, stores it encrypted with the deployment's secret box, and never shows it again (the last
@@ -69,6 +70,14 @@ Temporal's address, LangFuse's keys, and the operator's own CI credentials (fede
 
 ## Consequences
 
+- Slice 2 (27 Oct 2026): the platform app is the app connection no workspace owns (`ProviderConnectionsPort.platformApp`);
+  the operator creates it once from `/setup` with the setup token the API prints at boot (`ZENTHOS_SETUP_TOKEN`
+  or a random one), through a public manifest; `/github/install` and its callback claim installations for the
+  workspace, `/github/installations` lists and releases them, and the repository picker reads from them; the
+  worker acts as the platform app wherever a bound installation covers the repository. Per-workspace app
+  connections left the API and the dashboard; migration 005 promotes a deployment's one existing app and binds its
+  installations to the dry-run workspace. The app created before slice 2 must be updated on GitHub by hand: public,
+  setup URL `/github/install/callback`, organisation permission members read (docs/authentication.md).
 - Slice 1 (24 Oct 2026): workspaces, memberships and roles in the domain; `WorkspacesPort`; `workspace_id` on
   connections, profiles and runs with migration `004-workspaces`; the session carries the current workspace and the
   API guard resolves the person's role in it on every request (`CurrentWorkspace(action)`); sign-in is open and

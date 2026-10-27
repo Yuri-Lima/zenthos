@@ -10,6 +10,8 @@ export interface GitHubAppsPort {
   whoAmI(credentials: GitHubCredentials): Promise<string>;
   /** Every installation of the app as GitHub lists it now, with its repositories. */
   listInstallations(credentials: Extract<GitHubCredentials, { type: 'github-app' }>): Promise<Installation[]>;
+  /** Whether a login belongs to the organisation an installation is on, asked with that installation's token (organisation permission members: read). */
+  isMember(credentials: Extract<GitHubCredentials, { type: 'github-app' }>, installationId: number, organisation: string, login: string): Promise<boolean>;
   /** One repository as these credentials see it: default branch and clone URL, for the profile form. `repository_not_found` when they cannot. */
   describeRepository(credentials: GitHubCredentials, repo: string): Promise<RepositoryInfo>;
 }

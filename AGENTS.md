@@ -48,8 +48,8 @@ These win over any pattern below when the two conflict. The goal is a codebase a
 | `libs/evals` | Golden item schema and its LangFuse dataset-item shape, the scorers, the spec and review suites as experiment definitions (task, item and run evaluators) and the baseline check; no vendor import, LangFuse runs them (ADR 009, ADR 016) | domain, ports |
 | `libs/adapters/postgres` | Workspaces and members, provider connections (secrets sealed at rest), repository profiles, runs and sessions in Postgres; the schema as ordered statements (ADR 010, ADR 019) | domain, ports |
 | `libs/adapters/temporal` | `RunControlPort` over the Temporal client and the workflow bundler config, shared by the API, the CLI and the worker | domain, ports |
-| `apps/api` | NestJS REST API: provider connections with a credential check before storing and on demand, the GitHub manifest and install flows, repository profiles, runs from the stored projection, metrics computed from it, the GitHub webhook; OpenAPI at `/docs` and committed as `openapi.json` (ADR 010, ADR 011) | everything |
-| `apps/dashboard` | Angular dashboard (Material + Tailwind, en/pt JSON under `public/i18n`): sign-in gate, workspace switcher, create-workspace and members pages (ADR 019), runs list, run detail with approve and reject, start a run, settings for providers and repository profiles with derived first-run steps (ADR 010), metrics with cost by agent and the LangFuse check (ADR 015), glossary with inline help (ADR 014); only the generated client reaches the API; polls until server-sent events exist (ADR 012) | api-client |
+| `apps/api` | NestJS REST API: the operator's one-time setup of the platform GitHub App behind a setup token, a workspace's installations (install through GitHub, claim on the callback, release) and repository profiles, runs from the stored projection, metrics computed from it, the GitHub webhook; OpenAPI at `/docs` and committed as `openapi.json` (ADR 010, ADR 011, ADR 019) | everything |
+| `apps/dashboard` | Angular dashboard (Material + Tailwind, en/pt JSON under `public/i18n`): sign-in gate, workspace switcher, create-workspace and members pages (ADR 019), runs list, run detail with approve and reject, start a run, the operator's setup page, settings with the workspace's GitHub installations and repository profiles and derived first-run steps (ADR 010, ADR 019), metrics with cost by agent and the LangFuse check (ADR 015), glossary with inline help (ADR 014); only the generated client reaches the API; polls until server-sent events exist (ADR 012) | api-client |
 | `libs/api-client` | The typed client the dashboard uses: `schema.ts` generated from `apps/api/openapi.json` with openapi-typescript, `createApiClient` over openapi-fetch; never hand-edited (ADR 003) | nothing |
 | `apps/worker` | Temporal worker: `workflows.ts` (one workflow per ticket), `activities.ts` (thin, call use cases), `config.ts` (zod-validated env), `composition.ts` (the adapters, chosen once), `repos.ts` (the dry-run repository profiles), `scripts/` (contract check, manual review, evals) | anything |
 | `apps/cli` | `zenthos run|approve|reject|state <ticket-key>` against the running worker | anything |
@@ -107,63 +107,11 @@ bans vendor SDKs inside domain, ports and application. Every project carries a `
   `workspaceId`, every store list takes one, and the API gets it from the session (`CurrentWorkspace(action)`
   checks the role too), never from the client. A new table gets a `workspace_id` column and a scoping case in the
   port's contract test. The sandbox's checkout is a `Checkout`; "workspace" means the tenant and nothing else.
-- Provider connections and repository profiles are configuration the product owns (ADR 006, ADR 010): the
-  stores behind `ProviderConnectionsPort` and `RepoProfilesPort`, written by the API. The worker resolves
-  credentials per repository from the connection a profile names (`credentialsForRepo`), with
-  `githubCredentials()` from its environment as the only fallback; add nothing credential-shaped anywhere else.
-
-## Commands
-
-```bash
-pnpm install
-pnpm infra:up          # Temporal (7233, UI on 8080) and LangFuse (3100) in Docker
-pnpm check             # typecheck + lint + test for every project
-pnpm nx run-many -t typecheck
-pnpm nx run-many -t lint
-pnpm nx run-many -t test
-pnpm worker           # Temporal worker, dry run by default (ISSUE_TRACKER=memory, SPEC_WRITER=memory)
-pnpm cli run owner/repo#123
-pnpm cli approve owner/repo#123
-pnpm cli state owner/repo#123
-pnpm api               # REST API on :3200, OpenAPI at /docs (RUN_CONTROL=temporal to drive real runs)
-pnpm studio            # LangGraph Studio dev server on :2024 for the spec_writer and reviewer graphs (langgraph.json)
-pnpm dashboard         # Angular dashboard on :4200 (Angular Material + Tailwind, en/pt), talks to the API through libs/api-client
-pnpm nx run @zenthos/api-client:generate   # apps/api/openapi.json from the controllers, then the typed client (ADR 003); CI fails on a diff
-pnpm nx run @zenthos/worker:contract -- owner/repo#123   # live GitHub check: comment, commit attribution, cleanup
-pnpm nx run @zenthos/worker:review -- owner/repo#123 spec.json   # re-review the open pull request of a run (ADR 008)
-pnpm nx run @zenthos/worker:eval-dataset -- owner/repo            # merged history → LangFuse dataset owner-repo, upserted (ADR 016)
-pnpm nx run @zenthos/worker:eval -- spec owner/repo --limit 5     # spec suite as a LangFuse experiment, gated by libs/evals/baseline.json; --record sets it
-pnpm nx run @zenthos/worker:eval -- review owner/repo --limit 3   # review suite (costs both agents per item)
-pnpm nx run @zenthos/worker:eval-dataset -- owner/repo --from runs    # the pipeline's own judged runs → owner-repo-runs, specs included (ADR 011)
-pnpm nx run @zenthos/worker:eval -- review owner/repo --dataset runs  # the fair review measurement; baselines keyed per dataset
-pnpm nx run @zenthos/worker:prompts-publish                        # agents' system prompts → LangFuse, label = version; CI runs it on main
-pnpm nx run @zenthos/worker:coding-agent-trace-check              # tiny real Claude Code run traced into LangFuse; prints the cost-check verdict (ADR 015)
-infra/hetzner/deploy.sh zenthos-platform-1 46-224-120-62.sslip.io   # Traefik + LangFuse on the Hetzner host; secrets generated there (ADR 017)
-ZENTHOS_SECRETS_KEY_NEXT=... pnpm nx run @zenthos/worker:rotate-key   # re-seal stored connections under a new deployment key
-pnpm nx g @nx/js:lib libs/adapters/<name> --importPath=@zenthos/adapter-<name> --tags=scope:adapter --bundler=tsc --linter=eslint --unitTestRunner=jest --minimal
-```
-
-Jest configs are `jest.config.cjs` (plain CommonJS) because Jest cannot load `.cts` configs under TypeScript 6.
-
-## Roadmap
-
-Phases 0 to 3 are in: scaffold; intake, spec draft and human decision; implementation by Claude Code in a git
-sandbox, deterministic gates with one feedback retry, and a pull request to the base branch; the reviewer scores the
-pull request against the domain rubric and a failed review sends the agent back once (ADR 008); the evals measure
-both agents against merged history and block a prompt change that lowers the scores (ADR 009); the REST API keeps
-provider connections and repository profiles in Postgres with secrets sealed, connects GitHub by the manifest flow
-and takes the app's webhook (ADR 010); the worker acts with the connection each profile names and records every
-run transition to the store, which the API serves (ADR 011). Phase 4, the Angular dashboard (ADR 012, ADR 013:
-Material, en/pt, Sign in with GitHub, generated OpenAPI client, metrics from the runs store checked against
-LangFuse, the glossary), is in except its last slice, the Legal Connect hardening. Along the way the evals moved to
-LangFuse experiments with prompts published from CI (ADR 016), the coding agent is traced (ADR 015), LangFuse runs
-on a Hetzner host (ADR 017), the coding agent runs on organisation credentials only (ADR 018), and ZenthOs became a
-hosted service with workspaces (ADR 019, slice 1 of 5). Next: ADR 019 slices 2 to 5 (the platform GitHub App,
-per-workspace model keys, run isolation, limits), then phase 6 Phoenix (YouTrack, GitLab, TeamCity, Codex), then
-the deploy and the write-up.
-
-## Dependency policy
-
+- The platform GitHub App and repository profiles are configuration the product owns (ADR 006, ADR 010, ADR 019):
+  the platform app is the `ProviderConnection` no workspace owns, its installations carry the workspace that
+  claimed them, and profiles live behind `RepoProfilesPort`, written by the API. The worker resolves credentials per
+  repository (`credentialsForRepo`): the platform app where a bound installation covers it, else `githubCredentials()`
+  from its environment as the only fallback; add nothing credential-shaped anywhere else.
 - Upgrade Nx and its plugins only through `pnpm nx migrate latest` followed by `pnpm install` and
   `pnpm nx migrate --run-migrations`, so Nx's own migrations run.
 - Other packages: `pnpm outdated -r`, bump, then `pnpm check`. Checked on 2026-10-13.

@@ -44,8 +44,8 @@ export class AuthController {
   @Get('github')
   @ApiOperation({ summary: 'Start Sign in with GitHub; redirects to GitHub' })
   async start(@Query('returnTo') returnTo = '/', @Res() res: Response) {
-    const app = (await this.ports.connections.signInApp())?.app;
-    if (!app?.clientId) throw new NotFoundException('no GitHub App connection carries OAuth credentials, so nobody can sign in yet');
+    const app = (await this.ports.connections.platformApp())?.app;
+    if (!app?.clientId) throw new NotFoundException('the platform GitHub App is not set up yet, so nobody can sign in');
     const state = randomBytes(16).toString('hex');
     this.pending.set(state, { returnTo: returnTo.startsWith('/') ? returnTo : '/', expiresAt: Date.now() + STATE_TTL_MS });
     const url = new URL('https://github.com/login/oauth/authorize');

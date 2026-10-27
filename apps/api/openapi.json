@@ -499,9 +499,9 @@
         ]
       }
     },
-    "/providers": {
+    "/platform": {
       "get": {
-        "operationId": "ProvidersController_list",
+        "operationId": "PlatformController_status",
         "parameters": [],
         "responses": {
           "200": {
@@ -509,97 +509,36 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                      },
-                      "provider": {
-                        "type": "string",
-                        "enum": [
-                          "github"
-                        ]
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "kind": {
-                        "type": "string",
-                        "enum": [
-                          "github-app",
-                          "github-token"
-                        ]
-                      },
-                      "appSlug": {
-                        "type": "string"
-                      },
-                      "installations": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "installationId": {
-                              "type": "integer",
-                              "exclusiveMinimum": 0,
-                              "maximum": 9007199254740991
-                            },
-                            "account": {
-                              "type": "string",
-                              "minLength": 1
-                            },
-                            "repositories": {
-                              "type": "array",
-                              "items": {
-                                "type": "string",
-                                "minLength": 1
-                              }
-                            }
-                          },
-                          "required": [
-                            "installationId",
-                            "account",
-                            "repositories"
-                          ],
-                          "additionalProperties": false
-                        }
-                      },
-                      "installUrl": {
-                        "type": "string"
-                      },
-                      "createdAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                      }
+                  "type": "object",
+                  "properties": {
+                    "configured": {
+                      "type": "boolean"
                     },
-                    "required": [
-                      "id",
-                      "provider",
-                      "name",
-                      "kind",
-                      "installations",
-                      "createdAt"
-                    ],
-                    "additionalProperties": false
-                  }
+                    "slug": {
+                      "type": "string"
+                    },
+                    "installUrl": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "configured"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }
           }
         },
-        "summary": "List the workspace's provider connections, secrets redacted",
+        "summary": "Whether the platform GitHub App is set up, its slug and where it installs",
         "tags": [
-          "providers"
+          "platform"
         ]
       }
     },
-    "/providers/github/app": {
+    "/platform/github/manifest": {
       "post": {
-        "operationId": "ProvidersController_connectApp",
+        "operationId": "PlatformController_startManifest",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -608,6 +547,86 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "default": "zenthos",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "owner": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Start creating the platform app from the manifest: a page that submits it to GitHub. Takes the setup token the API printed at boot",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/platform/github/manifest/callback": {
+      "get": {
+        "operationId": "PlatformController_finishManifest",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "GitHub returns here with the manifest code; the app becomes the platform app and the browser goes to the dashboard",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/platform/github/app": {
+      "post": {
+        "operationId": "PlatformController_connectApp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1
+                  },
                   "name": {
                     "type": "string",
                     "minLength": 1
@@ -634,6 +653,7 @@
                   }
                 },
                 "required": [
+                  "token",
                   "name",
                   "appId",
                   "privateKey"
@@ -651,76 +671,18 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid",
-                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    "configured": {
+                      "type": "boolean"
                     },
-                    "provider": {
-                      "type": "string",
-                      "enum": [
-                        "github"
-                      ]
-                    },
-                    "name": {
+                    "slug": {
                       "type": "string"
-                    },
-                    "kind": {
-                      "type": "string",
-                      "enum": [
-                        "github-app",
-                        "github-token"
-                      ]
-                    },
-                    "appSlug": {
-                      "type": "string"
-                    },
-                    "installations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "installationId": {
-                            "type": "integer",
-                            "exclusiveMinimum": 0,
-                            "maximum": 9007199254740991
-                          },
-                          "account": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "repositories": {
-                            "type": "array",
-                            "items": {
-                              "type": "string",
-                              "minLength": 1
-                            }
-                          }
-                        },
-                        "required": [
-                          "installationId",
-                          "account",
-                          "repositories"
-                        ],
-                        "additionalProperties": false
-                      }
                     },
                     "installUrl": {
                       "type": "string"
-                    },
-                    "createdAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
                     }
                   },
                   "required": [
-                    "id",
-                    "provider",
-                    "name",
-                    "kind",
-                    "installations",
-                    "createdAt"
+                    "configured"
                   ],
                   "additionalProperties": false
                 }
@@ -728,71 +690,85 @@
             }
           }
         },
-        "summary": "Connect a GitHub App created by hand: app id, private key, the webhook secret, and the OAuth client id and secret for Sign in with GitHub; the key is checked against GitHub first; the same app again updates it",
+        "summary": "Make an app created by hand on GitHub the platform app: app id, private key, webhook secret and the OAuth client for Sign in with GitHub. Takes the setup token",
         "tags": [
-          "providers"
+          "platform"
         ]
       }
     },
-    "/providers/github/manifest": {
+    "/github/installations": {
       "get": {
-        "operationId": "ProvidersController_startManifest",
+        "operationId": "GithubController_installations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "installationId": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "account": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "repositories": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "workspaceId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    },
+                    "required": [
+                      "installationId",
+                      "account",
+                      "repositories"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "The installations this workspace has claimed, with the repositories each covers",
+        "tags": [
+          "github"
+        ]
+      }
+    },
+    "/github/install": {
+      "get": {
+        "operationId": "GithubController_install",
         "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
-        "summary": "Start creating a GitHub App from the manifest; redirects to GitHub",
+        "summary": "Install the platform app on an account or organisation for this workspace; redirects to GitHub",
         "tags": [
-          "providers"
+          "github"
         ]
       }
     },
-    "/providers/github/manifest/callback": {
+    "/github/install/callback": {
       "get": {
-        "operationId": "ProvidersController_finishManifest",
+        "operationId": "GithubController_finishInstall",
         "parameters": [
-          {
-            "name": "code",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "state",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "GitHub returns here with the manifest code; the app becomes a connection of the workspace that started the flow",
-        "tags": [
-          "providers"
-        ]
-      }
-    },
-    "/providers/github/install/callback": {
-      "get": {
-        "operationId": "ProvidersController_finishInstall",
-        "parameters": [
-          {
-            "name": "connection",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
           {
             "name": "installation_id",
             "required": true,
@@ -807,15 +783,15 @@
             "description": ""
           }
         },
-        "summary": "GitHub returns here after an install; the installation is read, recorded, and the browser goes back to the dashboard settings",
+        "summary": "GitHub returns here after an install; the installation is claimed for the workspace and the browser goes back to the dashboard settings",
         "tags": [
-          "providers"
+          "github"
         ]
       }
     },
-    "/providers/{id}/check": {
-      "post": {
-        "operationId": "ProvidersController_check",
+    "/github/installations/{id}": {
+      "delete": {
+        "operationId": "GithubController_release",
         "parameters": [
           {
             "name": "id",
@@ -827,61 +803,20 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "ok": {
-                      "type": "boolean"
-                    },
-                    "actsAs": {
-                      "type": "string"
-                    },
-                    "repositories": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "reason": {
-                      "type": "string"
-                    },
-                    "checkedAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                    }
-                  },
-                  "required": [
-                    "ok",
-                    "checkedAt"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
+          "204": {
+            "description": ""
           }
         },
-        "summary": "Ask GitHub whether the stored credentials still work, and refresh an app's installations from GitHub; answers with who they act as and how many repositories they reach, or why not",
+        "summary": "Release an installation from this workspace; the app stays installed on GitHub until its owner removes it there",
         "tags": [
-          "providers"
+          "github"
         ]
       }
     },
-    "/providers/{id}/repositories/{owner}/{name}": {
+    "/github/repositories/{owner}/{name}": {
       "get": {
-        "operationId": "ProvidersController_repository",
+        "operationId": "GithubController_repository",
         "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
           {
             "name": "owner",
             "required": true,
@@ -926,33 +861,9 @@
             }
           }
         },
-        "summary": "A repository as this connection's provider sees it: default branch and clone URL, for the profile form; 404 when the connection cannot see it",
+        "summary": "A repository one of the workspace's installations covers, as GitHub sees it: default branch and clone URL, for the profile form",
         "tags": [
-          "providers"
-        ]
-      }
-    },
-    "/providers/{id}": {
-      "delete": {
-        "operationId": "ProvidersController_remove",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": ""
-          }
-        },
-        "summary": "Remove a connection; profiles that used it keep working only through the environment",
-        "tags": [
-          "providers"
+          "github"
         ]
       }
     },

@@ -1,13 +1,13 @@
 import { createRun, repoProfile, type ProviderConnection, type RepoProfile, type Run } from '@zenthos/domain';
 import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort } from '@zenthos/ports';
-import { applyWebhookCommand, checkConnection, connectExistingGitHubApp, connectGitHubApp, describeRepository, recordInstallation } from './provider-connections.js';
+import { applyWebhookCommand, claimInstallation, connectExistingGitHubApp, connectGitHubApp, describeRepository, installationsOf, platformStatus, releaseInstallation } from './provider-connections.js';
 
 /** Map-backed fakes; the application layer may not import adapters, even in tests. */
 class Connections implements ProviderConnectionsPort {
   readonly byId = new Map<string, ProviderConnection>();
   get = async (id: string) => this.byId.get(id);
   findByAppId = async (appId: string) => [...this.byId.values()].find((c) => c.credentials.type === 'github-app' && c.credentials.appId === appId);
-  signInApp = async () => [...this.byId.values()].find((c) => c.app?.clientId && c.app.clientSecret);
+  platformApp = async () => [...this.byId.values()].find((c) => !c.workspaceId && c.credentials.type === 'github-app');
   list = async (workspaceId: string) => [...this.byId.values()].filter((c) => c.workspaceId === workspaceId);
   save = async (c: ProviderConnection) => void this.byId.set(c.id, c);
   remove = async (id: string) => void this.byId.delete(id);
@@ -37,40 +37,54 @@ const githubApps = {
     return c.type === 'github-token' ? 'octocat' : 'zenthos-dev';
   },
   listInstallations: async () => [{ installationId: 5, account: 'owner', repositories: ['owner/a', 'owner/b'] }],
+  describeInstallation: async (_c: unknown, installationId: number) => {
+    if (installationId === 404) throw Object.assign(new Error('Not Found'), { status: 404 });
+    return { installationId, account: installationId === 7 ? 'acme' : 'owner', repositories: [installationId === 7 ? 'acme/x' : 'owner/a'] };
+  },
+  isMember: async (_c: unknown, _i: number, organisation: string, login: string) => organisation === 'acme' && login === 'ana',
   describeRepository: async (_c: unknown, repo: string) => ({ defaultBranch: 'develop', cloneUrl: `https://github.com/${repo}.git` }),
 } as unknown as GitHubAppsPort;
 
 const manifest = { appId: '42', slug: 'zenthos-dev', privateKey: 'pem', webhookSecret: 'whs', clientId: 'c', clientSecret: 'cs' };
 const W = '00000000-0000-4000-8000-0000000000a1';
 
-describe('provider connections', () => {
-  it('describes a repository through the connection that can see it, and says so when there is no such connection', async () => {
-    const connections = new Connections();
-    const app = await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-dev', appId: '3', privateKey: 'pem', workspaceId: W });
-    expect(await describeRepository({ connections, githubApps }, app.id, 'owner/a')).toEqual({ defaultBranch: 'develop', cloneUrl: 'https://github.com/owner/a.git' });
-    await expect(describeRepository({ connections, githubApps }, 'missing', 'owner/a')).rejects.toMatchObject({ code: 'connection_not_found' });
-  });
+const actor = (login: string, workspaceId = W) => ({ workspaceId, login, role: 'owner' as const });
 
-  it('checks credentials before storing them, and reports the health of a stored connection without throwing', async () => {
+describe('provider connections', () => {
+  it('checks an app key before storing it; connects an app from the manifest result', async () => {
     const connections = new Connections();
     await expect(connectExistingGitHubApp({ connections, githubApps }, { name: 'x', appId: '1', privateKey: 'rejected' })).rejects.toMatchObject({ code: 'invalid_credentials' });
     expect(await connections.list(W)).toEqual([]);
-    const now = new Date('2026-10-18T12:00:00Z');
-    const app = await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-dev', appId: '11', privateKey: 'pem' });
-    expect(await checkConnection({ connections, githubApps }, app.id, now)).toMatchObject({ ok: true, actsAs: 'zenthos-dev', repositories: 2 });
-    expect((await connections.get(app.id))?.installations).toEqual([{ installationId: 5, account: 'owner', repositories: ['owner/a', 'owner/b'] }]);
-    await connections.save({ ...app, credentials: { type: 'github-app', appId: '11', privateKey: 'rejected' } });
-    expect(await checkConnection({ connections, githubApps }, app.id, now)).toEqual({ ok: false, reason: 'Bad credentials', checkedAt: now.toISOString() });
-    await expect(checkConnection({ connections, githubApps }, 'missing')).rejects.toMatchObject({ code: 'connection_not_found' });
-  });
-
-  it('connects an app from the manifest result and records installations', async () => {
-    const connections = new Connections();
     const connection = await connectGitHubApp({ connections }, manifest);
     expect(connection.credentials).toEqual({ type: 'github-app', appId: '42', privateKey: 'pem' });
-    const updated = await recordInstallation({ connections }, connection.id, { installationId: 1, account: 'owner', repositories: ['owner/repo'] });
-    expect((await connections.get(connection.id))?.installations).toEqual(updated.installations);
-    await expect(recordInstallation({ connections }, 'missing', { installationId: 1, account: 'o', repositories: [] })).rejects.toMatchObject({ code: 'connection_not_found' });
+  });
+
+  it('the platform app is the one no workspace owns; its status says whether it exists and where it installs', async () => {
+    const connections = new Connections();
+    expect(await platformStatus({ connections })).toEqual({ configured: false });
+    await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-dev', appId: '11', privateKey: 'pem', workspaceId: W });
+    expect(await platformStatus({ connections })).toEqual({ configured: false });
+    await connectGitHubApp({ connections }, manifest);
+    expect(await platformStatus({ connections })).toEqual({ configured: true, slug: 'zenthos-dev', installUrl: 'https://github.com/apps/zenthos-dev/installations/new' });
+  });
+
+  it('a member claims an installation on their own account or on an organisation they belong to, once, for their workspace', async () => {
+    const connections = new Connections();
+    const deps = { connections, githubApps };
+    await expect(claimInstallation(deps, actor('owner'), 5)).rejects.toMatchObject({ code: 'platform_not_configured' });
+    await connectGitHubApp({ connections }, manifest);
+    expect(await claimInstallation(deps, actor('Owner'), 5)).toEqual({ installationId: 5, account: 'owner', repositories: ['owner/a'], workspaceId: W });
+    await expect(claimInstallation(deps, actor('bob'), 7)).rejects.toMatchObject({ code: 'installation_not_yours' });
+    expect(await claimInstallation(deps, actor('ana'), 7)).toMatchObject({ account: 'acme', workspaceId: W });
+    await expect(claimInstallation(deps, actor('ana', '00000000-0000-4000-8000-0000000000b2'), 7)).rejects.toMatchObject({ code: 'installation_not_yours' });
+    await expect(claimInstallation(deps, actor('owner'), 404)).rejects.toMatchObject({ code: 'installation_not_found' });
+    expect(await claimInstallation(deps, actor('anonymous'), 9, true)).toMatchObject({ installationId: 9, workspaceId: W });
+    expect((await installationsOf({ connections }, W)).map((i) => i.installationId)).toEqual([5, 7, 9]);
+    expect(await describeRepository(deps, W, 'owner/a')).toEqual({ defaultBranch: 'develop', cloneUrl: 'https://github.com/owner/a.git' });
+    await expect(describeRepository(deps, '00000000-0000-4000-8000-0000000000b2', 'owner/a')).rejects.toMatchObject({ code: 'repository_not_found' });
+    await releaseInstallation({ connections }, actor('owner'), 5);
+    expect((await installationsOf({ connections }, W)).map((i) => i.installationId)).toEqual([7, 9]);
+    await expect(releaseInstallation({ connections }, actor('owner'), 5)).rejects.toMatchObject({ code: 'installation_not_found' });
   });
 
   it('connects an app created by hand, with the webhook only when its secret is known', async () => {
@@ -104,8 +118,9 @@ describe('provider connections', () => {
     expect(runs.runs.size).toBe(1);
 
     await applyWebhookCommand(deps, '42', { kind: 'installation', action: 'added', installation: { installationId: 5, account: 'owner', repositories: ['owner/repo'] } });
+    await claimInstallation({ connections, githubApps }, actor('owner'), 5);
     await applyWebhookCommand(deps, '42', { kind: 'repositories', installationId: 5, account: 'owner', added: ['owner/two'], removed: [] });
-    expect((await connections.get(connection.id))?.installations[0].repositories).toEqual(['owner/repo', 'owner/two']);
+    expect((await connections.get(connection.id))?.installations[0]).toEqual({ installationId: 5, account: 'owner', repositories: ['owner/a', 'owner/two'], workspaceId: W });
     await applyWebhookCommand(deps, '42', { kind: 'installation', action: 'removed', installation: { installationId: 5, account: 'owner', repositories: [] } });
     expect((await connections.get(connection.id))?.installations).toEqual([]);
     expect(await applyWebhookCommand(deps, '99', { kind: 'installation', action: 'added', installation: { installationId: 5, account: 'o', repositories: [] } })).toContain('no connection for app 99');

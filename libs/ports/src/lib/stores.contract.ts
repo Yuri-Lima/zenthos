@@ -6,13 +6,14 @@ import type { RepoProfilesPort } from './repo-profiles.port.js';
 const WORKSPACE_A = '00000000-0000-4000-8000-0000000000a1';
 const WORKSPACE_B = '00000000-0000-4000-8000-0000000000b2';
 
-export const sampleConnection = (workspaceId = WORKSPACE_A, appId = '424242'): ProviderConnection =>
+/** `null` for the platform app, which no workspace owns. */
+export const sampleConnection = (workspaceId: string | null = WORKSPACE_A, appId = '424242'): ProviderConnection =>
   createConnection({
     provider: 'github',
     name: 'zenthos-test',
     credentials: { type: 'github-app', appId, privateKey: '-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----' },
     app: { slug: 'zenthos-test', webhookSecret: 'whs', clientId: 'Iv1.test', clientSecret: 'cs' },
-    workspaceId,
+    ...(workspaceId ? { workspaceId } : {}),
   });
 
 export const providerConnectionsContract: Record<string, (port: ProviderConnectionsPort) => Promise<void>> = {
@@ -21,13 +22,20 @@ export const providerConnectionsContract: Record<string, (port: ProviderConnecti
     await port.save(connection);
     assert.deepEqual(await port.get(connection.id), connection);
     assert.deepEqual(await port.findByAppId('424242'), connection);
-    assert.equal((await port.signInApp())?.id, connection.id);
     const updated = withInstallation(connection, { installationId: 7, account: 'owner', repositories: ['owner/repo'] });
     await port.save(updated);
     assert.deepEqual((await port.get(connection.id))?.installations, updated.installations);
     assert.ok((await port.list(WORKSPACE_A)).some((c) => c.id === connection.id));
     await port.remove(connection.id);
     assert.equal(await port.get(connection.id), undefined);
+  },
+
+  'the platform app is the app connection no workspace owns': async (port) => {
+    const platform = sampleConnection(null, '424246');
+    await port.save(platform);
+    assert.equal((await port.platformApp())?.id, platform.id);
+    await port.remove(platform.id);
+    assert.equal(await port.platformApp(), undefined);
   },
 
   'a workspace lists only its own connections': async (port) => {

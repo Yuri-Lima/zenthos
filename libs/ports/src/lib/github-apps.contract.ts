@@ -15,5 +15,6 @@ export const githubAppsContract: Record<string, (port: GitHubAppsPort, fixture: 
     assert.ok(Array.isArray(await port.listInstallations({ type: 'github-app', appId: app.appId, privateKey: app.privateKey })));
     const info = await port.describeRepository({ type: 'github-app', appId: app.appId, privateKey: app.privateKey }, repo);
     assert.ok(info.defaultBranch.length > 0 && info.cloneUrl.length > 0);
+    assert.equal(typeof (await port.isMember({ type: 'github-app', appId: app.appId, privateKey: app.privateKey }, installationId, 'org', 'someone')), 'boolean');
   },
 };

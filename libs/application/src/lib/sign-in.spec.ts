@@ -33,8 +33,8 @@ class Sessions implements SessionsPort {
 }
 
 const withOAuth = createConnection({ provider: 'github', name: 'app', credentials: { type: 'github-app', appId: '1', privateKey: 'pem' }, app: { slug: 'app', webhookSecret: 's', clientId: 'Iv1.x', clientSecret: 'cs' } });
-const connectionsOf = (signInApp?: ProviderConnection): ProviderConnectionsPort => ({ get: async () => undefined, findByAppId: async () => undefined, signInApp: async () => signInApp, list: async () => [], save: async () => undefined, remove: async () => undefined });
-const githubApps: GitHubAppsPort = { exchangeManifestCode: async () => { throw new Error('unused'); }, describeInstallation: async () => { throw new Error('unused'); }, signInUser: async (_app, code) => ({ login: code, id: 7 }), whoAmI: async () => { throw new Error('unused'); }, listInstallations: async () => [], describeRepository: async () => { throw new Error('unused'); } };
+const connectionsOf = (platformApp?: ProviderConnection): ProviderConnectionsPort => ({ get: async () => undefined, findByAppId: async () => undefined, platformApp: async () => platformApp, list: async () => [], save: async () => undefined, remove: async () => undefined });
+const githubApps: GitHubAppsPort = { exchangeManifestCode: async () => { throw new Error('unused'); }, describeInstallation: async () => { throw new Error('unused'); }, signInUser: async (_app, code) => ({ login: code, id: 7 }), whoAmI: async () => { throw new Error('unused'); }, listInstallations: async () => [], isMember: async () => false, describeRepository: async () => { throw new Error('unused'); } };
 const input = { code: 'Yuri', redirectUri: 'http://localhost:3200/auth/github/callback', sessionId: 'x'.repeat(64), ttlHours: 24, now: new Date('2026-10-18T10:00:00Z') };
 
 describe('signInWithGitHub', () => {

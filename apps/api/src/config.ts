@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 
 /** Everything the API reads from the environment. Defaults are a dry run: in-memory stores, no Temporal. */
@@ -19,6 +20,8 @@ const ConfigSchema = z.object({
   /** `github`: Sign in with GitHub through the connected App; anyone may sign in, workspaces decide what they see (ADR 019). `off`: every request is anonymous; local dry runs only. */
   ZENTHOS_AUTH: z.enum(['github', 'off']).default('off'),
   ZENTHOS_SESSION_HOURS: z.coerce.number().int().positive().default(168),
+  /** Guards the operator's one-time setup of the platform GitHub App (ADR 019); printed at boot while no app exists. */
+  ZENTHOS_SETUP_TOKEN: z.string().min(16).default(() => randomBytes(16).toString('hex')),
   /** LangFuse, read back to check stored costs (ADR 015); without both keys the check reports itself unavailable. */
   LANGFUSE_BASE_URL: z.string().url().default('http://localhost:3100'),
   LANGFUSE_PUBLIC_KEY: z.string().min(1).optional(),

@@ -158,15 +158,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/providers": {
+    "/platform": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List the workspace's provider connections, secrets redacted */
-        get: operations["ProvidersController_list"];
+        /** Whether the platform GitHub App is set up, its slug and where it installs */
+        get: operations["PlatformController_status"];
         put?: never;
         post?: never;
         delete?: never;
@@ -175,7 +175,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/providers/github/app": {
+    "/platform/github/manifest": {
         parameters: {
             query?: never;
             header?: never;
@@ -184,23 +184,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Connect a GitHub App created by hand: app id, private key, the webhook secret, and the OAuth client id and secret for Sign in with GitHub; the key is checked against GitHub first; the same app again updates it */
-        post: operations["ProvidersController_connectApp"];
+        /** Start creating the platform app from the manifest: a page that submits it to GitHub. Takes the setup token the API printed at boot */
+        post: operations["PlatformController_startManifest"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/providers/github/manifest": {
+    "/platform/github/manifest/callback": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Start creating a GitHub App from the manifest; redirects to GitHub */
-        get: operations["ProvidersController_startManifest"];
+        /** GitHub returns here with the manifest code; the app becomes the platform app and the browser goes to the dashboard */
+        get: operations["PlatformController_finishManifest"];
         put?: never;
         post?: never;
         delete?: never;
@@ -209,41 +209,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/providers/github/manifest/callback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** GitHub returns here with the manifest code; the app becomes a connection of the workspace that started the flow */
-        get: operations["ProvidersController_finishManifest"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/providers/github/install/callback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** GitHub returns here after an install; the installation is read, recorded, and the browser goes back to the dashboard settings */
-        get: operations["ProvidersController_finishInstall"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/providers/{id}/check": {
+    "/platform/github/app": {
         parameters: {
             query?: never;
             header?: never;
@@ -252,23 +218,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Ask GitHub whether the stored credentials still work, and refresh an app's installations from GitHub; answers with who they act as and how many repositories they reach, or why not */
-        post: operations["ProvidersController_check"];
+        /** Make an app created by hand on GitHub the platform app: app id, private key, webhook secret and the OAuth client for Sign in with GitHub. Takes the setup token */
+        post: operations["PlatformController_connectApp"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/providers/{id}/repositories/{owner}/{name}": {
+    "/github/installations": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** A repository as this connection's provider sees it: default branch and clone URL, for the profile form; 404 when the connection cannot see it */
-        get: operations["ProvidersController_repository"];
+        /** The installations this workspace has claimed, with the repositories each covers */
+        get: operations["GithubController_installations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -277,7 +243,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/providers/{id}": {
+    "/github/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Install the platform app on an account or organisation for this workspace; redirects to GitHub */
+        get: operations["GithubController_install"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/github/install/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GitHub returns here after an install; the installation is claimed for the workspace and the browser goes back to the dashboard settings */
+        get: operations["GithubController_finishInstall"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/github/installations/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -287,8 +287,25 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Remove a connection; profiles that used it keep working only through the environment */
-        delete: operations["ProvidersController_remove"];
+        /** Release an installation from this workspace; the app stays installed on GitHub until its owner removes it there */
+        delete: operations["GithubController_release"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/github/repositories/{owner}/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A repository one of the workspace's installations covers, as GitHub sees it: default branch and clone URL, for the profile form */
+        get: operations["GithubController_repository"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -714,7 +731,7 @@ export interface operations {
             };
         };
     };
-    ProvidersController_list: {
+    PlatformController_status: {
         parameters: {
             query?: never;
             header?: never;
@@ -729,28 +746,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        /** Format: uuid */
-                        id: string;
-                        /** @enum {string} */
-                        provider: "github";
-                        name: string;
-                        /** @enum {string} */
-                        kind: "github-app" | "github-token";
-                        appSlug?: string;
-                        installations: {
-                            installationId: number;
-                            account: string;
-                            repositories: string[];
-                        }[];
+                        configured: boolean;
+                        slug?: string;
                         installUrl?: string;
-                        /** Format: date-time */
-                        createdAt: string;
-                    }[];
+                    };
                 };
             };
         };
     };
-    ProvidersController_connectApp: {
+    PlatformController_startManifest: {
         parameters: {
             query?: never;
             header?: never;
@@ -760,53 +764,15 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    token: string;
+                    /** @default zenthos */
                     name: string;
-                    appId: string;
-                    privateKey: string;
-                    webhookSecret?: string;
-                    clientId?: string;
-                    clientSecret?: string;
+                    owner?: string;
                 };
             };
         };
         responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        id: string;
-                        /** @enum {string} */
-                        provider: "github";
-                        name: string;
-                        /** @enum {string} */
-                        kind: "github-app" | "github-token";
-                        appSlug?: string;
-                        installations: {
-                            installationId: number;
-                            account: string;
-                            repositories: string[];
-                        }[];
-                        installUrl?: string;
-                        /** Format: date-time */
-                        createdAt: string;
-                    };
-                };
-            };
-        };
-    };
-    ProvidersController_startManifest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -814,7 +780,7 @@ export interface operations {
             };
         };
     };
-    ProvidersController_finishManifest: {
+    PlatformController_finishManifest: {
         parameters: {
             query: {
                 code: string;
@@ -834,10 +800,86 @@ export interface operations {
             };
         };
     };
-    ProvidersController_finishInstall: {
+    PlatformController_connectApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                    name: string;
+                    appId: string;
+                    privateKey: string;
+                    webhookSecret?: string;
+                    clientId?: string;
+                    clientSecret?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        configured: boolean;
+                        slug?: string;
+                        installUrl?: string;
+                    };
+                };
+            };
+        };
+    };
+    GithubController_installations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        installationId: number;
+                        account: string;
+                        repositories: string[];
+                        /** Format: uuid */
+                        workspaceId?: string;
+                    }[];
+                };
+            };
+        };
+    };
+    GithubController_install: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GithubController_finishInstall: {
         parameters: {
             query: {
-                connection: string;
                 installation_id: string;
             };
             header?: never;
@@ -854,7 +896,7 @@ export interface operations {
             };
         };
     };
-    ProvidersController_check: {
+    GithubController_release: {
         parameters: {
             query?: never;
             header?: never;
@@ -865,29 +907,19 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                        actsAs?: string;
-                        repositories?: number;
-                        reason?: string;
-                        /** Format: date-time */
-                        checkedAt: string;
-                    };
-                };
+                content?: never;
             };
         };
     };
-    ProvidersController_repository: {
+    GithubController_repository: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: string;
                 owner: string;
                 name: string;
             };
@@ -905,25 +937,6 @@ export interface operations {
                         cloneUrl: string;
                     };
                 };
-            };
-        };
-    };
-    ProvidersController_remove: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };

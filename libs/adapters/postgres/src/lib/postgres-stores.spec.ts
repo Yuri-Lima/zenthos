@@ -17,7 +17,7 @@ describe('Postgres stores', () => {
 
   beforeAll(async () => {
     await pool.query('DROP TABLE IF EXISTS sessions, runs, repo_profiles, provider_connections, workspace_members, workspaces, schema_migrations');
-    expect(await migrate(pool)).toEqual(['001-provider-connections-and-repo-profiles', '002-runs', '003-sessions', '004-workspaces']);
+    expect(await migrate(pool)).toEqual(['001-provider-connections-and-repo-profiles', '002-runs', '003-sessions', '004-workspaces', '005-platform-app']);
     expect(await migrate(pool)).toEqual([]);
     // The contracts save rows under these two workspaces (foreign keys).
     for (const [id, name] of [['00000000-0000-4000-8000-0000000000a1', 'A'], ['00000000-0000-4000-8000-0000000000b2', 'B']]) await new PostgresWorkspaces(pool).save({ id, name, createdAt: '2026-10-24T00:00:00.000Z' });

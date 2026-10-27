@@ -8,6 +8,8 @@ export const API = new InjectionToken<ApiClient>('zenthos.api', { providedIn: 'r
 /** Where the browser goes to sign in; the API sends it back to the dashboard afterwards (ADR 007). */
 export const signInUrl = (returnTo: string) => `${environment.apiUrl}/auth/github?returnTo=${encodeURIComponent(returnTo)}`;
 
-/** Where the browser goes to create a GitHub App from the manifest; GitHub and the API bring it back to /settings (ADR 007). */
-export const manifestUrl = (name: string, owner?: string) =>
-  `${environment.apiUrl}/providers/github/manifest?name=${encodeURIComponent(name)}${owner ? `&owner=${encodeURIComponent(owner)}` : ''}`;
+/** Where the browser goes to install the platform app for the workspace; GitHub and the API bring it back to /settings (ADR 019). */
+export const installUrl = () => `${environment.apiUrl}/github/install`;
+
+/** Where the operator's setup form posts; the API answers with the page that sends the manifest to GitHub (ADR 019). */
+export const setupManifestAction = () => `${environment.apiUrl}/platform/github/manifest`;

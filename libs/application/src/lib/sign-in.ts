@@ -19,7 +19,7 @@ export type SignInInput = {
  * dashboard asks them to create one.
  */
 export async function signInWithGitHub({ githubApps, connections, sessions, workspaces }: SignInDeps, input: SignInInput): Promise<Session> {
-  const app = (await connections.signInApp())?.app;
+  const app = (await connections.platformApp())?.app;
   if (!app?.clientId || !app.clientSecret) throw new DomainError('sign_in_unavailable');
   const user = await githubApps.signInUser({ clientId: app.clientId, clientSecret: app.clientSecret }, input.code, input.redirectUri);
   const now = input.now ?? new Date();

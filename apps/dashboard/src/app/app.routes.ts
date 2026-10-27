@@ -3,6 +3,7 @@ import { authGuard } from './core/auth.guard';
 
 export const appRoutes: Route[] = [
   { path: 'sign-in', loadComponent: () => import('./pages/sign-in-page').then((m) => m.SignInPage) },
+  { path: 'setup', loadComponent: () => import('./pages/setup-page').then((m) => m.SetupPage) },
   { path: '', canActivate: [authGuard], loadComponent: () => import('./pages/runs-page').then((m) => m.RunsPage) },
   { path: 'runs/:key', canActivate: [authGuard], loadComponent: () => import('./pages/run-detail-page').then((m) => m.RunDetailPage) },
   { path: 'metrics', canActivate: [authGuard], loadComponent: () => import('./pages/metrics-page').then((m) => m.MetricsPage) },

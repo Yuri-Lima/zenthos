@@ -6,11 +6,13 @@ import type { GitHubCredentials } from './provider.js';
 export const PROVIDERS = ['github'] as const;
 export type Provider = (typeof PROVIDERS)[number];
 
-/** One place the GitHub App is installed: an account and the repositories it may touch. */
+/** One place the GitHub App is installed: an account, the repositories it may touch, and the workspace it is bound to (ADR 019). */
 export const InstallationSchema = z.object({
   installationId: z.number().int().positive(),
   account: z.string().min(1),
   repositories: z.array(z.string().min(1)),
+  /** Unbound until a member of a workspace claims it from Settings; the pipeline acts only on bound installations. */
+  workspaceId: z.uuid().optional(),
 });
 export type Installation = z.infer<typeof InstallationSchema>;
 
@@ -33,7 +35,7 @@ const CredentialsSchema = z.discriminatedUnion('type', [
 /**
  * A provider the product is connected to (ADR 006): the credentials the pipeline acts with, and for a
  * GitHub App, what the webhook and the install flow need. Stores encrypt `credentials` and `app`; the
- * API returns only `redactConnection`.
+ * API never returns them.
  */
 export const ProviderConnectionSchema = z.object({
   id: z.string().uuid(),
@@ -56,59 +58,34 @@ export function parseConnection(input: unknown): ProviderConnection {
   return result.data;
 }
 
-/** The view the API serves: no credentials, no app secrets. */
-export const PublicConnectionSchema = z.object({
-  id: z.uuid(),
-  provider: z.enum(PROVIDERS),
-  name: z.string(),
-  kind: z.enum(['github-app', 'github-token']),
-  appSlug: z.string().optional(),
-  installations: z.array(InstallationSchema),
-  /** Where a person installs the app on more repositories; only apps have one. */
-  installUrl: z.string().optional(),
-  createdAt: z.iso.datetime(),
-});
+/** What the dashboard asks before anything else: whether the operator has set the platform app up, and where it installs. */
+export const PlatformStatusSchema = z.object({ configured: z.boolean(), slug: z.string().optional(), installUrl: z.string().optional() });
+export type PlatformStatus = z.infer<typeof PlatformStatusSchema>;
 
-export type PublicConnection = z.infer<typeof PublicConnectionSchema>;
+/** Whether these installations let the app act on a repository. */
+export const coversRepository = (installations: readonly Installation[], repo: string): boolean => installations.some((installation) => installation.repositories.includes(repo));
 
-export function redactConnection(connection: ProviderConnection): PublicConnection {
-  const { id, provider, name, credentials, app, installations, createdAt } = connection;
-  // workspaceId stays out: the caller is already inside the workspace.
-  return { id, provider, name, kind: credentials.type, appSlug: app?.slug, installations, installUrl: installUrl(connection), createdAt };
-}
-
-/**
- * Whether a connection can act on a repository: an app only where it is installed; a token's reach is not
- * known without asking GitHub, so `undefined`. The settings page warns on `false`; the worker decides for real.
- */
-export function coversRepository(connection: Pick<PublicConnection, 'kind' | 'installations'>, repo: string): boolean | undefined {
-  if (connection.kind === 'github-token') return undefined;
-  return connection.installations.some((installation) => installation.repositories.includes(repo));
-}
-
-/**
- * The answer to "do these credentials still work?": who they act as and, for an app, how many repositories its
- * installations reach once refreshed from GitHub; the provider's reason when they do not work.
- */
-export const ConnectionCheckSchema = z.object({
-  ok: z.boolean(),
-  /** The app slug or the token's login, as the provider reports it. */
-  actsAs: z.string().optional(),
-  /** Apps only: repositories across every installation, as GitHub lists them now. */
-  repositories: z.number().int().min(0).optional(),
-  /** Why the provider refused the credentials; absent when it accepted them. */
-  reason: z.string().optional(),
-  checkedAt: z.iso.datetime(),
-});
-export type ConnectionCheck = z.infer<typeof ConnectionCheckSchema>;
+/** The installations a workspace has claimed, on the platform app (ADR 019). */
+export const workspaceInstallations = (connection: Pick<ProviderConnection, 'installations'>, workspaceId: string): Installation[] => connection.installations.filter((i) => i.workspaceId === workspaceId);
 
 export function createConnection(input: Omit<ProviderConnection, 'id' | 'createdAt' | 'installations'> & { installations?: Installation[] }, id: string = globalThis.crypto.randomUUID(), now = new Date()): ProviderConnection {
   return parseConnection({ ...input, id, installations: input.installations ?? [], createdAt: now.toISOString() });
 }
 
-/** Records or replaces an installation; the webhook and the install callback both land here. */
+/** Records or replaces an installation; the webhook and the install callback both land here. A binding already made stays unless the new record carries one. */
 export function withInstallation(connection: ProviderConnection, installation: Installation): ProviderConnection {
-  return { ...connection, installations: [...connection.installations.filter((i) => i.installationId !== installation.installationId), installation] };
+  const workspaceId = installation.workspaceId ?? connection.installations.find((i) => i.installationId === installation.installationId)?.workspaceId;
+  const kept = { ...installation, ...(workspaceId ? { workspaceId } : {}) };
+  return { ...connection, installations: [...connection.installations.filter((i) => i.installationId !== installation.installationId), kept] };
+}
+
+/** A member claims an installation for their workspace (ADR 019); the caller has checked it is theirs to claim. */
+export function bindInstallation(connection: ProviderConnection, installation: Installation, workspaceId: string): ProviderConnection {
+  return withInstallation(connection, { ...installation, workspaceId });
+}
+
+export function unbindInstallation(connection: ProviderConnection, installationId: number): ProviderConnection {
+  return { ...connection, installations: connection.installations.map((i) => (i.installationId === installationId ? { installationId: i.installationId, account: i.account, repositories: i.repositories } : i)) };
 }
 
 /** Applies the delta an `installation_repositories` event carries to what the connection already knows. */
