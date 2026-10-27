@@ -1,5 +1,6 @@
 import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -48,13 +49,15 @@ const blank = (): Form => ({
 });
 
 /**
- * One repository profile as a form over PUT /repos. Gate commands are picked from the allowed commands, so
- * "gates are a subset" holds by construction; the tooling prefixes are always forbidden and shown, not edited.
- * Defaults come from the domain's DEFAULT_POLICY; every field's meaning comes from the glossary.
+ * One repository profile as a form over PUT /repos. The connection comes first: for a GitHub App it already knows
+ * which repositories it is installed on, so the repository is picked from that list and its default branch and
+ * clone URL come from the provider; a token or the environment leaves the name to type. Gate commands are picked
+ * from the allowed commands, so "gates are a subset" holds by construction; the tooling prefixes are always
+ * forbidden and shown, not edited. Defaults come from the domain's DEFAULT_POLICY; every field's meaning comes from the glossary.
  */
 @Component({
   selector: 'zen-repo-form-page',
-  imports: [FormsModule, RouterLink, TranslateModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule, MatTooltipModule],
+  imports: [FormsModule, RouterLink, TranslateModule, MatAutocompleteModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule, MatTooltipModule],
   styles: `
     form { display: grid; gap: 16px; max-width: 880px; }
     fieldset { border: 1px solid var(--zen-line); border-radius: var(--zen-radius); padding: 14px 16px 16px; margin: 0; display: grid; gap: 12px; background: var(--zen-surface); }
@@ -76,12 +79,32 @@ const blank = (): Form => ({
     <form (ngSubmit)="save()">
       <fieldset>
         <legend>{{ 'repoForm.repository' | translate }}</legend>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ 'settings.connection' | translate }}</mat-label>
+          <mat-select name="connectionId" [ngModel]="form().connectionId" (ngModelChange)="patch({ connectionId: $event })">
+            <mat-option value="">{{ 'settings.environment' | translate }}</mat-option>
+            @for (c of connections(); track c.id) {<mat-option [value]="c.id">{{ c.name }} · {{ 'settings.kind.' + c.kind | translate }}</mat-option>}
+          </mat-select>
+          <mat-icon matSuffix class="help" [matTooltip]="glossary.tip('setting_connection')">help_outline</mat-icon>
+        </mat-form-field>
         <div class="row">
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>{{ 'settings.repo' | translate }}</mat-label>
-            <input matInput name="repo" [ngModel]="form().repo" (ngModelChange)="patch({ repo: $event.trim() })" (blur)="suggestCloneUrl()" [disabled]="editing()" placeholder="owner/name" required autocomplete="off" class="mono" />
-            <mat-icon matSuffix class="help" [matTooltip]="glossary.tip('repo_profile')">help_outline</mat-icon>
-          </mat-form-field>
+          @if (!editing() && coveredRepos().length) {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'settings.repo' | translate }}</mat-label>
+              <input matInput name="repo" [ngModel]="form().repo" (ngModelChange)="patch({ repo: $event.trim() })" [matAutocomplete]="repos" placeholder="owner/name" required autocomplete="off" class="mono" />
+              <mat-autocomplete #repos="matAutocomplete" (optionSelected)="pickRepository($event.option.value)">
+                @for (repo of matchingRepos(); track repo) {<mat-option [value]="repo"><span class="mono">{{ repo }}</span></mat-option>}
+              </mat-autocomplete>
+              <mat-icon matSuffix class="help" [matTooltip]="glossary.tip('repo_profile')">help_outline</mat-icon>
+              <mat-hint>{{ 'repoForm.pickHint' | translate }}</mat-hint>
+            </mat-form-field>
+          } @else {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'settings.repo' | translate }}</mat-label>
+              <input matInput name="repo" [ngModel]="form().repo" (ngModelChange)="patch({ repo: $event.trim() })" (blur)="suggestCloneUrl()" [disabled]="editing()" placeholder="owner/name" required autocomplete="off" class="mono" />
+              <mat-icon matSuffix class="help" [matTooltip]="glossary.tip('repo_profile')">help_outline</mat-icon>
+            </mat-form-field>
+          }
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ 'settings.baseBranch' | translate }}</mat-label>
             <input matInput name="baseBranch" [ngModel]="form().baseBranch" (ngModelChange)="patch({ baseBranch: $event })" required autocomplete="off" class="mono" />
@@ -90,14 +113,6 @@ const blank = (): Form => ({
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ 'repoForm.cloneUrl' | translate }}</mat-label>
           <input matInput name="cloneUrl" [ngModel]="form().cloneUrl" (ngModelChange)="patch({ cloneUrl: $event })" required autocomplete="off" class="mono" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>{{ 'settings.connection' | translate }}</mat-label>
-          <mat-select name="connectionId" [ngModel]="form().connectionId" (ngModelChange)="patch({ connectionId: $event })">
-            <mat-option value="">{{ 'settings.environment' | translate }}</mat-option>
-            @for (c of connections(); track c.id) {<mat-option [value]="c.id">{{ c.name }} · {{ 'settings.kind.' + c.kind | translate }}</mat-option>}
-          </mat-select>
-          <mat-icon matSuffix class="help" [matTooltip]="glossary.tip('setting_connection')">help_outline</mat-icon>
         </mat-form-field>
         @if (coverage() === false) {
           <div class="warn" role="status">
@@ -189,6 +204,15 @@ export class RepoFormPage implements OnInit {
   readonly tooling = TOOLING_PATH_PREFIXES;
   readonly allowed = computed(() => lines(this.form().allowedText));
   readonly selectedConnection = computed(() => this.connections().find((c) => c.id === this.form().connectionId));
+  /** The repositories the selected app is installed on, across its installations; a token's reach is unknown, so none. */
+  readonly coveredRepos = computed(() => {
+    const connection = this.selectedConnection();
+    return connection?.kind === 'github-app' ? [...new Set(connection.installations.flatMap((i) => i.repositories))].sort() : [];
+  });
+  readonly matchingRepos = computed(() => {
+    const typed = this.form().repo.toLowerCase();
+    return this.coveredRepos().filter((repo) => repo.toLowerCase().includes(typed)).slice(0, 50);
+  });
   readonly coverage = computed(() => {
     const connection = this.selectedConnection();
     return connection && REPO_PATTERN.test(this.form().repo) ? coversRepository(connection, this.form().repo) : undefined;
@@ -201,6 +225,7 @@ export class RepoFormPage implements OnInit {
   async ngOnInit() {
     const [connections, profiles] = await Promise.all([this.settings.connections(), this.settings.profiles()]);
     this.connections.set(connections);
+    if (!this.repo() && connections.length === 1) this.patch({ connectionId: connections[0].id });
     const profile = profiles.find((p) => p.repo === this.repo());
     if (!profile) return;
     this.form.set({
@@ -228,6 +253,14 @@ export class RepoFormPage implements OnInit {
   toggleGate(command: string, on: boolean) {
     const gates = this.form().gates.filter((gate) => gate !== command);
     this.patch({ gates: on ? [...gates, command] : gates });
+  }
+
+  /** A repository picked from the connection's list: its default branch and clone URL come from the provider. */
+  async pickRepository(repo: string) {
+    this.patch({ repo });
+    const info = this.form().connectionId ? await this.settings.describeRepository(this.form().connectionId, repo) : undefined;
+    if (info) this.patch({ baseBranch: info.defaultBranch, cloneUrl: info.cloneUrl });
+    else this.suggestCloneUrl();
   }
 
   suggestCloneUrl() {

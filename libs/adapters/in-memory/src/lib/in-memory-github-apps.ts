@@ -1,4 +1,4 @@
-import type { GitHubAppManifestResult, GitHubCredentials, GitHubUser, Installation } from '@zenthos/domain';
+import { DomainError, type GitHubAppManifestResult, type GitHubCredentials, type GitHubUser, type Installation, type RepositoryInfo } from '@zenthos/domain';
 import type { GitHubAppsPort } from '@zenthos/ports';
 
 /** Answers the manifest exchange and installation lookups from canned data. */
@@ -25,6 +25,12 @@ export class InMemoryGitHubApps implements GitHubAppsPort {
 
   async listInstallations(): Promise<Installation[]> {
     return this.installations;
+  }
+
+  /** `main` and the GitHub clone URL for any repository; one named `missing` is not found, as GitHub answers 404. */
+  async describeRepository(_credentials: GitHubCredentials, repo: string): Promise<RepositoryInfo> {
+    if (repo.endsWith('/missing')) throw new DomainError('repository_not_found', { repo });
+    return { defaultBranch: 'main', cloneUrl: `https://github.com/${repo}.git` };
   }
 
   /** Credentials whose token or private key is `rejected` fail, as GitHub would answer 401; the rest act as `memory`. */

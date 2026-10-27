@@ -236,7 +236,8 @@
     "forbidden": "Extra forbidden path prefixes, one per line",
     "forbiddenHint": "A change touching these needs a person.",
     "alwaysForbidden": "Always forbidden: the files that define the gates",
-    "save": "Save profile"
+    "save": "Save profile",
+    "pickHint": "Start typing to pick one of the repositories the app is installed on; the default branch and clone URL come from GitHub."
   },
   "metrics": {
     "eyebrow": "Measurement",

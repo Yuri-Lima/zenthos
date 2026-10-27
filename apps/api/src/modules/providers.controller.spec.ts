@@ -39,6 +39,15 @@ describe('providers over HTTP', () => {
     expect(await check.json()).toMatchObject({ ok: true, actsAs: 'memory' });
   });
 
+  it('describes a repository through a connection, and answers 404 for one the connection cannot see', async () => {
+    const accepted = await post('/providers/github/token', { name: 'me', token: 'ghp_ok' });
+    const { id } = (await accepted.json()) as { id: string };
+    const found = await fetch(`${base}/providers/${id}/repositories/owner/repo`);
+    expect(found.status).toBe(200);
+    expect(await found.json()).toEqual({ defaultBranch: 'main', cloneUrl: 'https://github.com/owner/repo.git' });
+    expect((await fetch(`${base}/providers/${id}/repositories/owner/missing`)).status).toBe(404);
+  });
+
   it('records an installation and sends the browser back to the dashboard settings', async () => {
     const appConnection = createConnection({ provider: 'github', name: 'zenthos-memory', credentials: { type: 'github-app', appId: '7', privateKey: 'pem' }, app: { slug: 'zenthos-memory', webhookSecret: 'w' }, workspaceId: DRY_RUN_WORKSPACE.id });
     await ports.connections.save(appConnection);

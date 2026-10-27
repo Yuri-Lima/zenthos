@@ -1,4 +1,4 @@
-import { createConnection, DomainError, withInstallation, withoutInstallation, withRepositories, type ConnectionCheck, type GitHubAppManifestResult, type GitHubCredentials, type Installation, type ProviderConnection, type WebhookCommand } from '@zenthos/domain';
+import { createConnection, DomainError, withInstallation, withoutInstallation, withRepositories, type ConnectionCheck, type GitHubAppManifestResult, type GitHubCredentials, type Installation, type ProviderConnection, type RepositoryInfo, type WebhookCommand } from '@zenthos/domain';
 import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort } from '@zenthos/ports';
 
 type ConnectDeps = { connections: ProviderConnectionsPort; githubApps: GitHubAppsPort };
@@ -77,6 +77,13 @@ export async function checkConnection({ connections, githubApps }: ConnectDeps, 
   } catch (error) {
     return { ok: false, reason: error instanceof Error ? error.message : String(error), checkedAt };
   }
+}
+
+/** What the profile form needs for a repository the connection can see: its default branch and clone URL. */
+export async function describeRepository({ connections, githubApps }: ConnectDeps, connectionId: string, repo: string): Promise<RepositoryInfo> {
+  const connection = await connections.get(connectionId);
+  if (!connection) throw new DomainError('connection_not_found', { connectionId });
+  return githubApps.describeRepository(connection.credentials, repo);
 }
 
 /** Use case 9: the install callback or the webhook tells us where the app is now installed. */

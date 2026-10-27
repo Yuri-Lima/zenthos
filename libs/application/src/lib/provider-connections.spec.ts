@@ -1,6 +1,6 @@
 import { createRun, repoProfile, type ProviderConnection, type RepoProfile, type Run } from '@zenthos/domain';
 import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort } from '@zenthos/ports';
-import { applyWebhookCommand, checkConnection, connectExistingGitHubApp, connectGitHubApp, connectGitHubToken, recordInstallation } from './provider-connections.js';
+import { applyWebhookCommand, checkConnection, connectExistingGitHubApp, connectGitHubApp, connectGitHubToken, describeRepository, recordInstallation } from './provider-connections.js';
 
 /** Map-backed fakes; the application layer may not import adapters, even in tests. */
 class Connections implements ProviderConnectionsPort {
@@ -37,12 +37,20 @@ const githubApps = {
     return c.type === 'github-token' ? 'octocat' : 'zenthos-dev';
   },
   listInstallations: async () => [{ installationId: 5, account: 'owner', repositories: ['owner/a', 'owner/b'] }],
+  describeRepository: async (_c: unknown, repo: string) => ({ defaultBranch: 'develop', cloneUrl: `https://github.com/${repo}.git` }),
 } as unknown as GitHubAppsPort;
 
 const manifest = { appId: '42', slug: 'zenthos-dev', privateKey: 'pem', webhookSecret: 'whs', clientId: 'c', clientSecret: 'cs' };
 const W = '00000000-0000-4000-8000-0000000000a1';
 
 describe('provider connections', () => {
+  it('describes a repository through the connection that can see it, and says so when there is no such connection', async () => {
+    const connections = new Connections();
+    const token = await connectGitHubToken({ connections, githubApps }, { name: 'me', token: 'ghp_ok', workspaceId: W });
+    expect(await describeRepository({ connections, githubApps }, token.id, 'owner/a')).toEqual({ defaultBranch: 'develop', cloneUrl: 'https://github.com/owner/a.git' });
+    await expect(describeRepository({ connections, githubApps }, 'missing', 'owner/a')).rejects.toMatchObject({ code: 'connection_not_found' });
+  });
+
   it('checks credentials before storing them, and reports the health of a stored connection without throwing', async () => {
     const connections = new Connections();
     await expect(connectGitHubToken({ connections, githubApps }, { name: 'me', token: 'rejected', workspaceId: W })).rejects.toMatchObject({ code: 'invalid_credentials' });

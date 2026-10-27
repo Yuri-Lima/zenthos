@@ -1,4 +1,4 @@
-import type { GitHubAppManifestResult, GitHubCredentials, GitHubUser, Installation } from '@zenthos/domain';
+import type { GitHubAppManifestResult, GitHubCredentials, GitHubUser, Installation, RepositoryInfo } from '@zenthos/domain';
 
 /** The GitHub calls that happen outside any repository: finishing a manifest, reading an installation, signing in, checking credentials (ADR 007). */
 export interface GitHubAppsPort {
@@ -10,4 +10,6 @@ export interface GitHubAppsPort {
   whoAmI(credentials: GitHubCredentials): Promise<string>;
   /** Every installation of the app as GitHub lists it now, with its repositories. */
   listInstallations(credentials: Extract<GitHubCredentials, { type: 'github-app' }>): Promise<Installation[]>;
+  /** One repository as these credentials see it: default branch and clone URL, for the profile form. `repository_not_found` when they cannot. */
+  describeRepository(credentials: GitHubCredentials, repo: string): Promise<RepositoryInfo>;
 }

@@ -9,6 +9,7 @@ export type Profile = paths['/repos']['get']['responses'][200]['content']['appli
 export type ProfileBody = NonNullable<paths['/repos/{owner}/{name}']['put']['requestBody']>['content']['application/json'];
 export type AppBody = NonNullable<paths['/providers/github/app']['post']['requestBody']>['content']['application/json'];
 export type TokenBody = NonNullable<paths['/providers/github/token']['post']['requestBody']>['content']['application/json'];
+export type RepositoryInfo = paths['/providers/{id}/repositories/{owner}/{name}']['get']['responses'][200]['content']['application/json'];
 
 /** The API answers a refused change with the domain's message; undefined means it went through. */
 async function failure(call: Promise<{ error?: unknown; response: Response }>): Promise<string | undefined> {
@@ -35,6 +36,12 @@ export class SettingsService {
   async profiles(): Promise<Profile[]> {
     const { data } = await this.api.GET('/repos');
     return data ?? [];
+  }
+
+  /** The repository as the connection's provider sees it; undefined when it cannot see it. */
+  async describeRepository(id: string, repo: string): Promise<RepositoryInfo | undefined> {
+    const { data } = await this.api.GET('/providers/{id}/repositories/{owner}/{name}', { params: { path: { id, ...pathOf(repo) } } });
+    return data;
   }
 
   async check(id: string): Promise<ConnectionCheck | undefined> {

@@ -412,7 +412,8 @@
     "forbidden": "Prefixos de caminho proibidos extras, um por linha",
     "forbiddenHint": "Uma mudança que toque estes precisa de uma pessoa.",
     "alwaysForbidden": "Sempre proibidos: os arquivos que definem os portões",
-    "save": "Salvar perfil"
+    "save": "Salvar perfil",
+    "pickHint": "Comece a digitar para escolher um dos repositórios onde o app está instalado; o branch padrão e a URL de clone vêm do GitHub."
   },
   "metrics": {
     "eyebrow": "Medição",

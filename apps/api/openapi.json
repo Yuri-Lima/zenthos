@@ -990,6 +990,68 @@
         ]
       }
     },
+    "/providers/{id}/repositories/{owner}/{name}": {
+      "get": {
+        "operationId": "ProvidersController_repository",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "owner",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "defaultBranch": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "cloneUrl": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "defaultBranch",
+                    "cloneUrl"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "A repository as this connection's provider sees it: default branch and clone URL, for the profile form; 404 when the connection cannot see it",
+        "tags": [
+          "providers"
+        ]
+      }
+    },
     "/providers/{id}": {
       "delete": {
         "operationId": "ProvidersController_remove",

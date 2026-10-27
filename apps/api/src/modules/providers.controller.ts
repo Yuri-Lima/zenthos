@@ -2,8 +2,8 @@ import { randomBytes } from 'node:crypto';
 import { Controller, Get, Inject, NotFoundException, Post, Query, Res, Body, Delete, Param, HttpCode } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { githubAppManifest, manifestFormUrl } from '@zenthos/adapter-github';
-import { checkConnection, connectExistingGitHubApp, connectGitHubApp, connectGitHubToken, recordInstallation } from '@zenthos/application';
-import { ConnectionCheckSchema, installUrl, PublicConnectionSchema, redactConnection, type ProviderConnection, type WorkspaceActor } from '@zenthos/domain';
+import { checkConnection, connectExistingGitHubApp, connectGitHubApp, connectGitHubToken, describeRepository, recordInstallation } from '@zenthos/application';
+import { ConnectionCheckSchema, installUrl, PublicConnectionSchema, redactConnection, RepositoryInfoSchema, type ProviderConnection, type WorkspaceActor } from '@zenthos/domain';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { CurrentWorkspace } from '../auth/session.guard.js';
@@ -98,6 +98,14 @@ export class ProvidersController {
   async check(@Param('id') id: string, @CurrentWorkspace() actor: WorkspaceActor) {
     await this.owned(id, actor);
     return checkConnection(this.ports, id);
+  }
+
+  @Get(':id/repositories/:owner/:name')
+  @ApiOperation({ summary: "A repository as this connection's provider sees it: default branch and clone URL, for the profile form; 404 when the connection cannot see it" })
+  @ApiOkResponse({ schema: jsonSchema(RepositoryInfoSchema) })
+  async repository(@Param('id') id: string, @Param('owner') owner: string, @Param('name') name: string, @CurrentWorkspace() actor: WorkspaceActor) {
+    await this.owned(id, actor);
+    return describeRepository(this.ports, id, `${owner}/${name}`);
   }
 
   @Delete(':id')

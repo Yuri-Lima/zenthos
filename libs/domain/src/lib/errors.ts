@@ -22,6 +22,7 @@ export const ERROR_CODES = {
   invalid_profile: 'The repository profile is inconsistent',
   connection_not_found: 'No provider connection with that id',
   invalid_credentials: 'The provider rejected these credentials',
+  repository_not_found: 'The provider has no such repository, or this connection cannot see it',
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

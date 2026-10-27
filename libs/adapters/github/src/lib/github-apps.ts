@@ -1,7 +1,7 @@
 import { createAppAuth } from '@octokit/auth-app';
 import { createOAuthUserAuth } from '@octokit/auth-oauth-user';
 import { Octokit } from '@octokit/rest';
-import type { GitHubAppManifestResult, GitHubCredentials, GitHubUser, Installation } from '@zenthos/domain';
+import { DomainError, type GitHubAppManifestResult, type GitHubCredentials, type GitHubUser, type Installation, type RepositoryInfo } from '@zenthos/domain';
 import type { GitHubAppsPort } from '@zenthos/ports';
 
 /** Live only (Octokit is ESM); the API composes it, tests use the in-memory twin. */
@@ -31,6 +31,22 @@ export class OctokitGitHubApps implements GitHubAppsPort {
     const app = new Octokit({ authStrategy: createAppAuth, auth: { appId: credentials.appId, privateKey: credentials.privateKey } });
     const installations = await app.paginate(app.rest.apps.listInstallations, { per_page: 100 });
     return Promise.all(installations.map((installation) => this.describeInstallation(credentials, installation.id)));
+  }
+
+  /** GET /repos/{owner}/{repo} through the installation that covers it (an app) or the token; GitHub's 404 is `repository_not_found`. */
+  async describeRepository(credentials: GitHubCredentials, repo: string): Promise<RepositoryInfo> {
+    const [owner, name] = repo.split('/');
+    const notFound = (error: { status?: number }): never => {
+      if (error.status === 404) throw new DomainError('repository_not_found', { repo });
+      throw error;
+    };
+    let octokit = new Octokit(credentials.type === 'github-token' ? { auth: credentials.token } : { authStrategy: createAppAuth, auth: { appId: credentials.appId, privateKey: credentials.privateKey } });
+    if (credentials.type === 'github-app') {
+      const { data } = await octokit.rest.apps.getRepoInstallation({ owner, repo: name }).catch(notFound);
+      octokit = new Octokit({ authStrategy: createAppAuth, auth: { appId: credentials.appId, privateKey: credentials.privateKey, installationId: data.id } });
+    }
+    const { data } = await octokit.rest.repos.get({ owner, repo: name }).catch(notFound);
+    return { defaultBranch: data.default_branch, cloneUrl: data.clone_url };
   }
 
   /** One authenticated read: GET /app for an app (signed with its key), GET /user for a token. */

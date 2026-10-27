@@ -277,6 +277,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/providers/{id}/repositories/{owner}/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A repository as this connection's provider sees it: default branch and clone URL, for the profile form; 404 when the connection cannot see it */
+        get: operations["ProvidersController_repository"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/providers/{id}": {
         parameters: {
             query?: never;
@@ -920,6 +937,32 @@ export interface operations {
                         reason?: string;
                         /** Format: date-time */
                         checkedAt: string;
+                    };
+                };
+            };
+        };
+    };
+    ProvidersController_repository: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        defaultBranch: string;
+                        cloneUrl: string;
                     };
                 };
             };
