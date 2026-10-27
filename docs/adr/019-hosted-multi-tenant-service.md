@@ -70,6 +70,16 @@ Temporal's address, LangFuse's keys, and the operator's own CI credentials (fede
 
 ## Consequences
 
+- Slice 3 (27 Oct 2026): `ModelKeysPort` keeps one key per workspace, sealed by the same secret box as the app's
+  credentials (migration `006-workspace-model-keys`; `rotate-key` re-seals both tables); `ModelProviderPort`
+  checks a key with a zero-token call before it is stored (`AnthropicModelProvider`, or the in-memory one for dry
+  runs, `MODEL_PROVIDER`); `/model-key` serves the status, takes a key and removes it, owners and admins only; the
+  dashboard's Settings has the section and a third first-run step. The worker builds the three agents per
+  workspace when a run first needs them (`agentResolver`), from the key read at that moment, and again when the
+  key changes; the spec writer and the reviewer get it as their client's key, Claude Code as `ANTHROPIC_API_KEY`
+  in its own environment. A run of a workspace without a key uses the deployment's credentials, which is what dry
+  runs and the CI evals do; without those either it fails as `model_key_missing`. `ANTHROPIC_API_KEY` left the
+  worker's configuration and the `coding-agent-login` step is gone (ADR 018 amended).
 - Slice 2 (27 Oct 2026): the platform app is the app connection no workspace owns (`ProviderConnectionsPort.platformApp`);
   the operator creates it once from `/setup` with the setup token the API prints at boot (`ZENTHOS_SETUP_TOKEN`
   or a random one), through a public manifest; `/github/install` and its callback claim installations for the

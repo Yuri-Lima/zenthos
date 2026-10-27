@@ -56,3 +56,12 @@ What was measured on Claude Code 2.1.296 (the SDK's binary) and 2.1.309, 24 Oct 
   never holds a claude.ai login in the first place.
 - If Claude Code starts honouring `ant` profiles, the Console sign-in step can become the same profile the spec
   writer uses. Retest when the SDK is upgraded.
+
+## Amendment, 27 October 2026 (ADR 019, slice 3)
+
+The credential is the workspace's own API key, entered in Settings and handed to Claude Code as `ANTHROPIC_API_KEY`
+in its environment for that workspace's runs; the Console sign-in step and `coding-agent-login` are gone, and the
+config directory stays empty everywhere. The deployment's own credentials (federation, a cloud provider) still
+apply to a workspace without a key, which is what CI evals and dry runs use. The checks moved with it: the account
+is asked when a workspace's agents are built, not at boot, and every run still asks again before its prompt is
+sent. The rule is unchanged: a claude.ai subscription is refused wherever it is found.

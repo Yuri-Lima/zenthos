@@ -207,6 +207,9 @@ importers:
       '@zenthos/adapter-temporal':
         specifier: workspace:*
         version: link:../../libs/adapters/temporal
+      '@zenthos/agents':
+        specifier: workspace:*
+        version: link:../../libs/agents
       '@zenthos/application':
         specifier: workspace:*
         version: link:../../libs/application

@@ -2,7 +2,7 @@
  * Proves the coding agent's trace end to end (ADR 015): `pnpm nx run @zenthos/worker:coding-agent-trace-check`.
  * Runs Claude Code on a tiny task in a scratch git repository (one new file, no shell commands allowed), traced into
  * the LangFuse the worker is configured for, then reads the run back through the cost check and prints the verdict
- * for the coding agent with the session link. Costs a few cents on the organisation credential (ADR 018).
+ * for the coding agent with the session link. Costs a few cents on the deployment's own credentials (ADR 018).
  */
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';

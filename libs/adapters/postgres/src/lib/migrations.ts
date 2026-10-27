@@ -111,6 +111,17 @@ export const MIGRATIONS: { name: string; sql: string }[] = [
       END $$;
     `,
   },
+  {
+    name: '006-workspace-model-keys',
+    sql: `
+      CREATE TABLE workspace_model_keys (
+        workspace_id uuid PRIMARY KEY REFERENCES workspaces (id) ON DELETE CASCADE,
+        provider text NOT NULL,
+        secret bytea NOT NULL,
+        created_at timestamptz NOT NULL
+      );
+    `,
+  },
 ];
 
 export async function migrate(pool: Pool): Promise<string[]> {

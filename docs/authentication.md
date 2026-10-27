@@ -1,17 +1,26 @@
 # Authentication to the Claude API
 
-ZenthOs never stores an Anthropic API key. The SDK resolves credentials in this order: `ANTHROPIC_API_KEY` or
-`ANTHROPIC_AUTH_TOKEN`, then an explicit `ANTHROPIC_PROFILE`, then the federation variables, then the active
-profile on disk. The worker verifies access at boot with a zero-token model lookup, so a wrong setup fails
-before the first ticket.
+Each workspace brings its own Anthropic API key (ADR 019): an owner or admin enters it in Settings > Model
+provider, the API checks it with Anthropic with a zero-token call, stores it sealed with `ZENTHOS_SECRETS_KEY`,
+and shows only its last four characters from then on. Every agent of that workspace's runs uses it: the spec
+writer and the reviewer as their client's key, Claude Code as `ANTHROPIC_API_KEY` in its own environment. The
+invoice is the workspace's Console usage. Create the key under a Console workspace with a spend limit.
 
-| Where the worker runs | Credential | Why |
+The repository and `.env` never hold a key. The deployment's own credentials exist only for runs that have no
+workspace key: CI evals, dry runs, the manual commands. There the Anthropic SDK resolves them in its order:
+`ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` from the environment, then an explicit `ANTHROPIC_PROFILE`, then the
+federation variables, then the active profile on disk. A workspace without a key whose deployment has nothing
+either fails its run as `model_key_missing`.
+
+| Where the worker runs | Credential for runs without a workspace key | Why |
 | --- | --- | --- |
-| Your laptop | `ant auth login` profile for the spec writer and the reviewer; a Claude Console sign-in in ZenthOs's own Claude Code config directory for the coding agent | Interactive OAuth; nothing to copy into `.env`. A laptop has no OIDC issuer to federate from. Never a claude.ai subscription, not even for your own development (ADR 018) |
-| GitHub Actions (evals in phase 3) | Workload Identity Federation, GitHub issuer | The job's OIDC token is exchanged for a short-lived token; no secret in the repo |
-| Cloud Run (phase 5), or any deployment someone else uses | Workload Identity Federation, Google issuer, for every agent | The service's identity token from the metadata server. Claude Code's config directory stays empty there, so federation is the only credential it can find |
+| Your laptop | `ant auth login` profile for the spec writer and the reviewer | Interactive OAuth; nothing to copy into `.env`. Claude Code does not read the profile, so a coding-agent run on a laptop needs the workspace key. Never a claude.ai subscription, not even for your own development (ADR 018) |
+| GitHub Actions (evals) | Workload Identity Federation, GitHub issuer | The job's OIDC token is exchanged for a short-lived token; no secret in the repo |
+| Cloud Run, or any deployment someone else uses | Workload Identity Federation, Google issuer, for every agent | The service's identity token from the metadata server. Claude Code's config directory stays empty there |
 
-A leftover `ANTHROPIC_API_KEY`, even an empty one, shadows both other paths. Unset it rather than blanking it.
+A leftover `ANTHROPIC_API_KEY`, even an empty one, shadows the other deployment paths. Unset it rather than
+blanking it. Access is checked when a workspace's agents are first built, with a zero-token model lookup, so a
+wrong setup fails the first activity with the cause, not mid-run.
 
 **What the cost numbers mean.** The run's `estimatedCostUsd` is the sum of every agent call's estimate at
 list price: the coding agent's own figure (the Agent SDK documents its `total_cost_usd` as "estimates, not
@@ -32,29 +41,18 @@ Then `SPEC_WRITER=anthropic pnpm worker` works with no key in `.env`. The profil
 workspace; to target a specific one, run `ant auth login --profile zenthos --workspace-id wrkspc_...` and set
 `ANTHROPIC_PROFILE=zenthos`.
 
-## Laptop: the coding agent's Console sign-in
+## The coding agent's credential
 
 Claude Code picks its own credential, and on most developer machines that would be a personal claude.ai login.
 Anthropic does not allow a product built on the Agent SDK to run on one, so ZenthOs never lets it (ADR 018):
 Claude Code always runs with ZenthOs's own config directory, `CODING_AGENT_CONFIG_DIR` (default
-`~/.zenthos/claude-code`), where your personal login does not exist. Sign that directory in once with a Claude
-Console account, which bills the organisation's API usage:
-
-```bash
-pnpm nx run @zenthos/worker:coding-agent-login
-```
-
-It runs `claude auth login --console` (the `claude` CLI must be installed for this step) and then checks the
-account the way the worker does at boot. Claude Code offers two ways to sign in; pick **Create an API key**. Claude
-Code creates a Console key for a workspace you choose and keeps it in that directory's credential store (the macOS
-Keychain entry for that directory), not in `.env` and not in the repository; give the workspace a spend limit in the
-Console. The other choice, **Sign in with your Console account**, writes your active Anthropic profile (the one
-`ant auth login` uses for the spec writer) and signs out claude.ai logins stored on the machine, which would sign
-your own Claude Code out too. The worker refuses to start when Claude Code reports a claude.ai subscription or no
-credential at all, and every run asks again before its prompt is sent.
+`~/.zenthos/claude-code`), where your personal login does not exist and which stays empty, and with the
+workspace's key as `ANTHROPIC_API_KEY`, which outranks everything else in Claude Code's order. The worker asks
+Claude Code for its account when it builds a workspace's agents and refuses a claude.ai subscription or no
+credential at all; every run asks again before its prompt is sent.
 
 An `ant auth login` profile does not reach Claude Code on its own: Claude Code 2.1.296 and 2.1.309 ignored one
-named in `ANTHROPIC_PROFILE` (ADR 018), which is why the coding agent has its own sign-in step.
+named in `ANTHROPIC_PROFILE` (ADR 018). On a laptop, the coding agent therefore runs on the workspace key only.
 
 ## GitHub Actions: Workload Identity Federation
 

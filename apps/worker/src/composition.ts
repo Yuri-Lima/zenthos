@@ -6,14 +6,15 @@ import { ClaudeCodeAgent } from '@zenthos/adapter-claude-code';
 import { GitSandbox } from '@zenthos/adapter-git-sandbox';
 import { GitHubIssueTracker, GitHubScm, parseRepo, ResolvingGitHubClients, type GitHubClients } from '@zenthos/adapter-github';
 import { createGitHubClients } from '@zenthos/adapter-github/live';
-import { InMemoryCodingAgent, InMemoryIssueTracker, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryReviewer, InMemoryRuns, InMemoryScm, InMemorySpecWriter, LocalSandbox } from '@zenthos/adapter-in-memory';
-import { migrate, PostgresProviderConnections, PostgresRepoProfiles, PostgresRuns, SecretBox } from '@zenthos/adapter-postgres';
+import { InMemoryCodingAgent, InMemoryIssueTracker, InMemoryModelKeys, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryReviewer, InMemoryRuns, InMemoryScm, InMemorySpecWriter, LocalSandbox } from '@zenthos/adapter-in-memory';
+import { migrate, PostgresModelKeys, PostgresProviderConnections, PostgresRepoProfiles, PostgresRuns, SecretBox } from '@zenthos/adapter-postgres';
 import { credentialsForRepo } from '@zenthos/application';
-import { traceSessionId, type TracePurpose } from '@zenthos/domain';
+import { DomainError, traceSessionId, type TracePurpose } from '@zenthos/domain';
 import pg from 'pg';
 import { LangfuseAgentTracing, noTracing, startLangfuseTracing } from '@zenthos/adapter-langfuse';
 import { costEstimator, createAnthropicReviewerModels, createAnthropicSpecModel, LangGraphReviewer, LangGraphSpecWriter, REVIEWER_VERSION, SPEC_WRITER_VERSION, verifyAnthropicAccess } from '@zenthos/agents';
-import type { CodingAgentPort, IssueTrackerPort, ProviderConnectionsPort, RepoProfilesPort, ReviewerPort, RunsPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
+import type { CodingAgentPort, IssueTrackerPort, ModelKeysPort, ProviderConnectionsPort, RepoProfilesPort, ReviewerPort, RunsPort, SandboxPort, ScmPort, SpecWriterPort } from '@zenthos/ports';
+import type { Agents } from './activities.js';
 import { githubCredentials, loadConfig, type WorkerConfig } from './config.js';
 import { REPO_PROFILES } from './repos.js';
 
@@ -39,15 +40,16 @@ const DRY_RUN_TICKET = {
 };
 
 /** `close` ends the Postgres pool; one-off scripts call it so the process does not wait on idle connections. */
-export type Stores = { profiles: RepoProfilesPort; connections: ProviderConnectionsPort; runs: RunsPort; close(): Promise<void> };
+export type Stores = { profiles: RepoProfilesPort; connections: ProviderConnectionsPort; runs: RunsPort; modelKeys: ModelKeysPort; close(): Promise<void> };
 
-/** Profiles and connections come from Postgres when the API manages them, otherwise from the code list for dry runs. */
+/** Profiles, connections and model keys come from Postgres when the API manages them, otherwise from the code list for dry runs. */
 export async function stores(config: WorkerConfig): Promise<Stores> {
-  if (!config.DATABASE_URL) return { profiles: new InMemoryRepoProfiles(REPO_PROFILES), connections: new InMemoryProviderConnections(), runs: new InMemoryRuns(), close: async () => undefined };
+  if (!config.DATABASE_URL) return { profiles: new InMemoryRepoProfiles(REPO_PROFILES), connections: new InMemoryProviderConnections(), runs: new InMemoryRuns(), modelKeys: new InMemoryModelKeys(), close: async () => undefined };
   if (!config.ZENTHOS_SECRETS_KEY) throw new Error('ZENTHOS_SECRETS_KEY is required with DATABASE_URL (openssl rand -hex 32)');
   const pool = new pg.Pool({ connectionString: config.DATABASE_URL });
   await migrate(pool);
-  return { profiles: new PostgresRepoProfiles(pool), connections: new PostgresProviderConnections(pool, new SecretBox(config.ZENTHOS_SECRETS_KEY)), runs: new PostgresRuns(pool), close: () => pool.end() };
+  const box = new SecretBox(config.ZENTHOS_SECRETS_KEY);
+  return { profiles: new PostgresRepoProfiles(pool), connections: new PostgresProviderConnections(pool, box), runs: new PostgresRuns(pool), modelKeys: new PostgresModelKeys(pool, box), close: () => pool.end() };
 }
 
 /**
@@ -70,10 +72,15 @@ export function tracing(config: WorkerConfig) {
     : noTracing;
 }
 
-/** `purpose` names the trace session (ADR 015): the workflow traces as `run`, evals and manual commands beside it. */
-export async function specWriter(config: WorkerConfig, trace: ReturnType<typeof tracing>, purpose: TracePurpose = 'run'): Promise<SpecWriterPort> {
+/**
+ * `purpose` names the trace session (ADR 015): the workflow traces as `run`, evals and manual commands beside it.
+ * `apiKey` is the workspace's own (ADR 019); without one the Anthropic SDK resolves the deployment's credentials.
+ */
+export type AgentOptions = { purpose?: TracePurpose; apiKey?: string };
+
+export async function specWriter(config: WorkerConfig, trace: ReturnType<typeof tracing>, { purpose = 'run', apiKey }: AgentOptions = {}): Promise<SpecWriterPort> {
   if (config.SPEC_WRITER === 'memory') return new InMemorySpecWriter();
-  const modelConfig = { model: config.ZENTHOS_SPEC_MODEL, apiKey: config.ANTHROPIC_API_KEY };
+  const modelConfig = { model: config.ZENTHOS_SPEC_MODEL, apiKey };
   await verifyAnthropicAccess(modelConfig);
   return new LangGraphSpecWriter({
     model: createAnthropicSpecModel(modelConfig),
@@ -97,9 +104,10 @@ export async function sandbox(config: WorkerConfig, profiles: RepoProfilesPort, 
 /**
  * With LangFuse keys, each implementation runs inside a span in the ticket's trace and Claude Code exports its own
  * spans there (ADR 015); `tracing(config)` must have registered the OpenTelemetry provider first, as the worker does.
- * Claude Code's credential is checked here, at boot: an organisation one or the worker does not start (ADR 018).
+ * Claude Code's credential is checked here, as the agent is built: the workspace's key or an organisation credential,
+ * never a subscription (ADR 018).
  */
-export async function codingAgent(config: WorkerConfig, overrides: { maxTurns?: number } = {}): Promise<CodingAgentPort> {
+export async function codingAgent(config: WorkerConfig, overrides: { maxTurns?: number; apiKey?: string } = {}): Promise<CodingAgentPort> {
   if (config.CODING_AGENT !== 'claude-code') return new InMemoryCodingAgent();
   const traced = config.LANGFUSE_PUBLIC_KEY && config.LANGFUSE_SECRET_KEY;
   const agent = new ClaudeCodeAgent({
@@ -112,9 +120,9 @@ export async function codingAgent(config: WorkerConfig, overrides: { maxTurns?: 
   return agent;
 }
 
-export async function reviewer(config: WorkerConfig, trace: ReturnType<typeof tracing>, purpose: TracePurpose = 'run'): Promise<ReviewerPort> {
+export async function reviewer(config: WorkerConfig, trace: ReturnType<typeof tracing>, { purpose = 'run', apiKey }: AgentOptions = {}): Promise<ReviewerPort> {
   if (config.REVIEWER === 'memory') return new InMemoryReviewer();
-  const modelConfig = { model: config.ZENTHOS_REVIEW_MODEL, apiKey: config.ANTHROPIC_API_KEY };
+  const modelConfig = { model: config.ZENTHOS_REVIEW_MODEL, apiKey };
   await verifyAnthropicAccess(modelConfig);
   return new LangGraphReviewer({
     models: createAnthropicReviewerModels(modelConfig),
@@ -125,4 +133,31 @@ export async function reviewer(config: WorkerConfig, trace: ReturnType<typeof tr
 
 export function scm(config: WorkerConfig, clients?: GitHubClients): ScmPort {
   return config.SCM === 'github' && clients ? new GitHubScm(clients) : new InMemoryScm();
+}
+
+/**
+ * The agents per workspace (ADR 019): built on the workspace's own key the first time one of its runs needs them,
+ * kept until the key is replaced or removed, and built again then. A run without a workspace, or a workspace
+ * without a key, gets agents on the deployment's credentials, which is what dry runs and CI evals use. A key the
+ * provider refuses, or no credential at all, fails the activity with a domain error naming the cause.
+ */
+export function agentResolver(config: WorkerConfig, trace: ReturnType<typeof tracing>, modelKeys: ModelKeysPort): (workspaceId?: string) => Promise<Agents> {
+  const built = new Map<string, { stamp: string; agents: Promise<Agents> }>();
+  const build = async (apiKey?: string): Promise<Agents> => ({
+    specWriter: await specWriter(config, trace, { apiKey }),
+    codingAgent: await codingAgent(config, { apiKey }),
+    reviewer: await reviewer(config, trace, { apiKey }),
+  });
+  return async (workspaceId = '') => {
+    const key = workspaceId ? await modelKeys.get(workspaceId) : undefined;
+    const stamp = key?.createdAt ?? 'deployment';
+    const cached = built.get(workspaceId);
+    if (cached?.stamp === stamp) return cached.agents;
+    const agents = build(key?.apiKey).catch((error: unknown) => {
+      built.delete(workspaceId);
+      throw new DomainError(key ? 'model_key_invalid' : 'model_key_missing', { workspaceId, reason: error instanceof Error ? error.message : String(error) });
+    });
+    built.set(workspaceId, { stamp, agents });
+    return agents;
+  };
 }

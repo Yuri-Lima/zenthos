@@ -11,3 +11,4 @@ export * from './lib/repo-profiles.js';
 export * from './lib/repo-credentials.js';
 export * from './lib/sign-in.js';
 export * from './lib/workspaces.js';
+export * from './lib/model-keys.js';

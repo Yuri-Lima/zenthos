@@ -1,10 +1,11 @@
 import { existsSync } from 'node:fs';
 import { OctokitGitHubApps } from '@zenthos/adapter-github/live';
-import { InMemoryGitHubApps, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryRunControl, InMemoryRuns, InMemorySessions, InMemoryWorkspaces } from '@zenthos/adapter-in-memory';
-import { migrate, PostgresProviderConnections, PostgresRepoProfiles, PostgresRuns, PostgresSessions, PostgresWorkspaces, SecretBox } from '@zenthos/adapter-postgres';
+import { InMemoryGitHubApps, InMemoryModelKeys, InMemoryModelProvider, InMemoryProviderConnections, InMemoryRepoProfiles, InMemoryRunControl, InMemoryRuns, InMemorySessions, InMemoryWorkspaces } from '@zenthos/adapter-in-memory';
+import { migrate, PostgresModelKeys, PostgresProviderConnections, PostgresRepoProfiles, PostgresRuns, PostgresSessions, PostgresWorkspaces, SecretBox } from '@zenthos/adapter-postgres';
+import { AnthropicModelProvider } from '@zenthos/agents';
 import { LangfuseEvalResults, LangfuseTraceUsage } from '@zenthos/adapter-langfuse';
 import { TemporalRunControl } from '@zenthos/adapter-temporal';
-import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort, RunsPort, SessionsPort, WorkspacesPort } from '@zenthos/ports';
+import type { GitHubAppsPort, ModelKeysPort, ModelProviderPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort, RunsPort, SessionsPort, WorkspacesPort } from '@zenthos/ports';
 import { DRY_RUN_WORKSPACE } from '@zenthos/domain';
 import pg from 'pg';
 import { loadConfig, type ApiConfig } from './config.js';
@@ -24,10 +25,13 @@ export async function composePorts(config: ApiConfig): Promise<ApiPorts> {
   let runStore: RunsPort = new InMemoryRuns();
   let sessions: SessionsPort = new InMemorySessions();
   let workspaces: WorkspacesPort = new InMemoryWorkspaces();
+  let modelKeys: ModelKeysPort = new InMemoryModelKeys();
   if (config.DATABASE_URL && config.ZENTHOS_SECRETS_KEY) {
     const pool = new pg.Pool({ connectionString: config.DATABASE_URL });
     await migrate(pool);
-    connections = new PostgresProviderConnections(pool, new SecretBox(config.ZENTHOS_SECRETS_KEY));
+    const box = new SecretBox(config.ZENTHOS_SECRETS_KEY);
+    connections = new PostgresProviderConnections(pool, box);
+    modelKeys = new PostgresModelKeys(pool, box);
     profiles = new PostgresRepoProfiles(pool);
     runStore = new PostgresRuns(pool);
     sessions = new PostgresSessions(pool);
@@ -45,11 +49,12 @@ export async function composePorts(config: ApiConfig): Promise<ApiPorts> {
     closers.push(() => temporal.close());
   }
   const githubApps: GitHubAppsPort = config.GITHUB_APPS === 'octokit' ? new OctokitGitHubApps() : new InMemoryGitHubApps();
+  const modelProvider: ModelProviderPort = config.MODEL_PROVIDER === 'anthropic' ? new AnthropicModelProvider() : new InMemoryModelProvider();
   const langfuse =
     config.LANGFUSE_PUBLIC_KEY && config.LANGFUSE_SECRET_KEY
       ? { baseUrl: config.LANGFUSE_BASE_URL, publicKey: config.LANGFUSE_PUBLIC_KEY, secretKey: config.LANGFUSE_SECRET_KEY, projectId: config.LANGFUSE_PROJECT_ID }
       : undefined;
   const traces = langfuse && new LangfuseTraceUsage(langfuse);
   const evals = langfuse && new LangfuseEvalResults(langfuse);
-  return { connections, profiles, runs, runStore, githubApps, sessions, workspaces, traces, evals, close: async () => void (await Promise.all(closers.map((close) => close()))) };
+  return { connections, profiles, runs, runStore, githubApps, sessions, workspaces, modelKeys, modelProvider, traces, evals, close: async () => void (await Promise.all(closers.map((close) => close()))) };
 }

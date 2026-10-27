@@ -17,11 +17,10 @@ export const WorkerConfigSchema = z.object({
   GITHUB_APP_PRIVATE_KEY_FILE: z.string().optional(),
   /** Personal token: the interim for a single account. Ignored when the app is configured. */
   GITHUB_TOKEN: z.string().optional(),
-  /** `memory` writes a canned spec. `anthropic` calls Claude; credentials come from an API key, an
-   * `ant auth login` profile or Workload Identity Federation (docs/authentication.md). Access is
-   * verified at boot. */
+  /** `memory` writes a canned spec. `anthropic` calls Claude on the workspace's own API key (ADR 019) or, for a
+   * workspace without one, on the deployment's credentials: an `ant auth login` profile on a laptop, Workload
+   * Identity Federation elsewhere (docs/authentication.md). Access is verified when a workspace's agents are built. */
   SPEC_WRITER: z.enum(['anthropic', 'memory']).default('memory'),
-  ANTHROPIC_API_KEY: z.string().optional(),
   ZENTHOS_SPEC_MODEL: z.string().default('claude-opus-5-5'),
   LANGFUSE_PUBLIC_KEY: z.string().optional(),
   LANGFUSE_SECRET_KEY: z.string().optional(),
@@ -32,9 +31,9 @@ export const WorkerConfigSchema = z.object({
   SANDBOX: z.enum(['git', 'memory']).default('memory'),
   /** Where git sandboxes live; one subdirectory per run, removed on cleanup. */
   SANDBOX_ROOT: z.string().optional(),
-  /** `claude-code` runs Claude Code headless in the sandbox on organisation credentials only (ADR 018); `memory` writes a markdown note. */
+  /** `claude-code` runs Claude Code headless in the sandbox on the workspace's key or organisation credentials, never a subscription (ADR 018); `memory` writes a markdown note. */
   CODING_AGENT: z.enum(['claude-code', 'memory']).default('memory'),
-  /** ZenthOs's own Claude Code config directory: a Console sign-in on a laptop, empty where federation supplies the credential. */
+  /** ZenthOs's own Claude Code config directory, kept apart from any personal Claude Code login on the machine; it stays empty. */
   CODING_AGENT_CONFIG_DIR: z.string().default(path.join(homedir(), '.zenthos', 'claude-code')),
   ZENTHOS_CODING_MODEL: z.string().optional(),
   /** `github` opens pull requests with GITHUB_TOKEN; `memory` records them. */

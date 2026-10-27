@@ -231,7 +231,8 @@
     "view_metrics": "Página de métricas",
     "workspace": "Workspace",
     "setting_role": "Papel",
-    "platform_app": "GitHub App da plataforma"
+    "platform_app": "GitHub App da plataforma",
+    "setting_model_key": "Chave do provedor de modelo"
   },
   "glossary": {
     "run": "Um ticket atravessando o pipeline, da entrada até um pull request mesclado ou uma parada. Um workflow Temporal por ticket; seu estado só muda pela máquina de estados e cada mudança é armazenada.",
@@ -316,19 +317,22 @@
     "trace_check": "O custo armazenado de cada agente comparado com o que o LangFuse registrou para a mesma execução: o redator de especificações, o agente de código e o revisor. São precificados separadamente, então coincidem dentro de 5% ou um centavo; execuções armazenadas antes de os custos serem guardados por agente não podem ser comparadas.",
     "view_metrics": "As nove métricas com suas definições ao lado dos números, calculadas a partir das execuções armazenadas; as que vivem em outro lugar dizem onde. Abaixo, cada execução com seu custo dividido por agente e a verificação no LangFuse sob demanda.",
     "workspace": "O que uma equipe configura e vê: seus membros, conexões de provedor, perfis de repositório e execuções. Toda consulta ao armazenamento é limitada a um workspace; uma pessoa pertence a um ou mais e trabalha em um por vez, escolhido na barra superior.",
-    "setting_role": "O que um membro pode fazer em um workspace. Donos gerenciam membros; donos e admins configuram conexões, repositórios e credenciais; todo membro inicia execuções e decide especificações. A API verifica o papel em cada requisição, e um workspace mantém ao menos um dono.",
-    "platform_app": "O único GitHub App de uma implantação, criado uma vez pelo operador e público: cada equipe o instala nas suas próprias contas e organizações a partir das Configurações. Ele faz o login das pessoas, recebe o webhook e age em toda instalação que um workspace reivindicou. Suas credenciais são seladas em repouso."
+    "setting_role": "O que um membro pode fazer em um workspace. Donos gerenciam membros; donos e admins configuram instalações, repositórios e a chave de modelo; todo membro inicia execuções e decide especificações. A API verifica o papel em cada requisição, e um workspace mantém ao menos um dono.",
+    "platform_app": "O único GitHub App de uma implantação, criado uma vez pelo operador e público: cada equipe o instala nas suas próprias contas e organizações a partir das Configurações. Ele faz o login das pessoas, recebe o webhook e age em toda instalação que um workspace reivindicou. Suas credenciais são seladas em repouso.",
+    "setting_model_key": "A chave de API da Anthropic do próprio workspace, informada nas Configurações por um dono ou admin: verificada com a Anthropic antes de ser guardada, selada em repouso com a chave de segredos da implantação, nunca mais exibida além dos quatro últimos caracteres. Todo agente das execuções do workspace a usa, então a fatura é do workspace. Sem ela, só as credenciais da própria implantação servem."
   },
   "settings": {
     "eyebrow": "Configuração",
     "title": "Configurações",
     "setup": {
       "title": "Configurar o ZenthOs",
-      "intro": "Dois passos antes da primeira execução. Cada um fica verde assim que for verdade.",
+      "intro": "Três passos antes da primeira execução. Cada um fica verde assim que for verdade.",
       "install": "Instalar o app em uma conta",
       "installHint": "Qualquer conta ou organização do GitHub de que você faça parte; escolha os repositórios em que ele pode agir.",
       "repo": "Adicionar um perfil de repositório",
-      "repoHint": "Quais comandos podem rodar, quais deles bloqueiam um pull request, e os limites de uma execução."
+      "repoHint": "Quais comandos podem rodar, quais deles bloqueiam um pull request, e os limites de uma execução.",
+      "key": "Informar a chave de API de modelo do workspace",
+      "keyHint": "Uma chave de API da Anthropic do seu próprio workspace no Console; as execuções são cobradas lá. Verificada antes de ser guardada, selada em repouso, nunca mais exibida."
     },
     "install": "Instalar no GitHub",
     "remove": "Remover",
@@ -359,7 +363,20 @@
     "setupLink": "Abrir a página de configuração",
     "release": "Liberar",
     "confirmRelease": "Liberar a instalação em {{account}} deste workspace? O app continua instalado no GitHub até o dono removê-lo lá.",
-    "coveredBy": "Coberto por"
+    "coveredBy": "Coberto por",
+    "modelKey": {
+      "title": "Provedor de modelo",
+      "none": "Nenhuma chave ainda. As execuções deste workspace precisam de uma; até lá o worker só pode usar as credenciais da própria implantação, se houver.",
+      "label": "Chave de API da Anthropic",
+      "save": "Verificar e salvar",
+      "replace": "Substituir",
+      "hint": "Crie a chave no Console da Anthropic em um workspace com limite de gasto. O ZenthOs a verifica com a Anthropic, guarda selada e, daqui em diante, mostra só os quatro últimos caracteres.",
+      "since": "desde {{date}}",
+      "confirmRemove": "Remover a chave deste workspace? Suas execuções vão falhar até uma nova ser informada, a menos que a implantação tenha credenciais próprias.",
+      "provider": {
+        "anthropic": "Anthropic"
+      }
+    }
   },
   "repoForm": {
     "newTitle": "Adicionar um repositório",

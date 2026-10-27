@@ -5,3 +5,4 @@ export * from './lib/postgres-runs.js';
 export * from './lib/rotate-secrets.js';
 export * from './lib/postgres-sessions.js';
 export * from './lib/postgres-workspaces.js';
+export * from './lib/postgres-model-keys.js';

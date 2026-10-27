@@ -23,8 +23,8 @@ export async function evalDeps(ticketKey: string) {
     profile: await profileForTicket(store.profiles, ticketKey),
     issueTracker: issueTracker(config, clients),
     scm: scm(config, clients),
-    specWriter: await specWriter(config, langfuseCallbacks, 'eval'),
-    reviewer: await reviewer(config, langfuseCallbacks, 'eval'),
+    specWriter: await specWriter(config, langfuseCallbacks, { purpose: 'eval' }),
+    reviewer: await reviewer(config, langfuseCallbacks, { purpose: 'eval' }),
     repoContext: config.REPO_CONTEXT_FILE ? await readFile(config.REPO_CONTEXT_FILE, 'utf8') : '',
     /** In-memory agents prove the plumbing, not the prompts; their scores never count as the latest eval. */
     dryRun: config.SPEC_WRITER === 'memory' || config.REVIEWER === 'memory',

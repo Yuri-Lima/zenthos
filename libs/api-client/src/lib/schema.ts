@@ -311,6 +311,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/model-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether this workspace has a model provider key, which provider and its last four characters; never the key itself */
+        get: operations["ModelKeyController_status"];
+        /** Enter or replace the workspace's Anthropic API key: checked with Anthropic first, then stored sealed; owners and admins */
+        put: operations["ModelKeyController_set"];
+        post?: never;
+        /** Remove the workspace's key; its runs fall back to the deployment's own credentials, if any; owners and admins */
+        delete: operations["ModelKeyController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/repos": {
         parameters: {
             query?: never;
@@ -937,6 +956,81 @@ export interface operations {
                         cloneUrl: string;
                     };
                 };
+            };
+        };
+    };
+    ModelKeyController_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        configured: boolean;
+                        /** @enum {string} */
+                        provider?: "anthropic";
+                        last4?: string;
+                        /** Format: date-time */
+                        createdAt?: string;
+                    };
+                };
+            };
+        };
+    };
+    ModelKeyController_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    apiKey: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        configured: boolean;
+                        /** @enum {string} */
+                        provider?: "anthropic";
+                        last4?: string;
+                        /** Format: date-time */
+                        createdAt?: string;
+                    };
+                };
+            };
+        };
+    };
+    ModelKeyController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

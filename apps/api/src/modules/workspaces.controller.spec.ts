@@ -62,6 +62,7 @@ describe('workspaces over HTTP, with sign-in on', () => {
     expect(((await (await json(ana, 'GET', '/runs')).json()) as { ticket: { key: string } }[]).map((r) => r.ticket.key)).toEqual(['acme/app#1']);
     expect((await json(ana, 'GET', '/repos/acme/app')).status).toBe(200);
     expect((await json(ana, 'PUT', '/repos/acme/app', { cloneUrl: 'https://github.com/acme/app.git', baseBranch: 'main', allowedCommands: [], gateCommands: [] })).status).toBe(403);
+    expect((await json(ana, 'PUT', '/model-key', { apiKey: 'sk-ant-api03-not-hers' })).status).toBe(403);
     expect((await json(ana, 'PUT', `/workspaces/${id}/members/Bob`, { role: 'member' })).status).toBe(403);
     expect((await json(yuri, 'DELETE', `/workspaces/${id}/members/yuri`)).status).toBe(409);
   });

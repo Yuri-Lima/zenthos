@@ -7,6 +7,7 @@ import { API_PORTS, type ApiPorts } from './ports.js';
 import type { ApiConfig } from './config.js';
 import { GlossaryController } from './modules/glossary.controller.js';
 import { MetricsController } from './modules/metrics.controller.js';
+import { ModelKeyController } from './modules/model-key.controller.js';
 import { PlatformController } from './modules/platform.controller.js';
 import { GithubController } from './modules/github.controller.js';
 import { ReposController } from './modules/repos.controller.js';
@@ -27,7 +28,7 @@ class HealthController {
 /** One module: the API is small, and the ports object is the only thing the controllers share. */
 export function createAppModule(ports: ApiPorts, config: ApiConfig) {
   @Module({
-    controllers: [HealthController, AuthController, WorkspacesController, PlatformController, GithubController, ReposController, RunsController, WebhooksController, MetricsController, GlossaryController],
+    controllers: [HealthController, AuthController, WorkspacesController, PlatformController, GithubController, ModelKeyController, ReposController, RunsController, WebhooksController, MetricsController, GlossaryController],
     providers: [WebhooksService, { provide: API_PORTS, useValue: ports }, { provide: 'ApiConfig', useValue: config }, { provide: APP_FILTER, useClass: DomainErrorFilter }, { provide: APP_GUARD, useClass: SessionGuard }],
   })
   class AppModule {}

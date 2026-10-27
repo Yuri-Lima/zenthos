@@ -4,6 +4,7 @@ import { API } from './api';
 
 /** Every type here is derived from the OpenAPI document; none is written by hand. */
 export type PlatformStatus = paths['/platform']['get']['responses'][200]['content']['application/json'];
+export type ModelKeyStatus = paths['/model-key']['get']['responses'][200]['content']['application/json'];
 export type Installation = paths['/github/installations']['get']['responses'][200]['content']['application/json'][number];
 export type RepositoryInfo = paths['/github/repositories/{owner}/{name}']['get']['responses'][200]['content']['application/json'];
 export type Profile = paths['/repos']['get']['responses'][200]['content']['application/json'][number];
@@ -21,7 +22,7 @@ const pathOf = (repo: string) => {
   return { owner, name };
 };
 
-/** The platform app, the installations this workspace has claimed, and repository profiles (ADR 010, ADR 019), through the generated client. */
+/** The platform app, the installations this workspace has claimed, its model key and repository profiles (ADR 010, ADR 019), through the generated client. */
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
   private readonly api = inject(API);
@@ -44,6 +45,21 @@ export class SettingsService {
   async describeRepository(repo: string): Promise<RepositoryInfo | undefined> {
     const { data } = await this.api.GET('/github/repositories/{owner}/{name}', { params: { path: pathOf(repo) } });
     return data;
+  }
+
+  /** Whether the workspace has a model provider key and which one; the key itself never comes back. */
+  async modelKey(): Promise<ModelKeyStatus | undefined> {
+    const { data } = await this.api.GET('/model-key');
+    return data;
+  }
+
+  /** Checked with the provider before it is stored; the failure message says when it is refused. */
+  setModelKey(apiKey: string) {
+    return failure(this.api.PUT('/model-key', { body: { apiKey } }));
+  }
+
+  removeModelKey() {
+    return failure(this.api.DELETE('/model-key'));
   }
 
   async profiles(): Promise<Profile[]> {

@@ -7,7 +7,8 @@ orchestrated by Temporal, traced and evaluated with LangFuse, and proven on two 
 Status: phases 0 to 3 done, phase 4 nearly done: an Angular dashboard over the REST API (runs, three views of a run,
 settings, metrics checked against LangFuse, a glossary), evals as LangFuse experiments gated in CI, LangFuse
 hosted on a Hetzner server behind Traefik, the coding agent on organisation credentials only (ADR 018), and
-workspaces with members and roles as the first slice of ZenthOs as a hosted service (ADR 019).
+ZenthOs as a hosted service (ADR 019): workspaces with members and roles, one platform GitHub App each team
+installs on its own accounts, and each workspace's own Anthropic key entered in Settings.
 
 A ticket key starts a Temporal workflow that fetches the issue, has a LangGraph agent draft a
 spec validated against the zod schema, posts it as a comment, and waits for a human to approve or reject by
@@ -40,8 +41,9 @@ pnpm dashboard     # Angular dashboard on :4200; with ZENTHOS_AUTH=github it ask
 ```
 
 For a real run set `ISSUE_TRACKER=github`, the GitHub App (`GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_FILE`), `SPEC_WRITER=anthropic` and the LangFuse keys in
-`.env`; the dev LangFuse keys from `.env.example` match the compose bootstrap. Model access needs no API key:
-`ant auth login` on a laptop, workload identity federation in CI and the cloud. See
+`.env`; the dev LangFuse keys from `.env.example` match the compose bootstrap. Model access is the workspace's own
+Anthropic key, entered in the dashboard's Settings, never in `.env`; runs without one (dry runs, CI evals) use
+`ant auth login` on a laptop and workload identity federation in CI and the cloud. See
 [docs/authentication.md](docs/authentication.md).
 
 How the repo is organised and the rules for working in it: [AGENTS.md](AGENTS.md).

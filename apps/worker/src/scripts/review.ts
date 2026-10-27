@@ -24,7 +24,7 @@ const trace = tracing(config);
 const store = await stores(config);
 const clients = github(config, store);
 const profile = await profileForTicket(store.profiles, key);
-const deps = { issueTracker: issueTracker(config, clients), scm: scm(config, clients), reviewer: await reviewer(config, trace, 'manual') };
+const deps = { issueTracker: issueTracker(config, clients), scm: scm(config, clients), reviewer: await reviewer(config, trace, { purpose: 'manual' }) };
 try {
   const pullRequest = await deps.scm.findPullRequest(profile, branchNameFor(key));
   if (!pullRequest) throw new Error(`no open pull request for ${branchNameFor(key)} in ${profile.repo}`);

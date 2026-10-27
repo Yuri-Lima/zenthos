@@ -27,6 +27,8 @@ export const ERROR_CODES = {
   platform_already_configured: 'The ZenthOs GitHub App is already set up',
   setup_token_invalid: 'The setup token does not match the one the API printed at boot',
   installation_not_found: 'The GitHub App has no such installation',
+  model_key_invalid: 'The model provider rejected this API key',
+  model_key_missing: 'This workspace has no model API key and the deployment has no credentials of its own',
   installation_not_yours: 'This installation belongs to an account the signed-in person is not a member of, or to another workspace',
 } as const;
 

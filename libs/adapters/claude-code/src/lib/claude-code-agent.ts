@@ -6,8 +6,10 @@ import { decideToolUse } from './permissions.js';
 import { CLAUDE_CODE_AGENT_VERSION, implementationPrompt } from './prompt.js';
 
 export type ClaudeCodeAgentOptions = {
-  /** ZenthOs's own Claude Code config directory: the Console sign-in lives here, a personal claude.ai login never does. */
+  /** ZenthOs's own Claude Code config directory: a personal claude.ai login never lives here. */
   configDir: string;
+  /** The workspace's own API key (ADR 019); without one Claude Code resolves the deployment's credentials. */
+  apiKey?: string;
   model?: string;
   maxTurns?: number;
   /** Puts each run into the ticket's trace (ADR 015); without it the run is not traced. */
@@ -30,7 +32,7 @@ export class ClaudeCodeAgent implements CodingAgentPort {
 
   /** Asks Claude Code which account it would run on, without sending a message; the worker calls it at boot. */
   async verifyAccess(): Promise<void> {
-    const { session, check } = guardedSession(undefined, { env: claudeCodeEnv(this.options.configDir), settingSources: [] });
+    const { session, check } = guardedSession(undefined, { env: claudeCodeEnv(this.options.configDir, {}, process.env, this.options.apiKey), settingSources: [] });
     try {
       for await (const message of session) void message;
     } catch {
@@ -49,7 +51,7 @@ export class ClaudeCodeAgent implements CodingAgentPort {
       disallowedTools: ['WebFetch', 'WebSearch'],
       settingSources: ['project'],
       canUseTool: async (toolName, toolInput) => decideToolUse(input.profile, toolName, toolInput),
-      env: claudeCodeEnv(this.options.configDir, exportEnv),
+      env: claudeCodeEnv(this.options.configDir, exportEnv, process.env, this.options.apiKey),
     });
 
     let sessionModel: string | undefined;

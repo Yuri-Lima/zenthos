@@ -10,6 +10,7 @@ export * from './lib/in-memory-github-apps.js';
 export * from './lib/in-memory-runs.js';
 export * from './lib/in-memory-sessions.js';
 export * from './lib/in-memory-workspaces.js';
+export * from './lib/in-memory-model-keys.js';
 export * from './lib/in-memory-trace-usage.js';
 export * from './lib/in-memory-eval-results.js';
 export * from './lib/no-agent-tracing.js';

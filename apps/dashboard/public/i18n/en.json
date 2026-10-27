@@ -152,11 +152,13 @@
     "title": "Settings",
     "setup": {
       "title": "Set up ZenthOs",
-      "intro": "Two steps before the first run. Each one turns green as soon as it is true.",
+      "intro": "Three steps before the first run. Each one turns green as soon as it is true.",
       "install": "Install the app on an account",
       "installHint": "Any GitHub account or organisation you belong to; choose the repositories it may act on.",
       "repo": "Add a repository profile",
-      "repoHint": "Which commands may run, which ones gate a pull request, and the limits of a run."
+      "repoHint": "Which commands may run, which ones gate a pull request, and the limits of a run.",
+      "key": "Enter the workspace's model API key",
+      "keyHint": "An Anthropic API key from your own Console workspace; the runs bill there. Checked before it is stored, sealed at rest, never shown again."
     },
     "install": "Install on GitHub",
     "remove": "Remove",
@@ -187,7 +189,20 @@
     "setupLink": "Open the setup page",
     "release": "Release",
     "confirmRelease": "Release the installation on {{account}} from this workspace? The app stays installed on GitHub until its owner removes it there.",
-    "coveredBy": "Covered by"
+    "coveredBy": "Covered by",
+    "modelKey": {
+      "title": "Model provider",
+      "none": "No key yet. Runs of this workspace need one; until then the worker can only use the deployment's own credentials, if it has any.",
+      "label": "Anthropic API key",
+      "save": "Check and save",
+      "replace": "Replace",
+      "hint": "Create the key in the Anthropic Console under a workspace with a spend limit. ZenthOs checks it with Anthropic, stores it sealed, and shows only its last four characters from now on.",
+      "since": "since {{date}}",
+      "confirmRemove": "Remove this workspace's key? Its runs will fail until a new one is entered, unless the deployment has credentials of its own.",
+      "provider": {
+        "anthropic": "Anthropic"
+      }
+    }
   },
   "repoForm": {
     "newTitle": "Add a repository",

@@ -1,24 +1,29 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { coversRepository } from '@zenthos/domain';
 import { installUrl } from '../core/api';
 import { GlossaryService } from '../core/glossary';
 import { SessionService } from '../core/session';
-import { SettingsService, type Installation, type PlatformStatus, type Profile } from '../core/settings';
+import { SettingsService, type Installation, type ModelKeyStatus, type PlatformStatus, type Profile } from '../core/settings';
 import { TermLink } from '../shared/term';
 
 /**
- * GitHub installations and repositories (ADR 010, ADR 019). The platform app is the operator's; a workspace installs
- * it on its own accounts from here and claims the installation on the way back (`?installed=<id>`). The first-run
- * steps are derived from what exists, never stored: an installation, a repository profile.
+ * GitHub installations, the model provider key and repositories (ADR 010, ADR 019). The platform app is the
+ * operator's; a workspace installs it on its own accounts from here and claims the installation on the way back
+ * (`?installed=<id>`). The key is the workspace's own and never shown again once stored. The first-run steps are
+ * derived from what exists, never stored: an installation, a key, a repository profile.
  */
 @Component({
   selector: 'zen-settings-page',
-  imports: [RouterLink, TranslateModule, MatButtonModule, MatIconModule, MatTooltipModule, TermLink],
+  imports: [DatePipe, FormsModule, RouterLink, TranslateModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatTooltipModule, TermLink],
   styles: `
     .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
     section { margin-bottom: 22px; }
@@ -49,6 +54,9 @@ import { TermLink } from '../shared/term';
     .warn { color: var(--zen-warn); font-size: 18px; width: 18px; height: 18px; vertical-align: -4px; }
     .banner { padding: 8px 12px; margin-bottom: 12px; border-left: 3px solid var(--zen-good); background: var(--zen-good-soft); color: var(--zen-good); font-size: 13px; border-radius: 0 var(--zen-radius) var(--zen-radius) 0; }
     .notice { padding: 10px 14px; font-size: 13px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .key-form { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .key-form mat-form-field { flex: 1 1 320px; }
+    .error { color: var(--zen-crit); font-size: 13px; margin: 0; }
   `,
   template: `
     <div class="toolbar">
@@ -120,6 +128,42 @@ import { TermLink } from '../shared/term';
       </div>
     </section>
 
+    <section aria-labelledby="model-title">
+      <div class="section-head">
+        <h2 id="model-title"><zen-term id="setting_model_key">{{ 'settings.modelKey.title' | translate }}</zen-term></h2>
+      </div>
+      <div class="surface conn">
+        @if (modelKey()?.configured) {
+          <header>
+            <mat-icon aria-hidden="true">key</mat-icon>
+            <h3>{{ 'settings.modelKey.provider.' + modelKey()?.provider | translate }}</h3>
+            <span class="mono muted">···· {{ modelKey()?.last4 }}</span>
+            <span class="muted text-sm">{{ 'settings.modelKey.since' | translate: { date: (modelKey()?.createdAt | date: 'mediumDate') } }}</span>
+            <div class="actions">
+              @if (canConfigure() && !editingKey()) {
+                <button mat-button (click)="editingKey.set(true)"><mat-icon>autorenew</mat-icon>{{ 'settings.modelKey.replace' | translate }}</button>
+                <button mat-button (click)="removeKey()"><mat-icon>delete</mat-icon>{{ 'settings.remove' | translate }}</button>
+              }
+            </div>
+          </header>
+        } @else if (!loading()) {
+          <p class="m-0 text-sm">{{ 'settings.modelKey.none' | translate }}</p>
+        }
+        @if (canConfigure() && !loading() && (editingKey() || !modelKey()?.configured)) {
+          <form class="key-form" (ngSubmit)="saveKey()">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'settings.modelKey.label' | translate }}</mat-label>
+              <input matInput type="password" name="apiKey" [ngModel]="apiKey()" (ngModelChange)="apiKey.set($event)" autocomplete="off" placeholder="sk-ant-api03-…" required class="mono" />
+            </mat-form-field>
+            <button mat-flat-button type="submit" [disabled]="saving() || apiKey().trim().length < 8">{{ 'settings.modelKey.save' | translate }}</button>
+            @if (editingKey()) {<button mat-button type="button" (click)="cancelKey()">{{ 'common.cancel' | translate }}</button>}
+          </form>
+          @if (keyError(); as message) {<p class="error" role="alert">{{ message }}</p>}
+          <p class="muted text-xs m-0">{{ 'settings.modelKey.hint' | translate }}</p>
+        }
+      </div>
+    </section>
+
     <section aria-labelledby="repos-title">
       <div class="section-head">
         <h2 id="repos-title"><zen-term id="repo_profile">{{ 'settings.repositories' | translate }}</zen-term></h2>
@@ -181,8 +225,14 @@ export class SettingsPage {
   readonly installed = input<string>();
   readonly platform = signal<PlatformStatus | undefined>(undefined);
   readonly installations = signal<Installation[]>([]);
+  readonly modelKey = signal<ModelKeyStatus | undefined>(undefined);
   readonly profiles = signal<Profile[]>([]);
   readonly loading = signal(true);
+  /** The key form: shown while there is no key, or while replacing one; the value never outlives the save. */
+  readonly editingKey = signal(false);
+  readonly apiKey = signal('');
+  readonly saving = signal(false);
+  readonly keyError = signal<string | undefined>(undefined);
   /** A full navigation: GitHub needs the browser itself, and comes back to /settings through the API. */
   readonly installHref = installUrl();
   /** An installation can cover dozens of repositories; the card shows a few and the total, the rest on request. */
@@ -192,6 +242,7 @@ export class SettingsPage {
 
   readonly setup = computed(() => [
     { key: 'install', done: this.installations().length > 0 },
+    { key: 'key', done: this.modelKey()?.configured === true },
     { key: 'repo', done: this.profiles().length > 0 },
   ]);
   readonly setupDone = computed(() => this.setup().every((step) => step.done));
@@ -202,11 +253,37 @@ export class SettingsPage {
   }
 
   async refresh() {
-    const [platform, installations, profiles] = await Promise.all([this.settings.platform(), this.settings.installations(), this.settings.profiles()]);
+    const [platform, installations, modelKey, profiles] = await Promise.all([this.settings.platform(), this.settings.installations(), this.settings.modelKey(), this.settings.profiles()]);
     this.platform.set(platform);
     this.installations.set(installations);
+    this.modelKey.set(modelKey);
     this.profiles.set(profiles);
     this.loading.set(false);
+  }
+
+  async saveKey() {
+    this.saving.set(true);
+    this.keyError.set(undefined);
+    try {
+      const failure = await this.settings.setModelKey(this.apiKey().trim());
+      if (failure) return this.keyError.set(failure);
+      this.cancelKey();
+      await this.refresh();
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  cancelKey() {
+    this.apiKey.set('');
+    this.keyError.set(undefined);
+    this.editingKey.set(false);
+  }
+
+  async removeKey() {
+    if (!confirm(this.translate.instant('settings.modelKey.confirmRemove'))) return;
+    await this.settings.removeModelKey();
+    await this.refresh();
   }
 
   /** The account whose installation covers the repository; none means runs will fail to act on it. */

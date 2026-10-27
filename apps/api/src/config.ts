@@ -15,6 +15,8 @@ const ConfigSchema = z.object({
   TEMPORAL_NAMESPACE: z.string().default('default'),
   TEMPORAL_TASK_QUEUE: z.string().default('zenthos'),
   GITHUB_APPS: z.enum(['octokit', 'memory']).default('memory'),
+  /** `anthropic` checks a workspace's model key with Anthropic before storing it (ADR 019); `memory` accepts any key, for dry runs. */
+  MODEL_PROVIDER: z.enum(['anthropic', 'memory']).default('memory'),
   /** The dashboard's origin; the only one the browser may call the API from. */
   ZENTHOS_DASHBOARD_ORIGIN: z.string().url().default('http://localhost:4200'),
   /** `github`: Sign in with GitHub through the connected App; anyone may sign in, workspaces decide what they see (ADR 019). `off`: every request is anonymous; local dry runs only. */

@@ -22,6 +22,9 @@
       "path": "../../libs/application/tsconfig.lib.json"
     },
     {
+      "path": "../../libs/agents/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/adapters/temporal/tsconfig.lib.json"
     },
     {

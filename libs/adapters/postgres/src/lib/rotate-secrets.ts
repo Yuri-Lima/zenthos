@@ -1,21 +1,29 @@
 import type { Pool } from 'pg';
 import type { SecretBox } from './secret-box.js';
 
+/** Every table with a sealed column, and the column that identifies its row. */
+const SEALED = [
+  { table: 'provider_connections', id: 'id' },
+  { table: 'workspace_model_keys', id: 'workspace_id' },
+];
+
 /**
- * Re-seals every connection's secret half under a new deployment key, in one transaction: either every
- * row reads with the new key afterwards or none changed. Run it with the old key still in hand, then
- * switch ZENTHOS_SECRETS_KEY everywhere the store is opened (API and worker) and restart them.
+ * Re-seals every sealed row (app secrets, workspace model keys) under a new deployment key, in one transaction:
+ * either every row reads with the new key afterwards or none changed. Run it with the old key still in hand,
+ * then switch ZENTHOS_SECRETS_KEY everywhere the store is opened (API and worker) and restart them.
  */
 export async function rotateSecrets(pool: Pool, from: SecretBox, to: SecretBox): Promise<number> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const { rows } = await client.query<{ id: string; secret: Buffer }>('SELECT id, secret FROM provider_connections FOR UPDATE');
-    for (const row of rows) {
-      await client.query('UPDATE provider_connections SET secret = $2 WHERE id = $1', [row.id, to.seal(from.open(row.secret))]);
+    let count = 0;
+    for (const { table, id } of SEALED) {
+      const { rows } = await client.query<{ id: string; secret: Buffer }>(`SELECT ${id} AS id, secret FROM ${table} FOR UPDATE`);
+      for (const row of rows) await client.query(`UPDATE ${table} SET secret = $2 WHERE ${id} = $1`, [row.id, to.seal(from.open(row.secret))]);
+      count += rows.length;
     }
     await client.query('COMMIT');
-    return rows.length;
+    return count;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
