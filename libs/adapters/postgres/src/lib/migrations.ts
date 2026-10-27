@@ -76,12 +76,13 @@ export const MIGRATIONS: { name: string; sql: string }[] = [
       CREATE INDEX provider_connections_workspace ON provider_connections (workspace_id);
       CREATE INDEX repo_profiles_workspace ON repo_profiles (workspace_id);
       CREATE INDEX runs_workspace_created_at ON runs (workspace_id, created_at DESC);
-      -- Rows from before workspaces existed move into one workspace with no members; the first sign-in claims it (ADR 019).
+      -- Rows from before workspaces existed move into the dry-run workspace (the fixed id DRY_RUN_WORKSPACE names), with
+      -- no members: an API running with auth off keeps seeing them, and the first sign-in once auth is on claims them (ADR 019).
       DO $$
-      DECLARE legacy uuid;
+      DECLARE legacy uuid := '00000000-0000-4000-8000-000000000001';
       BEGIN
         IF EXISTS (SELECT 1 FROM repo_profiles) OR EXISTS (SELECT 1 FROM provider_connections) OR EXISTS (SELECT 1 FROM runs) THEN
-          INSERT INTO workspaces (id, name, created_at) VALUES (gen_random_uuid(), 'Workspace', now()) RETURNING id INTO legacy;
+          INSERT INTO workspaces (id, name, created_at) VALUES (legacy, 'Workspace', now()) ON CONFLICT (id) DO NOTHING;
           UPDATE repo_profiles SET workspace_id = legacy;
           UPDATE provider_connections SET workspace_id = legacy;
           UPDATE runs SET workspace_id = legacy;

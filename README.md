@@ -4,9 +4,10 @@
 out, with a human approving the spec and the risky steps. Built as a hexagonal core with pluggable adapters,
 orchestrated by Temporal, traced and evaluated with LangFuse, and proven on two real codebases.
 
-Status: phases 0 to 3 done, phase 4 in progress: an Angular dashboard over the REST API (runs, three views of a run,
-settings, metrics checked against LangFuse, a glossary), evals as LangFuse experiments gated in CI, and LangFuse
-hosted on a Hetzner server behind Traefik.
+Status: phases 0 to 3 done, phase 4 nearly done: an Angular dashboard over the REST API (runs, three views of a run,
+settings, metrics checked against LangFuse, a glossary), evals as LangFuse experiments gated in CI, LangFuse
+hosted on a Hetzner server behind Traefik, the coding agent on organisation credentials only (ADR 018), and
+workspaces with members and roles as the first slice of ZenthOs as a hosted service (ADR 019).
 
 A ticket key starts a Temporal workflow that fetches the issue, has a LangGraph agent draft a
 spec validated against the zod schema, posts it as a comment, and waits for a human to approve or reject by

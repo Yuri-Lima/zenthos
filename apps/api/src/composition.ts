@@ -32,9 +32,10 @@ export async function composePorts(config: ApiConfig): Promise<ApiPorts> {
     runStore = new PostgresRuns(pool);
     sessions = new PostgresSessions(pool);
     workspaces = new PostgresWorkspaces(pool);
-    // With auth off every row belongs to the dry-run workspace, which the foreign keys need to exist. It has no
-    // members, so the first person to sign in once auth is on claims it, with everything configured so far (ADR 019).
-    if (config.ZENTHOS_AUTH === 'off') await workspaces.save(DRY_RUN_WORKSPACE);
+    // With auth off every row belongs to the dry-run workspace, which the foreign keys need to exist; migration 004 may
+    // have created it already around older rows, under its own name. It has no members, so the first person to sign in
+    // once auth is on claims it, with everything configured so far (ADR 019).
+    if (config.ZENTHOS_AUTH === 'off' && !(await workspaces.get(DRY_RUN_WORKSPACE.id))) await workspaces.save(DRY_RUN_WORKSPACE);
     closers.push(() => pool.end());
   }
   let runs: RunControlPort = new InMemoryRunControl();

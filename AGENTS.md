@@ -147,17 +147,20 @@ Jest configs are `jest.config.cjs` (plain CommonJS) because Jest cannot load `.c
 
 ## Roadmap
 
-Phases 0 to 2 are in: scaffold; intake, spec draft and human decision; implementation by Claude Code in a git
-sandbox, deterministic gates with one feedback retry, and a pull request to the base branch. Phase 3 in
-progress: the reviewer scores the pull request against the domain rubric and posts a comment, a failed review
-sends the agent back once (ADR 008); the evals measure both agents against merged history and block a prompt
-change that lowers the scores (ADR 009); the REST API keeps provider connections and repository profiles in
-Postgres with secrets sealed, connects GitHub by the manifest flow and takes the app's webhook (ADR 010); the worker
-acts with the connection each profile names and records every run transition to the store, which the API serves
-(ADR 011). Phases were swapped (ADR 012): phase 4 is the Angular dashboard (PrimeNG, en/pt, Sign in with GitHub
-with workspaces since ADR 019, generated OpenAPI client, metrics from the runs store) plus Legal Connect hardening; phase 5
-is Phoenix (YouTrack, GitLab, TeamCity, Codex); phase 6 is Cloud Run and the write-up.
-Then 4 Phoenix adapters and Codex; 5 dashboard, Cloud Run, write-up.
+Phases 0 to 3 are in: scaffold; intake, spec draft and human decision; implementation by Claude Code in a git
+sandbox, deterministic gates with one feedback retry, and a pull request to the base branch; the reviewer scores the
+pull request against the domain rubric and a failed review sends the agent back once (ADR 008); the evals measure
+both agents against merged history and block a prompt change that lowers the scores (ADR 009); the REST API keeps
+provider connections and repository profiles in Postgres with secrets sealed, connects GitHub by the manifest flow
+and takes the app's webhook (ADR 010); the worker acts with the connection each profile names and records every
+run transition to the store, which the API serves (ADR 011). Phase 4, the Angular dashboard (ADR 012, ADR 013:
+Material, en/pt, Sign in with GitHub, generated OpenAPI client, metrics from the runs store checked against
+LangFuse, the glossary), is in except its last slice, the Legal Connect hardening. Along the way the evals moved to
+LangFuse experiments with prompts published from CI (ADR 016), the coding agent is traced (ADR 015), LangFuse runs
+on a Hetzner host (ADR 017), the coding agent runs on organisation credentials only (ADR 018), and ZenthOs became a
+hosted service with workspaces (ADR 019, slice 1 of 5). Next: ADR 019 slices 2 to 5 (the platform GitHub App,
+per-workspace model keys, run isolation, limits), then phase 6 Phoenix (YouTrack, GitLab, TeamCity, Codex), then
+the deploy and the write-up.
 
 ## Dependency policy
 

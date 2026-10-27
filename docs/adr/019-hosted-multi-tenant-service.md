@@ -74,11 +74,10 @@ Temporal's address, LangFuse's keys, and the operator's own CI credentials (fede
   API guard resolves the person's role in it on every request (`CurrentWorkspace(action)`); sign-in is open and
   `ZENTHOS_ALLOWED_LOGINS` is gone; the dashboard gets the switcher, the create page and the members page. The
   sandbox's `Workspace` type became `Checkout`, so the word has one meaning.
-- Data from before workspaces is moved by the migration into one workspace with no members, and the first person to
-  sign in afterwards becomes its owner. That is right for the one existing deployment, whose API is not public; a
-  fresh deployment has no such workspace, so there is nothing to claim. The same happens to the dry-run workspace
-  (`ZENTHOS_AUTH=off` with Postgres): the API creates its row at boot, and whoever signs in first after auth is
-  turned on owns what was configured in it.
+- Data from before workspaces is moved by the migration into the dry-run workspace (one fixed id, no members), so an
+  API still running with auth off keeps seeing it, and the first person to sign in once auth is on becomes its owner
+  with everything configured so far. That is right for the one existing deployment, whose API is not public; a fresh
+  deployment has no such rows, so there is nothing to claim.
 - Until slice 2, Sign in with GitHub still uses whichever connection carries OAuth credentials
   (`ProviderConnectionsPort.signInApp`), and each workspace connects its own GitHub App.
 
