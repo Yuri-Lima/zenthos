@@ -62,7 +62,7 @@ const blank = (): Form => ({
     form { display: grid; gap: 16px; max-width: 880px; }
     fieldset { border: 1px solid var(--zen-line); border-radius: var(--zen-radius); padding: 14px 16px 16px; margin: 0; display: grid; gap: 12px; background: var(--zen-surface); }
     legend { padding: 0 6px; font-size: 13px; font-weight: 600; }
-    .row { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    .row { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: start; }
     .gates { display: grid; gap: 2px; }
     .gates .cmd { font-family: var(--zen-mono); font-size: 12.5px; }
     .tooling { display: flex; flex-wrap: wrap; gap: 6px; font-family: var(--zen-mono); font-size: 11px; color: var(--zen-muted); }
