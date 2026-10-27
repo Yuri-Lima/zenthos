@@ -39,7 +39,7 @@ pnpm api           # REST API on :3200, OpenAPI at /docs
 pnpm dashboard     # Angular dashboard on :4200; with ZENTHOS_AUTH=github it asks you to sign in with GitHub
 ```
 
-For a real run set `ISSUE_TRACKER=github`, `GITHUB_TOKEN`, `SPEC_WRITER=anthropic` and the LangFuse keys in
+For a real run set `ISSUE_TRACKER=github`, the GitHub App (`GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_FILE`), `SPEC_WRITER=anthropic` and the LangFuse keys in
 `.env`; the dev LangFuse keys from `.env.example` match the compose bootstrap. Model access needs no API key:
 `ant auth login` on a laptop, workload identity federation in CI and the cloud. See
 [docs/authentication.md](docs/authentication.md).

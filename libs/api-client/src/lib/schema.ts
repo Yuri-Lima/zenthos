@@ -175,23 +175,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/providers/github/token": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Connect GitHub with a personal token (interim for one account); GitHub is asked first and a refused token is not stored */
-        post: operations["ProvidersController_connectToken"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/providers/github/app": {
         parameters: {
             query?: never;
@@ -763,49 +746,6 @@ export interface operations {
                         /** Format: date-time */
                         createdAt: string;
                     }[];
-                };
-            };
-        };
-    };
-    ProvidersController_connectToken: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    name: string;
-                    token: string;
-                };
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        id: string;
-                        /** @enum {string} */
-                        provider: "github";
-                        name: string;
-                        /** @enum {string} */
-                        kind: "github-app" | "github-token";
-                        appSlug?: string;
-                        installations: {
-                            installationId: number;
-                            account: string;
-                            repositories: string[];
-                        }[];
-                        installUrl?: string;
-                        /** Format: date-time */
-                        createdAt: string;
-                    };
                 };
             };
         };

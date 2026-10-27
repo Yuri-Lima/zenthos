@@ -38,7 +38,7 @@ const CredentialsSchema = z.discriminatedUnion('type', [
 export const ProviderConnectionSchema = z.object({
   id: z.string().uuid(),
   provider: z.enum(PROVIDERS),
-  /** What a person sees in the list: the app slug, or "personal token". */
+  /** What a person sees in the list: the app slug. */
   name: z.string().min(1),
   credentials: CredentialsSchema,
   app: GitHubAppSchema.optional(),

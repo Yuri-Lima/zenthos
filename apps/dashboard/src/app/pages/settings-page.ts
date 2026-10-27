@@ -16,7 +16,7 @@ import { SettingsService, type Connection, type ConnectionCheck, type Profile } 
 import { StatusChip } from '../shared/status-chip';
 import { TermLink } from '../shared/term';
 
-type ConnectMode = 'manifest' | 'app' | 'token' | undefined;
+type ConnectMode = 'manifest' | 'app' | undefined;
 
 /**
  * Providers and repositories (ADR 010). The first-run steps are derived from what exists, never stored:
@@ -94,7 +94,6 @@ type ConnectMode = 'manifest' | 'app' | 'token' | undefined;
         @if (canConfigure()) {
           <button mat-flat-button (click)="toggle('manifest')"><mat-icon>add</mat-icon>{{ 'settings.createApp' | translate }}</button>
           <button mat-stroked-button (click)="toggle('app')">{{ 'settings.existingApp' | translate }}</button>
-          <button mat-stroked-button (click)="toggle('token')">{{ 'settings.token' | translate }}</button>
         }
       </div>
 
@@ -128,16 +127,6 @@ type ConnectMode = 'manifest' | 'app' | 'token' | undefined;
               <button mat-flat-button type="submit" [disabled]="busy() || !app.name || !app.appId || !app.privateKey">{{ 'settings.connect' | translate }}</button>
               <button mat-button type="button" (click)="mode.set(undefined)">{{ 'common.cancel' | translate }}</button>
             </div>
-            @if (error(); as message) {<p class="full error" role="alert">{{ message }}</p>}
-          </form>
-        }
-        @case ('token') {
-          <form class="surface connect" (ngSubmit)="connectToken()">
-            <p class="full muted text-sm">{{ 'settings.tokenIntro' | translate }} <zen-term id="setting_health_check">{{ 'settings.healthCheck' | translate }}</zen-term></p>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-56"><mat-label>{{ 'settings.tokenName' | translate }}</mat-label><input matInput name="tokenName" [(ngModel)]="token.name" required autocomplete="off" /></mat-form-field>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-80"><mat-label>{{ 'settings.tokenValue' | translate }}</mat-label><input matInput type="password" name="tokenValue" [(ngModel)]="token.token" required autocomplete="off" class="mono" /></mat-form-field>
-            <button mat-flat-button type="submit" [disabled]="busy() || !token.name || !token.token">{{ 'settings.connect' | translate }}</button>
-            <button mat-button type="button" (click)="mode.set(undefined)">{{ 'common.cancel' | translate }}</button>
             @if (error(); as message) {<p class="full error" role="alert">{{ message }}</p>}
           </form>
         }
@@ -257,11 +246,10 @@ export class SettingsPage {
   appName = 'zenthos';
   owner = '';
   app = { name: '', appId: '', privateKey: '', webhookSecret: '', clientId: '', clientSecret: '' };
-  token = { name: '', token: '' };
 
   readonly setup = computed(() => [
     { key: 'connect', done: this.connections().length > 0 },
-    { key: 'install', done: this.connections().some((c) => c.kind === 'github-token' || c.installations.length > 0) },
+    { key: 'install', done: this.connections().some((c) => c.installations.length > 0) },
     { key: 'repo', done: this.profiles().length > 0 },
   ]);
   readonly setupDone = computed(() => this.setup().every((step) => step.done));
@@ -294,9 +282,6 @@ export class SettingsPage {
     await this.submit(() => this.settings.connectApp({ ...required, ...optional }), () => (this.app = { name: '', appId: '', privateKey: '', webhookSecret: '', clientId: '', clientSecret: '' }));
   }
 
-  async connectToken() {
-    await this.submit(() => this.settings.connectToken(this.token), () => (this.token = { name: '', token: '' }));
-  }
 
   async check(connection: Connection) {
     this.checking.set(connection.id);

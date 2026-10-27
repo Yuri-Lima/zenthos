@@ -23,24 +23,24 @@ describe('providers over HTTP', () => {
 
   const post = (path: string, body?: unknown) => fetch(`${base}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
 
-  it('refuses a token GitHub rejects without storing it, stores one it accepts, and checks it later', async () => {
-    const refused = await post('/providers/github/token', { name: 'me', token: 'rejected' });
+  it('refuses an app key GitHub rejects without storing it, stores one it accepts, and checks it later', async () => {
+    const refused = await post('/providers/github/app', { name: 'zenthos-hand', appId: '8', privateKey: 'rejected' });
     expect(refused.status).toBe(400);
     expect(await refused.json()).toMatchObject({ code: 'invalid_credentials' });
     expect(await ports.connections.list(DRY_RUN_WORKSPACE.id)).toEqual([]);
 
-    const accepted = await post('/providers/github/token', { name: 'me', token: 'ghp_ok' });
-    const connection = (await accepted.json()) as { id: string; kind: string; token?: string };
-    expect(connection).toMatchObject({ kind: 'github-token' });
-    expect(JSON.stringify(connection)).not.toContain('ghp_ok');
+    const accepted = await post('/providers/github/app', { name: 'zenthos-hand', appId: '8', privateKey: 'pem-ok' });
+    const connection = (await accepted.json()) as { id: string; kind: string };
+    expect(connection).toMatchObject({ kind: 'github-app' });
+    expect(JSON.stringify(connection)).not.toContain('pem-ok');
 
     const check = await post(`/providers/${connection.id}/check`);
     expect(check.status).toBe(200);
-    expect(await check.json()).toMatchObject({ ok: true, actsAs: 'memory' });
+    expect(await check.json()).toMatchObject({ ok: true, actsAs: 'zenthos-memory' });
   });
 
   it('describes a repository through a connection, and answers 404 for one the connection cannot see', async () => {
-    const accepted = await post('/providers/github/token', { name: 'me', token: 'ghp_ok' });
+    const accepted = await post('/providers/github/app', { name: 'zenthos-hand-2', appId: '9', privateKey: 'pem' });
     const { id } = (await accepted.json()) as { id: string };
     const found = await fetch(`${base}/providers/${id}/repositories/owner/repo`);
     expect(found.status).toBe(200);

@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { Controller, Get, Inject, NotFoundException, Post, Query, Res, Body, Delete, Param, HttpCode } from '@nestjs/common';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { githubAppManifest, manifestFormUrl } from '@zenthos/adapter-github';
-import { checkConnection, connectExistingGitHubApp, connectGitHubApp, connectGitHubToken, describeRepository, recordInstallation } from '@zenthos/application';
+import { checkConnection, connectExistingGitHubApp, connectGitHubApp, describeRepository, recordInstallation } from '@zenthos/application';
 import { ConnectionCheckSchema, installUrl, PublicConnectionSchema, redactConnection, RepositoryInfoSchema, type ProviderConnection, type WorkspaceActor } from '@zenthos/domain';
 import type { Response } from 'express';
 import { z } from 'zod';
@@ -11,7 +11,6 @@ import { API_PORTS, type ApiPorts } from '../ports.js';
 import type { ApiConfig } from '../config.js';
 import { jsonSchema, parseBody } from '../openapi.js';
 
-const TokenBody = z.object({ name: z.string().min(1), token: z.string().min(1) });
 const AppBody = z.object({ name: z.string().min(1), appId: z.string().min(1), privateKey: z.string().min(1), webhookSecret: z.string().min(1).optional(), clientId: z.string().min(1).optional(), clientSecret: z.string().min(1).optional() });
 const MANIFEST_STATE_TTL_MS = 10 * 60 * 1000;
 
@@ -39,13 +38,6 @@ export class ProvidersController {
     return (await this.ports.connections.list(actor.workspaceId)).map(redactConnection);
   }
 
-  @Post('github/token')
-  @ApiOperation({ summary: 'Connect GitHub with a personal token (interim for one account); GitHub is asked first and a refused token is not stored' })
-  @ApiBody({ schema: jsonSchema(TokenBody) })
-  @ApiOkResponse({ schema: jsonSchema(PublicConnectionSchema) })
-  async connectToken(@Body() body: unknown, @CurrentWorkspace('configure') actor: WorkspaceActor) {
-    return redactConnection(await connectGitHubToken(this.ports, { ...parseBody(TokenBody, body), workspaceId: actor.workspaceId }));
-  }
 
   @Post('github/app')
   @ApiOperation({ summary: 'Connect a GitHub App created by hand: app id, private key, the webhook secret, and the OAuth client id and secret for Sign in with GitHub; the key is checked against GitHub first; the same app again updates it' })

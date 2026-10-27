@@ -1,6 +1,6 @@
 import { createRun, repoProfile, type ProviderConnection, type RepoProfile, type Run } from '@zenthos/domain';
 import type { GitHubAppsPort, ProviderConnectionsPort, RepoProfilesPort, RunControlPort } from '@zenthos/ports';
-import { applyWebhookCommand, checkConnection, connectExistingGitHubApp, connectGitHubApp, connectGitHubToken, describeRepository, recordInstallation } from './provider-connections.js';
+import { applyWebhookCommand, checkConnection, connectExistingGitHubApp, connectGitHubApp, describeRepository, recordInstallation } from './provider-connections.js';
 
 /** Map-backed fakes; the application layer may not import adapters, even in tests. */
 class Connections implements ProviderConnectionsPort {
@@ -46,24 +46,21 @@ const W = '00000000-0000-4000-8000-0000000000a1';
 describe('provider connections', () => {
   it('describes a repository through the connection that can see it, and says so when there is no such connection', async () => {
     const connections = new Connections();
-    const token = await connectGitHubToken({ connections, githubApps }, { name: 'me', token: 'ghp_ok', workspaceId: W });
-    expect(await describeRepository({ connections, githubApps }, token.id, 'owner/a')).toEqual({ defaultBranch: 'develop', cloneUrl: 'https://github.com/owner/a.git' });
+    const app = await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-dev', appId: '3', privateKey: 'pem', workspaceId: W });
+    expect(await describeRepository({ connections, githubApps }, app.id, 'owner/a')).toEqual({ defaultBranch: 'develop', cloneUrl: 'https://github.com/owner/a.git' });
     await expect(describeRepository({ connections, githubApps }, 'missing', 'owner/a')).rejects.toMatchObject({ code: 'connection_not_found' });
   });
 
   it('checks credentials before storing them, and reports the health of a stored connection without throwing', async () => {
     const connections = new Connections();
-    await expect(connectGitHubToken({ connections, githubApps }, { name: 'me', token: 'rejected', workspaceId: W })).rejects.toMatchObject({ code: 'invalid_credentials' });
     await expect(connectExistingGitHubApp({ connections, githubApps }, { name: 'x', appId: '1', privateKey: 'rejected' })).rejects.toMatchObject({ code: 'invalid_credentials' });
     expect(await connections.list(W)).toEqual([]);
-    const token = await connectGitHubToken({ connections, githubApps }, { name: 'me', token: 'ghp_ok', workspaceId: W });
     const now = new Date('2026-10-18T12:00:00Z');
-    expect(await checkConnection({ connections, githubApps }, token.id, now)).toEqual({ ok: true, actsAs: 'octocat', checkedAt: now.toISOString() });
-    await connections.save({ ...token, credentials: { type: 'github-token', token: 'rejected' } });
-    expect(await checkConnection({ connections, githubApps }, token.id, now)).toEqual({ ok: false, reason: 'Bad credentials', checkedAt: now.toISOString() });
     const app = await connectExistingGitHubApp({ connections, githubApps }, { name: 'zenthos-dev', appId: '11', privateKey: 'pem' });
     expect(await checkConnection({ connections, githubApps }, app.id, now)).toMatchObject({ ok: true, actsAs: 'zenthos-dev', repositories: 2 });
     expect((await connections.get(app.id))?.installations).toEqual([{ installationId: 5, account: 'owner', repositories: ['owner/a', 'owner/b'] }]);
+    await connections.save({ ...app, credentials: { type: 'github-app', appId: '11', privateKey: 'rejected' } });
+    expect(await checkConnection({ connections, githubApps }, app.id, now)).toEqual({ ok: false, reason: 'Bad credentials', checkedAt: now.toISOString() });
     await expect(checkConnection({ connections, githubApps }, 'missing')).rejects.toMatchObject({ code: 'connection_not_found' });
   });
 

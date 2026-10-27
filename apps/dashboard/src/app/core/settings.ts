@@ -8,7 +8,6 @@ export type ConnectionCheck = paths['/providers/{id}/check']['post']['responses'
 export type Profile = paths['/repos']['get']['responses'][200]['content']['application/json'][number];
 export type ProfileBody = NonNullable<paths['/repos/{owner}/{name}']['put']['requestBody']>['content']['application/json'];
 export type AppBody = NonNullable<paths['/providers/github/app']['post']['requestBody']>['content']['application/json'];
-export type TokenBody = NonNullable<paths['/providers/github/token']['post']['requestBody']>['content']['application/json'];
 export type RepositoryInfo = paths['/providers/{id}/repositories/{owner}/{name}']['get']['responses'][200]['content']['application/json'];
 
 /** The API answers a refused change with the domain's message; undefined means it went through. */
@@ -47,10 +46,6 @@ export class SettingsService {
   async check(id: string): Promise<ConnectionCheck | undefined> {
     const { data } = await this.api.POST('/providers/{id}/check', { params: { path: { id } } });
     return data;
-  }
-
-  connectToken(body: TokenBody) {
-    return failure(this.api.POST('/providers/github/token', { body }));
   }
 
   connectApp(body: AppBody) {

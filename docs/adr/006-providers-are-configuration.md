@@ -7,8 +7,8 @@ Date: 2026-10-14. Status: accepted.
 1. **ZenthOs acts as a GitHub App, not as a person.** Repository owners install the app where they want it.
    The worker holds the app id and private key, resolves the installation that covers each repository, and
    lets Octokit mint short-lived installation tokens, including a fresh one before every clone and push.
-   Comments and pull requests appear as `<app>[bot]`. A personal token remains as an interim for one
-   account and is ignored when the app is configured.
+   Comments and pull requests appear as `<app>[bot]`. A personal token is not a stored connection (removed from
+   the product on 27 Oct 2026 under ADR 019); `GITHUB_TOKEN` remains the worker's environment fallback for dry runs.
 2. **Provider connections are data the product owns**, not code and not only environment variables.
    Target: a `provider_connections` table (type, display name, non-secret config, encrypted secret) and a
    `repo_profiles` table with the same fields `RepoProfile` has today, both managed through the REST API

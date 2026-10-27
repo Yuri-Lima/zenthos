@@ -51,14 +51,6 @@ export async function connectExistingGitHubApp(
   return connection;
 }
 
-/** A personal token as the interim connection for one account, checked against GitHub before it is stored. */
-export async function connectGitHubToken({ connections, githubApps }: ConnectDeps, input: { name: string; token: string; workspaceId?: string }): Promise<ProviderConnection> {
-  await verified(githubApps, { type: 'github-token', token: input.token });
-  const connection = createConnection({ provider: 'github', name: input.name, credentials: { type: 'github-token', token: input.token }, workspaceId: input.workspaceId });
-  await connections.save(connection);
-  return connection;
-}
-
 /**
  * The health check behind the settings page, never a throw: one authenticated read with the stored credentials,
  * and for an app, its installations refreshed from GitHub and stored. The install redirect and the webhook keep

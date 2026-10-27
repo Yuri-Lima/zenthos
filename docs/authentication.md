@@ -168,8 +168,9 @@ GitHub assigns to it, so the commit, the comment and the pull request all show t
 hand-written no-reply address: GitHub maps it to whichever account owns that name. Keep the `.pem` out of the repository; on Cloud Run it comes from Secret Manager.
 The private key is the one long-lived secret in this design.
 
-A fine-grained personal token (`GITHUB_TOKEN`, scoped to the named repositories, with Contents, Issues and
-Pull requests write) still works as an interim and is ignored once the app is configured.
+The product stores and offers apps only. A fine-grained personal token (`GITHUB_TOKEN`, scoped to the named
+repositories, with Contents, Issues and Pull requests write) remains only as the worker's environment fallback for a
+dry run without a store, and is ignored once an app is configured.
 
 Prove the connection before the first real run, on an issue you own. It posts one comment there, pushes one
 marker commit to a throwaway branch, checks that GitHub attributes that commit to the bot, and deletes the branch:

@@ -56,7 +56,7 @@ Temporal's address, LangFuse's keys, and the operator's own CI credentials (fede
 2. **Platform GitHub App and installs.** Public manifest; one-time operator setup with a setup token; install flow
    bound to the workspace and verified against the person's installations; installation webhooks; repository
    credentials come from the platform app and the repository's installation. Per-workspace app connections and
-   personal tokens leave the customer settings.
+   personal tokens leave the customer settings (tokens left on 27 Oct 2026, ahead of the rest).
 3. **Model provider per workspace.** API key settings with check, replace and remove; activities read the key per
    run; Claude Code, the spec writer and the reviewer use it; the worker's Anthropic variables and the Console
    sign-in step are removed.
