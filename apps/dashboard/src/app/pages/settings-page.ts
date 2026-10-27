@@ -52,6 +52,7 @@ type ConnectMode = 'manifest' | 'app' | undefined;
     .inst dt { font-family: var(--zen-mono); color: var(--zen-muted); font-size: 11.5px; }
     .inst dd { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
     .repo-chip { font-family: var(--zen-mono); font-size: 11.5px; border: 1px solid var(--zen-line); border-radius: 999px; padding: 0 8px; }
+    button.repo-chip { background: var(--zen-accent-soft); color: var(--zen-accent); border-color: transparent; cursor: pointer; font-family: inherit; }
     .check { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
     .table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .table th { text-align: left; font-family: var(--zen-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--zen-muted); font-weight: 400; padding: 10px 12px; border-bottom: 1px solid var(--zen-line); white-space: nowrap; }
@@ -162,8 +163,15 @@ type ConnectMode = 'manifest' | 'app' | undefined;
             @if (c.kind === 'github-app') {
               <dl class="inst">
                 @for (i of c.installations; track i.installationId) {
-                  <dt>{{ i.account }}</dt>
-                  <dd>@for (r of i.repositories; track r) {<span class="repo-chip">{{ r }}</span>} @empty {<span class="muted">{{ 'settings.noRepos' | translate }}</span>}</dd>
+                  <dt>{{ i.account }} <span class="muted">· {{ 'settings.repoTotal' | translate: { n: i.repositories.length } }}</span></dt>
+                  <dd>
+                    @for (r of shownRepos(i); track r) {<span class="repo-chip">{{ r }}</span>} @empty {<span class="muted">{{ 'settings.noRepos' | translate }}</span>}
+                    @if (i.repositories.length > repoPreview) {
+                      <button type="button" class="repo-chip" (click)="toggleRepos(i.installationId)" [attr.aria-expanded]="expanded().has(i.installationId)">
+                        {{ (expanded().has(i.installationId) ? 'settings.fewerRepos' : 'settings.moreRepos') | translate: { n: i.repositories.length - repoPreview } }}
+                      </button>
+                    }
+                  </dd>
                 } @empty {
                   <dt><zen-term id="setting_installation">{{ 'settings.installations' | translate }}</zen-term></dt>
                   <dd class="muted">{{ 'settings.notInstalled' | translate }}</dd>
@@ -243,6 +251,9 @@ export class SettingsPage {
   readonly mode = signal<ConnectMode>(undefined);
   readonly checking = signal<string | undefined>(undefined);
   readonly checks = signal<Record<string, ConnectionCheck>>({});
+  /** An installation can cover dozens of repositories; the card shows a few and the total, the rest on request. */
+  readonly repoPreview = 6;
+  readonly expanded = signal<Set<number>>(new Set());
   appName = 'zenthos';
   owner = '';
   app = { name: '', appId: '', privateKey: '', webhookSecret: '', clientId: '', clientSecret: '' };
@@ -264,6 +275,19 @@ export class SettingsPage {
     this.connections.set(connections);
     this.profiles.set(profiles);
     this.loading.set(false);
+  }
+
+  shownRepos(installation: Connection['installations'][number]): string[] {
+    const sorted = [...installation.repositories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    return this.expanded().has(installation.installationId) ? sorted : sorted.slice(0, this.repoPreview);
+  }
+
+  toggleRepos(installationId: number) {
+    this.expanded.update((ids) => {
+      const next = new Set(ids);
+      if (!next.delete(installationId)) next.add(installationId);
+      return next;
+    });
   }
 
   toggle(mode: ConnectMode) {

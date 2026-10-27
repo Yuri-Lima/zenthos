@@ -211,7 +211,10 @@
     "manage": "Manage repositories on GitHub",
     "manageHint": "Add or remove the repositories this app may act on, on GitHub; then press Check to refresh the list here.",
     "addThisRepo": "Add this repository on GitHub",
-    "members": "Members"
+    "members": "Members",
+    "repoTotal": "{{n}} repositories",
+    "moreRepos": "+{{n}} more",
+    "fewerRepos": "show fewer"
   },
   "repoForm": {
     "newTitle": "Add a repository",

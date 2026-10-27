@@ -57,6 +57,25 @@ describe('SettingsPage', () => {
   });
 });
 
+describe('SettingsPage repositories of an installation', () => {
+  it('shows six of them with the total, and the rest on request', async () => {
+    const repositories = Array.from({ length: 10 }, (_, i) => `o/repo-${String.fromCharCode(106 - i)}`);
+    const api = { GET: async (path: string) => ({ data: path === '/providers' ? [{ ...app, installations: [{ installationId: 3, account: 'o', repositories }] }] : [], response: ok }), POST: async () => ({ data: undefined, response: ok }) };
+    TestBed.configureTestingModule({ imports: [SettingsPage, TranslateModule.forRoot()], providers: [provideZonelessChangeDetection(), provideRouter([]), { provide: API, useValue: api }] });
+    const fixture = TestBed.createComponent(SettingsPage);
+    await settle(fixture);
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelectorAll('span.repo-chip')).toHaveLength(6);
+    expect(host.querySelector('span.repo-chip')?.textContent?.trim()).toBe('o/repo-a');
+    expect(host.querySelector('button.repo-chip')?.textContent).toContain('settings.moreRepos');
+    fixture.componentInstance.toggleRepos(3);
+    await settle(fixture);
+    expect(host.querySelectorAll('span.repo-chip')).toHaveLength(10);
+    expect(host.querySelector('button.repo-chip')?.textContent).toContain('settings.fewerRepos');
+    fixture.destroy();
+  });
+});
+
 describe('SettingsPage install link', () => {
   it('turns into a quiet "manage repositories" link once the app is installed somewhere', async () => {
     const installed = { ...app, installations: [{ installationId: 1, account: 'o', repositories: ['o/r'] }] };
