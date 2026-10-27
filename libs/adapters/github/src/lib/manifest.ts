@@ -15,7 +15,8 @@ export function githubAppManifest({ name, baseUrl, connectionId }: { name: strin
     setup_on_update: true,
     hook_attributes: { url: `${baseUrl}/webhooks/github`, active: true },
     default_permissions: { contents: 'write', issues: 'write', pull_requests: 'write', metadata: 'read' },
-    default_events: ['issues', 'installation', 'installation_repositories'],
+    // Installation events reach every app without subscribing; GitHub refuses them in a manifest's default_events.
+    default_events: ['issues'],
   };
 }
 
