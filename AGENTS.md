@@ -54,7 +54,7 @@ These win over any pattern below when the two conflict. The goal is a codebase a
 | `apps/worker` | Temporal worker: `workflows.ts` (one workflow per ticket), `activities.ts` (thin, call use cases), `config.ts` (zod-validated env), `composition.ts` (the adapters, chosen once), `repos.ts` (the dry-run repository profiles), `scripts/` (contract check, manual review, evals) | anything |
 | `apps/cli` | `zenthos run|approve|reject|state <ticket-key>` against the running worker | anything |
 | `docs/adr` | Architecture decision records | |
-| `infra/` | Files mounted by `docker-compose.yml` | |
+| `infra/` | Files mounted by `docker-compose.yml`; `infra/hetzner` the platform host: Traefik, LangFuse and ZenthOs stacks, deploy script | |
 
 The ESLint rule `@nx/enforce-module-boundaries` in `eslint.config.mjs` enforces the "Depends on" column and
 bans vendor SDKs inside domain, ports and application. Every project carries a `scope:*` tag in its
@@ -116,6 +116,11 @@ bans vendor SDKs inside domain, ports and application. Every project carries a `
   claimed them, and profiles live behind `RepoProfilesPort`, written by the API. The worker resolves credentials per
   repository (`credentialsForRepo`): the platform app where a bound installation covers it, else `githubCredentials()`
   from its environment as the only fallback; add nothing credential-shaped anywhere else.
+- Deployment (ADR 017): `Dockerfile` has three targets, `api`, `worker` and `dashboard`, from one `pnpm install`;
+  the API and the worker run from sources as the local scripts do. `.github/workflows/images.yml` publishes them to
+  GHCR on `main`; `infra/hetzner/zenthos/compose.yaml` runs them beside LangFuse behind Traefik on one origin with
+  the API under `/api`; `infra/hetzner/deploy.sh` does the deploy. A toolchain a repository profile's commands need
+  goes into the worker target. Secrets are generated on the server by `bootstrap-secrets.sh` and never committed.
 - Upgrade Nx and its plugins only through `pnpm nx migrate latest` followed by `pnpm install` and
   `pnpm nx migrate --run-migrations`, so Nx's own migrations run.
 - Other packages: `pnpm outdated -r`, bump, then `pnpm check`. Checked on 2026-10-13.

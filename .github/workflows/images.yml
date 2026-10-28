@@ -1,0 +1,38 @@
+name: Images
+
+# Builds the three app images from the Dockerfile and publishes them to GHCR on every push to main: `main` moves
+# with the branch, `sha-<commit>` stays. The host pulls them (infra/hetzner/deploy.sh, ADR 017).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Image names and tags
+        id: meta
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "owner=$owner" >> "$GITHUB_OUTPUT"
+          echo "sha=sha-$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Build and push the three targets
+        run: |
+          for target in api worker dashboard; do
+            docker buildx build --target "$target" --platform linux/amd64 --push \
+              --cache-from type=gha --cache-to type=gha,mode=max \
+              -t "ghcr.io/${{ steps.meta.outputs.owner }}/zenthos-$target:main" \
+              -t "ghcr.io/${{ steps.meta.outputs.owner }}/zenthos-$target:${{ steps.meta.outputs.sha }}" .
+          done

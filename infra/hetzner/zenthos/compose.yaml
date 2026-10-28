@@ -1,0 +1,132 @@
+# ZenthOs on the platform host (ADR 017): the API, the worker and the dashboard as the images CI publishes, with their
+# own Postgres and Temporal. One origin, https://zenthos.${ZENTHOS_DOMAIN}: Traefik sends /api/* to the API with
+# the prefix stripped and everything else to the dashboard. Secrets come from .env next to this file, written once
+# by bootstrap-secrets.sh. Sign-in is always on here; the dry-run mode never reaches a public URL.
+name: zenthos
+
+x-zenthos-env: &zenthos-env
+  DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/zenthos
+  ZENTHOS_SECRETS_KEY: ${ZENTHOS_SECRETS_KEY}
+  TEMPORAL_ADDRESS: temporal:7233
+  TEMPORAL_NAMESPACE: default
+  TEMPORAL_TASK_QUEUE: zenthos
+  LANGFUSE_BASE_URL: https://langfuse.${ZENTHOS_DOMAIN}
+  LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
+  LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
+  LANGFUSE_PROJECT_ID: zenthos
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: zenthos
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  temporal:
+    image: temporalio/auto-setup:1.29.7
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PWD: ${POSTGRES_PASSWORD}
+      POSTGRES_SEEDS: postgres
+      DEFAULT_NAMESPACE_RETENTION: 30d
+
+  # Operators only: reach it with `ssh -L 8080:127.0.0.1:8080 <host>`; it is bound to the loopback, never routed.
+  temporal-ui:
+    image: temporalio/ui:2.55.0
+    restart: unless-stopped
+    depends_on: [temporal]
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:8080
+    ports:
+      - 127.0.0.1:8080:8080
+
+  api:
+    image: ghcr.io/yuri-lima/zenthos-api:${ZENTHOS_IMAGE_TAG:-main}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+    networks: [default, edge]
+    environment:
+      <<: *zenthos-env
+      PORT: 3200
+      ZENTHOS_API_BASE_URL: https://zenthos.${ZENTHOS_DOMAIN}/api
+      ZENTHOS_DASHBOARD_ORIGIN: https://zenthos.${ZENTHOS_DOMAIN}
+      ZENTHOS_AUTH: github
+      ZENTHOS_SETUP_TOKEN: ${ZENTHOS_SETUP_TOKEN}
+      RUN_CONTROL: temporal
+      GITHUB_APPS: octokit
+      MODEL_PROVIDER: anthropic
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: edge
+      traefik.http.routers.zenthos-api.rule: Host(`zenthos.${ZENTHOS_DOMAIN}`) && PathPrefix(`/api`)
+      traefik.http.routers.zenthos-api.entrypoints: websecure
+      traefik.http.routers.zenthos-api.tls.certresolver: le
+      traefik.http.routers.zenthos-api.middlewares: zenthos-api-prefix@docker,secure-headers@docker
+      traefik.http.middlewares.zenthos-api-prefix.stripprefix.prefixes: /api
+      traefik.http.services.zenthos-api.loadbalancer.server.port: '3200'
+
+  worker:
+    image: ghcr.io/yuri-lima/zenthos-worker:${ZENTHOS_IMAGE_TAG:-main}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+    environment:
+      <<: *zenthos-env
+      ISSUE_TRACKER: github
+      SCM: github
+      SPEC_WRITER: anthropic
+      REVIEWER: anthropic
+      CODING_AGENT: claude-code
+      CODING_AGENT_CONFIG_DIR: /srv/claude-code
+      SANDBOX: git
+      SANDBOX_ROOT: /srv/sandboxes
+    volumes:
+      - sandboxes:/srv/sandboxes
+      - claude_code:/srv/claude-code
+
+  dashboard:
+    image: ghcr.io/yuri-lima/zenthos-dashboard:${ZENTHOS_IMAGE_TAG:-main}
+    restart: unless-stopped
+    networks: [edge]
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: edge
+      traefik.http.routers.zenthos-app.rule: Host(`zenthos.${ZENTHOS_DOMAIN}`)
+      traefik.http.routers.zenthos-app.entrypoints: websecure
+      traefik.http.routers.zenthos-app.tls.certresolver: le
+      traefik.http.routers.zenthos-app.middlewares: secure-headers@docker
+      traefik.http.services.zenthos-app.loadbalancer.server.port: '80'
+
+networks:
+  edge:
+    external: true
+
+volumes:
+  postgres_data:
+  sandboxes:
+  claude_code:

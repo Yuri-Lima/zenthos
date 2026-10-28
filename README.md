@@ -46,5 +46,18 @@ Anthropic key, entered in the dashboard's Settings, never in `.env`; runs withou
 `ant auth login` on a laptop and workload identity federation in CI and the cloud. See
 [docs/authentication.md](docs/authentication.md).
 
+## Deploy
+
+The hosted service runs on one Hetzner host behind Traefik (ADR 017): Traefik, LangFuse and ZenthOs as three Compose
+stacks under `infra/hetzner`. CI publishes the app images to GHCR on every push to `main` (`Dockerfile`,
+`.github/workflows/images.yml`); the deploy copies the folder, writes the secrets once on the server and pulls them:
+
+```bash
+infra/hetzner/deploy.sh zenthos-platform-1 46-224-120-62.sslip.io
+```
+
+The dashboard is at `https://zenthos.<domain>`, the API under `/api` on the same origin, sign-in always on. The
+first visit needs the platform GitHub App: open `/setup` with the token from `/srv/zenthos/zenthos/.env` on the server.
+
 How the repo is organised and the rules for working in it: [AGENTS.md](AGENTS.md).
 Why things are the way they are: [docs/adr](docs/adr).

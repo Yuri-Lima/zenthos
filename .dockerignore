@@ -1,0 +1,16 @@
+# What the images never carry: dependencies are installed from the lockfile, outputs are built inside, secrets stay out.
+.git
+.github
+.nx
+.angular
+node_modules
+**/node_modules
+dist
+**/dist
+**/test-output
+coverage
+.env
+.env.*
+!.env.example
+*.log
+docs

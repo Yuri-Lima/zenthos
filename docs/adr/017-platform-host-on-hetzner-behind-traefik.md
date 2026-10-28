@@ -34,3 +34,26 @@ fit there.
 - Docker-published ports bypass ufw; that is why only Traefik publishes, and why the Hetzner Cloud Firewall
   (by label `project=zenthos`) is the outer wall.
 - The same host can take the API's public webhook endpoint and Temporal later, each as a Traefik-labelled service.
+
+## Amendment, 28 October 2026: ZenthOs runs on the host too
+
+The API, the worker and the dashboard run on the same host as a third Compose stack (`infra/hetzner/zenthos`),
+with their own Postgres and Temporal; Cloud Run is no longer planned. The hosted service (ADR 019) is one
+deployment, and a Compose stack beside LangFuse is the smallest one that works.
+
+- **One origin.** `https://zenthos.<domain>` serves the dashboard; Traefik sends `/api/*` to the API with the prefix
+  stripped. The production dashboard calls `/api` (`environment.production.ts`), so there is no CORS and the session
+  cookie is first-party. `ZENTHOS_API_BASE_URL` carries the prefix, so the GitHub callbacks and the webhook land on
+  it; `ZENTHOS_AUTH` is `github` in the stack itself, never a variable.
+- **Images from CI.** `Dockerfile` builds three targets from one install; `.github/workflows/images.yml` publishes
+  them to GHCR on every push to `main` as `main` and `sha-<commit>`. The API and the worker run from the TypeScript
+  sources as `pnpm api` and `pnpm worker` do, because the Temporal workflow bundle resolves the libraries' sources
+  the same way. `deploy.sh` rsyncs the folder, writes the secrets once (`bootstrap-secrets.sh`, which reuses
+  LangFuse's project keys), pulls the images and brings the three stacks up; `ZENTHOS_IMAGE_TAG` pins a commit.
+- **The worker's toolchain is part of its image:** git, node and bun today, for Legal Connect's gate commands. Until
+  slice 4 of ADR 019 each run shares the worker container, so the host serves trusted teams only.
+- **Operators reach Temporal's UI** through `ssh -L 8080:127.0.0.1:8080`; it is bound to the loopback and never
+  routed. The setup token for the platform GitHub App is in `/srv/zenthos/zenthos/.env` on the server.
+- Memory: the host had 4.9 GiB free before this stack; LangFuse's own recommendation is 16 GiB. Rescale when the
+  worker's runs push it to swap.
+
