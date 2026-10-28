@@ -48,10 +48,14 @@ export const WorkerConfigSchema = z.object({
 
 export type WorkerConfig = z.infer<typeof WorkerConfigSchema>;
 
+/**
+ * With a store, GitHub credentials come from the platform app per repository (ADR 019) and the environment is only a
+ * fallback; without one, the environment is the only source and must have them.
+ */
 export function loadConfig(env: NodeJS.ProcessEnv): WorkerConfig {
   const config = WorkerConfigSchema.parse(env);
-  if ((config.ISSUE_TRACKER === 'github' || config.SCM === 'github') && !githubCredentials(config)) {
-    throw new Error('ISSUE_TRACKER=github and SCM=github need GITHUB_APP_ID with GITHUB_APP_PRIVATE_KEY or _FILE, or GITHUB_TOKEN');
+  if ((config.ISSUE_TRACKER === 'github' || config.SCM === 'github') && !config.DATABASE_URL && !githubCredentials(config)) {
+    throw new Error('ISSUE_TRACKER=github and SCM=github need DATABASE_URL (the platform GitHub App, ADR 019), or GITHUB_APP_ID with GITHUB_APP_PRIVATE_KEY or _FILE, or GITHUB_TOKEN');
   }
   return config;
 }
